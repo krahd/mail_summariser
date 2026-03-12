@@ -1,0 +1,353 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A100000D2C00000100000001 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000032C00000100000001 /* AppState.swift */; };
+		A100000E2C00000100000001 /* BackendBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000042C00000100000001 /* BackendBridge.swift */; };
+		A100000F2C00000100000001 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000052C00000100000001 /* ContentView.swift */; };
+		A10000102C00000100000001 /* LogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000062C00000100000001 /* LogView.swift */; };
+		A10000112C00000100000001 /* MailSummariserApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000072C00000100000001 /* MailSummariserApp.swift */; };
+		A10000122C00000100000001 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000082C00000100000001 /* Models.swift */; };
+		A10000132C00000100000001 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000092C00000100000001 /* SearchView.swift */; };
+		A10000142C00000100000001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000A2C00000100000001 /* SettingsView.swift */; };
+		A10000152C00000100000001 /* SummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000B2C00000100000001 /* SummaryView.swift */; };
+		A10000162C00000100000001 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A100000C2C00000100000001 /* SwiftUI.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A10000012C00000100000001 /* MailSummariser.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MailSummariser.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000032C00000100000001 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppState.swift; path = macos-app/AppState.swift; sourceTree = SOURCE_ROOT; };
+		A10000042C00000100000001 /* BackendBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BackendBridge.swift; path = macos-app/BackendBridge.swift; sourceTree = SOURCE_ROOT; };
+		A10000052C00000100000001 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ContentView.swift; path = macos-app/ContentView.swift; sourceTree = SOURCE_ROOT; };
+		A10000062C00000100000001 /* LogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogView.swift; path = macos-app/LogView.swift; sourceTree = SOURCE_ROOT; };
+		A10000072C00000100000001 /* MailSummariserApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MailSummariserApp.swift; path = macos-app/MailSummariserApp.swift; sourceTree = SOURCE_ROOT; };
+		A10000082C00000100000001 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Models.swift; path = macos-app/Models.swift; sourceTree = SOURCE_ROOT; };
+		A10000092C00000100000001 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SearchView.swift; path = macos-app/SearchView.swift; sourceTree = SOURCE_ROOT; };
+		A100000A2C00000100000001 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = macos-app/SettingsView.swift; sourceTree = SOURCE_ROOT; };
+		A100000B2C00000100000001 /* SummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SummaryView.swift; path = macos-app/SummaryView.swift; sourceTree = SOURCE_ROOT; };
+		A100000C2C00000100000001 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A100001D2C00000100000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000162C00000100000001 /* SwiftUI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A10000172C00000100000001 = {
+			isa = PBXGroup;
+			children = (
+				A10000192C00000100000001 /* macos-app */,
+				A10000182C00000100000001 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A10000182C00000100000001 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A10000012C00000100000001 /* MailSummariser.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A10000192C00000100000001 /* macos-app */ = {
+			isa = PBXGroup;
+			children = (
+				A10000032C00000100000001 /* AppState.swift */,
+				A10000042C00000100000001 /* BackendBridge.swift */,
+				A10000052C00000100000001 /* ContentView.swift */,
+				A10000062C00000100000001 /* LogView.swift */,
+				A10000072C00000100000001 /* MailSummariserApp.swift */,
+				A10000082C00000100000001 /* Models.swift */,
+				A10000092C00000100000001 /* SearchView.swift */,
+				A100000A2C00000100000001 /* SettingsView.swift */,
+				A100000B2C00000100000001 /* SummaryView.swift */,
+			);
+			name = macos-app;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A100001A2C00000100000001 /* MailSummariser */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000242C00000100000001 /* Build configuration list for PBXNativeTarget "MailSummariser" */;
+			buildPhases = (
+				A100001C2C00000100000001 /* Sources */,
+				A100001D2C00000100000001 /* Frameworks */,
+				A100001E2C00000100000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MailSummariser;
+			productName = MailSummariser;
+			productReference = A10000012C00000100000001 /* MailSummariser.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A100001B2C00000100000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					A100001A2C00000100000001 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = A100001F2C00000100000001 /* Build configuration list for PBXProject "MailSummariser" */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A10000172C00000100000001;
+			productRefGroup = A10000182C00000100000001 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A100001A2C00000100000001 /* MailSummariser */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A100001E2C00000100000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A100001C2C00000100000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A100000D2C00000100000001 /* AppState.swift in Sources */,
+				A100000E2C00000100000001 /* BackendBridge.swift in Sources */,
+				A100000F2C00000100000001 /* ContentView.swift in Sources */,
+				A10000102C00000100000001 /* LogView.swift in Sources */,
+				A10000112C00000100000001 /* MailSummariserApp.swift in Sources */,
+				A10000122C00000100000001 /* Models.swift in Sources */,
+				A10000132C00000100000001 /* SearchView.swift in Sources */,
+				A10000142C00000100000001 /* SettingsView.swift in Sources */,
+				A10000152C00000100000001 /* SummaryView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A10000202C00000100000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A10000212C00000100000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A10000222C00000100000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Mail Summariser";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tom.MailSummariser;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A10000232C00000100000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Mail Summariser";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tom.MailSummariser;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A100001F2C00000100000001 /* Build configuration list for PBXProject "MailSummariser" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000202C00000100000001 /* Debug */,
+				A10000212C00000100000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000242C00000100000001 /* Build configuration list for PBXNativeTarget "MailSummariser" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000222C00000100000001 /* Debug */,
+				A10000232C00000100000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A100001B2C00000100000001 /* Project object */;
+}
