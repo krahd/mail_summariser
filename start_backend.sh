@@ -1,11 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
-cd /Users/tom/devel/ml-llm/llm/Mail-Summariser/backend
+cd ./backend
 
 REINSTALL=false
 HOST="127.0.0.1"
-PORT="8000"
+PORT="8766"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -50,5 +50,5 @@ fi
 
 source .venv/bin/activate
 
-# IMPORTANT: use module form to avoid stale .venv/bin/uvicorn shebang issues
+# Use module form to avoid stale .venv/bin/uvicorn shebang issues
 python -m uvicorn app:app --reload --host "$HOST" --port "$PORT"
