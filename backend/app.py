@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from datetime import datetime
 from uuid import uuid4
 
@@ -9,18 +10,28 @@ from mail_service import add_keyword_tag, demo_search, mark_messages_read, remov
 from schemas import AppSettings, JobAction, MessageItem, SummaryRequest, SummaryResponse
 from summary_service import summarize_messages
 
-app = FastAPI(title="Mail Summariser Backend", version="0.1.0")
-
-DEFAULT_SETTINGS = AppSettings().model_dump()
-
-
-@app.on_event("startup")
-def startup() -> None:
+@asynccontextmanager
+async def lifespan(_: FastAPI):
     init_db()
     current = list_settings()
     for key, value in DEFAULT_SETTINGS.items():
         if key not in current:
             set_setting(key, value)
+    yield
+
+
+app = FastAPI(title="Mail Summariser Backend", version="0.1.0")
+
+DEFAULT_SETTINGS = AppSettings().model_dump()
+
+# remove deprecated block:
+# @app.on_event("startup")
+# def startup() -> None:
+#     init_db()
+#     current = list_settings()
+#     for key, value in DEFAULT_SETTINGS.items():
+#         if key not in current:
+#             set_setting(key, value)
 
 
 @app.get("/health")
