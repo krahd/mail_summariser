@@ -1,3 +1,9 @@
-fastapi==0.115.0
-uvicorn[standard]==0.30.6
-pydantic==2.9.2
+
+fastapi==0.115.0 # FastAPI is the part that says what your API does
+uvicorn[standard]==0.30.6 # Uvicorn is the server that runs your FastAPI application
+pydantic==2.9.2 # Pydantic is the library that handles data validation and settings management
+
+# FastAPI = restaurant menu and kitchen rules
+# Uvicorn = waiter/front door taking orders
+# Pydantic = quality control checking the order format
+

@@ -1,4 +1,4 @@
-from contextlib import asynccontextmanager
+import contextlib
 from datetime import datetime
 from uuid import uuid4
 
@@ -10,7 +10,7 @@ from mail_service import add_keyword_tag, demo_search, mark_messages_read, remov
 from schemas import AppSettings, JobAction, MessageItem, SummaryRequest, SummaryResponse
 from summary_service import summarize_messages
 
-@asynccontextmanager
+@contextlib.asynccontextmanager
 async def lifespan(_: FastAPI):
     init_db()
     current = list_settings()
@@ -20,7 +20,11 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="Mail Summariser Backend", version="0.1.0")
+app = FastAPI(
+    title="Mail Summariser Backend",
+    version="0.1.0",
+    lifespan=lifespan,
+)
 
 DEFAULT_SETTINGS = AppSettings().model_dump()
 
