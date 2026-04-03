@@ -98,13 +98,11 @@ function renderLogs(logs) {
   logsBody.innerHTML = logs
     .map(
       (item) => {
-        let undoCell = '<span class="log-badge log-badge-muted">Not undoable</span>';
+        let undoCell = '<span class="log-badge log-badge-final">Final</span>';
         if (item.undoable) {
           undoCell = `<button type="button" class="secondary tiny-btn log-undo-btn" data-log-id="${escapeHtml(
             item.id || ""
           )}">Undo</button>`;
-        } else if (item.undo_status === "final") {
-          undoCell = '<span class="log-badge log-badge-final">Final</span>';
         }
 
         return (
@@ -398,18 +396,67 @@ function bindTabs() {
     search: document.getElementById("tab-search"),
     logs: document.getElementById("tab-logs"),
     settings: document.getElementById("tab-settings"),
+    help: document.getElementById("tab-help"),
   };
+
+  let previousTab = "search";
 
   tabButtons.forEach((button) => {
     button.addEventListener("click", () => {
+      const newTab = button.dataset.tab;
+      if (newTab !== "help") {
+        previousTab = newTab;
+      }
+      
       tabButtons.forEach((btn) => btn.classList.remove("active"));
       Object.values(panels).forEach((panel) => panel.classList.remove("active"));
 
       button.classList.add("active");
-      const tabName = button.dataset.tab;
-      panels[tabName].classList.add("active");
+      panels[newTab].classList.add("active");
+      updateHelpButton(newTab === "help");
     });
   });
+
+  // Help button in header - toggles help tab
+  const helpButton = document.getElementById("help-button");
+  if (helpButton) {
+    helpButton.addEventListener("click", () => {
+      const helpPanel = panels.help;
+      const isHelpActive = helpPanel.classList.contains("active");
+
+      if (isHelpActive) {
+        // Go back to previous tab
+        const previousTabBtn = document.querySelector(`.tab[data-tab='${previousTab}']`);
+        if (previousTabBtn) {
+          previousTabBtn.click();
+        }
+      } else {
+        // Open help tab
+        tabButtons.forEach((btn) => btn.classList.remove("active"));
+        Object.values(panels).forEach((panel) => panel.classList.remove("active"));
+        helpPanel.classList.add("active");
+        updateHelpButton(true);
+      }
+    });
+
+    // ESC key to close help
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        const helpPanel = panels.help;
+        if (helpPanel.classList.contains("active")) {
+          helpButton.click();
+        }
+      }
+    });
+  }
+}
+
+function updateHelpButton(isHelpActive) {
+  const helpButton = document.getElementById("help-button");
+  if (helpButton) {
+    helpButton.textContent = isHelpActive ? "×" : "?";
+    helpButton.setAttribute("aria-label", isHelpActive ? "Close help" : "Open help");
+  }
 }
 
 async function loadInitialData() {

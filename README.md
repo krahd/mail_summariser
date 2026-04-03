@@ -1,19 +1,10 @@
-# Mail Summariser
+# video_glitcher (Developer Guide)
 
-Mail Summariser is a local-first email assistant with a FastAPI backend, a SwiftUI macOS client, and a browser client. It searches messages, generates concise summaries, and supports post-summary actions while keeping settings and job history in SQLite.
+video_glitcher is a local-first email assistant with a FastAPI backend, a SwiftUI macOS client, and a browser client. It searches messages, generates concise summaries, and supports post-summary actions while keeping settings and job history in SQLite.
 
-Project website: [krahd.github.io/Mail-Summariser](https://krahd.github.io/Mail-Summariser/)
+**For users**: See the [video_glitcher project website](https://krahd.github.io/Mail-Summariser/) for installation, downloads, and user manual.
 
-## Main screen
-
-![Mail Summariser main screen](docs/assets/main-screen.png)
-
-## Project status
-
-- Current release target: `v0.0.3`
-- Mail source: demo dataset only (real IMAP integration is planned, not enabled yet)
-- Cross-platform release artifacts: backend binaries for macOS, Linux, and Windows
-- Desktop client release artifact: macOS `.app`
+**For developers**: Continue reading for architecture, setup, and contribution details.
 
 ## Architecture
 

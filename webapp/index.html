@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mail Summariser Web</title>
+  <title>video_glitcher Web</title>
   <link rel="stylesheet" href="/web/styles.css" />
 </head>
 <body>
@@ -11,7 +11,10 @@
   <div class="bg-shape bg-shape-2" aria-hidden="true"></div>
 
   <header class="app-header">
-    <h1>Mail Summariser</h1>
+    <div class="app-header-top">
+      <h1>video_glitcher</h1>
+      <button id="help-button" class="help-btn" title="Help and manual" aria-label="Open help">?</button>
+    </div>
     <p>Cross-platform mail summarising workspace</p>
     <div class="connection-bar">
       <button id="test-connection" type="button" class="secondary">Test Connection</button>
@@ -159,6 +162,83 @@
         </label>
         <button type="submit">Save settings</button>
       </form>
+    </section>
+
+    <section id="tab-help" class="tab-panel">
+      <article class="card help-article">
+        <section>
+          <h3>Getting Started</h3>
+          <ol>
+            <li><strong>Search criteria</strong>: Fill in the search fields on the main tab. You can filter by keyword, sender, tags, and more.</li>
+            <li><strong>Run a summary</strong>: Click <strong>Create Summary</strong> to search for matching messages and generate a summary.</li>
+            <li><strong>Review results</strong>: Check the summary text and review the list of messages that were included.</li>
+            <li><strong>Take action</strong>: Use the buttons below the summary to mark messages read, add tags, or email the summary.</li>
+          </ol>
+        </section>
+
+        <section>
+          <h3>Tabs</h3>
+          <ul>
+            <li><strong>Search and Summary</strong>: The main interface. Search for messages and create summaries.</li>
+            <li><strong>Logs</strong>: View the history of actions performed. You can undo recent actions here.</li>
+            <li><strong>Settings</strong>: Configure backend connection, LLM provider, email settings, and Ollama models.</li>
+            <li><strong>Help</strong>: This page.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Search Filters</h3>
+          <dl>
+            <dt>Keyword</dt>
+            <dd>Search for words in the email subject or body.</dd>
+            <dt>Raw Search</dt>
+            <dd>Advanced search syntax (provider-specific).</dd>
+            <dt>Sender</dt>
+            <dd>Filter by sender email address.</dd>
+            <dt>Recipient</dt>
+            <dd>Filter by recipient email address.</dd>
+            <dt>Tag</dt>
+            <dd>Filter messages that have a specific tag.</dd>
+            <dt>Summary Length</dt>
+            <dd>Control how detailed the summary should be (1–10).</dd>
+            <dt>Unread Only / Read Only</dt>
+            <dd>Limit results to unread or read messages.</dd>
+            <dt>Use AND</dt>
+            <dd>When checked, use AND logic for multiple filters. When unchecked, use OR logic.</dd>
+            <dt>Replied</dt>
+            <dd>Filter by whether the message has been replied to.</dd>
+          </dl>
+        </section>
+
+        <section>
+          <h3>Actions</h3>
+          <ul>
+            <li><strong>Mark Read</strong>: Mark all messages in the summary result as read.</li>
+            <li><strong>Tag Summarised</strong>: Add the configured tag to all messages in the result.</li>
+            <li><strong>Email Summary</strong>: Send the summary text to the configured recipient email.</li>
+            <li><strong>Undo Last</strong>: Reverse the last action (available in Logs tab).</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Settings</h3>
+          <p>Configure IMAP/SMTP connection details, choose an LLM provider, and set up Ollama if using local inference.</p>
+          <ul>
+            <li><strong>LLM Provider</strong>: Choose between Ollama (local), OpenAI (remote), or Anthropic (remote).</li>
+            <li><strong>Backend URL</strong>: Point to a different backend service if needed.</li>
+            <li><strong>Backend API Key</strong>: Optional authentication for the backend (if enabled).</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Project Links</h3>
+          <ul>
+            <li><a href="https://github.com/krahd/Mail-Summariser" target="_blank">View on GitHub</a></li>
+            <li><a href="https://github.com/krahd/Mail-Summariser/releases" target="_blank">Latest Releases</a></li>
+            <li><a href="https://krahd.github.io/Mail-Summariser/" target="_blank">Project Website</a></li>
+          </ul>
+        </section>
+      </article>
     </section>
   </main>
 
