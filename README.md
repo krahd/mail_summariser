@@ -2,6 +2,12 @@
 
 Mail Summariser is a local-first email assistant with a FastAPI backend, a SwiftUI macOS client, and a browser client. It searches messages, generates concise summaries, and supports post-summary actions while keeping settings and job history in SQLite.
 
+Project website: [krahd.github.io/Mail-Summariser](https://krahd.github.io/Mail-Summariser/)
+
+## Main screen
+
+![Mail Summariser main screen](docs/assets/main-screen.png)
+
 ## Project status
 
 - Current release target: `v0.0.3`
