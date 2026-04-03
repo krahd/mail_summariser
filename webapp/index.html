@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mail Summariser Web</title>
+  <link rel="stylesheet" href="/web/styles.css" />
+</head>
+<body>
+  <div class="bg-shape bg-shape-1" aria-hidden="true"></div>
+  <div class="bg-shape bg-shape-2" aria-hidden="true"></div>
+
+  <header class="app-header">
+    <h1>Mail Summariser</h1>
+    <p>Cross-platform mail summarising workspace</p>
+    <div class="connection-bar">
+      <button id="test-connection" type="button" class="secondary">Test Connection</button>
+      <p id="connection-test-status" class="status-line connection-status">Connection not tested yet.</p>
+    </div>
+    <p id="status-line" class="status-line">Ready</p>
+  </header>
+
+  <nav class="tabs" aria-label="Main views">
+    <button class="tab active" data-tab="search">Search and Summary</button>
+    <button class="tab" data-tab="logs">Logs</button>
+    <button class="tab" data-tab="settings">Settings</button>
+  </nav>
+
+  <main>
+    <section id="tab-search" class="tab-panel active">
+      <form id="search-form" class="card grid-form" autocomplete="off">
+        <h2>Search Criteria</h2>
+        <label>Keyword <input name="keyword" /></label>
+        <label>Raw Search <input name="rawSearch" /></label>
+        <label>Sender <input name="sender" /></label>
+        <label>Recipient <input name="recipient" /></label>
+        <label>Tag <input name="tag" /></label>
+        <label>Summary Length
+          <input name="summaryLength" type="number" min="1" max="10" value="5" />
+        </label>
+        <label class="checkbox"><input name="unreadOnly" type="checkbox" checked /> Unread Only</label>
+        <label class="checkbox"><input name="readOnly" type="checkbox" /> Read Only</label>
+        <label class="checkbox"><input name="useAnd" type="checkbox" checked /> Use AND</label>
+        <label>Replied
+          <select name="replied">
+            <option value="">Any</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </label>
+        <button type="submit">Create Summary</button>
+      </form>
+
+      <section class="card" id="summary-card">
+        <h2>Summary</h2>
+        <p id="job-id">No job yet</p>
+        <pre id="summary-text">Run a summary to see output here.</pre>
+        <div class="actions-row">
+          <button id="mark-read" type="button" class="secondary" disabled>Mark Read</button>
+          <button id="tag-summary" type="button" class="secondary" disabled>Tag Summarised</button>
+          <button id="email-summary" type="button" class="secondary" disabled>Email Summary</button>
+          <button id="undo-action" type="button" class="secondary">Undo Last</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Messages</h2>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>ID</th><th>Subject</th><th>Sender</th><th>Date</th></tr>
+            </thead>
+            <tbody id="messages-body">
+              <tr><td colspan="4">No messages yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section id="tab-logs" class="tab-panel">
+      <section class="card">
+        <div class="section-header">
+          <h2>Action Logs</h2>
+          <button id="refresh-logs" type="button" class="secondary">Refresh</button>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>Time</th><th>Action</th><th>Status</th><th>Details</th><th>Job</th></tr>
+            </thead>
+            <tbody id="logs-body">
+              <tr><td colspan="5">No logs loaded.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section id="tab-settings" class="tab-panel">
+      <form id="settings-form" class="card grid-form">
+        <h2>Settings</h2>
+        <label>IMAP Host <input name="imapHost" required /></label>
+        <label>IMAP Port <input name="imapPort" type="number" required /></label>
+        <label>SMTP Host <input name="smtpHost" required /></label>
+        <label>SMTP Port <input name="smtpPort" type="number" required /></label>
+        <label>Username <input name="username" required /></label>
+        <label>Recipient Email <input name="recipientEmail" type="email" required /></label>
+        <label>Summarised Tag <input name="summarisedTag" required /></label>
+        <label>LLM Provider
+          <select name="llmProvider" id="llm-provider" required>
+            <option value="ollama">Ollama (local)</option>
+            <option value="openai">OpenAI (remote)</option>
+            <option value="anthropic">Anthropic (remote)</option>
+          </select>
+        </label>
+        <p id="provider-key-warning" class="status-line">Provider key check pending.</p>
+        <label id="openai-key-group">OpenAI API Key
+          <div class="secret-row">
+            <input name="openaiApiKey" id="openai-api-key" type="password" placeholder="Used when provider is OpenAI" autocomplete="off" />
+            <button id="toggle-openai-key" type="button" class="secondary tiny-btn">Show</button>
+          </div>
+          <small class="field-note">Stored locally in SQLite. For stronger security, set <code>OPENAI_API_KEY</code> in the backend environment.</small>
+        </label>
+        <label id="anthropic-key-group">Anthropic API Key
+          <div class="secret-row">
+            <input name="anthropicApiKey" id="anthropic-api-key" type="password" placeholder="Used when provider is Anthropic" autocomplete="off" />
+            <button id="toggle-anthropic-key" type="button" class="secondary tiny-btn">Show</button>
+          </div>
+          <small class="field-note">Stored locally in SQLite. For stronger security, set <code>ANTHROPIC_API_KEY</code> in the backend environment.</small>
+        </label>
+        <label>Ollama Host <input name="ollamaHost" type="url" placeholder="http://127.0.0.1:11434" required /></label>
+        <label class="checkbox"><input name="ollamaAutoStart" type="checkbox" /> Auto-start Ollama when needed</label>
+        <label>Model Name <input name="modelName" required /></label>
+        <div class="inline-actions">
+          <button id="refresh-models" type="button" class="secondary">Refresh Available Models</button>
+        </div>
+        <p id="ollama-status" class="status-line">Model list not loaded yet.</p>
+        <label>Discover Downloadable Ollama Models
+          <select id="downloadable-model" name="downloadableModel">
+            <option value="">Select a model to download...</option>
+          </select>
+        </label>
+        <div class="inline-actions">
+          <button id="refresh-catalog" type="button" class="secondary">Discover Models</button>
+          <button id="download-model" type="button">Download Selected Model</button>
+        </div>
+        <p id="catalog-status" class="status-line">Catalogue not loaded yet.</p>
+        <label>Backend Base URL
+          <input name="backendBaseURL" type="url" required />
+          <small class="field-note">Changes which backend this web app talks to. It does not restart any backend service.</small>
+        </label>
+        <label>Backend API Key (for backend auth, not OpenAI/Anthropic)
+          <div class="secret-row">
+            <input id="backend-api-key" type="password" placeholder="Sends X-API-Key with every request" autocomplete="off" />
+            <button id="toggle-backend-key" type="button" class="secondary tiny-btn">Show</button>
+          </div>
+          <small class="field-note">Use this only if backend auth is enabled via <code>API_KEY</code>. Stored in browser localStorage for this machine.</small>
+        </label>
+        <button type="submit">Save settings</button>
+      </form>
+    </section>
+  </main>
+
+  <script type="module" src="/web/app.js"></script>
+</body>
+</html>

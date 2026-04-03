@@ -37,6 +37,10 @@ class JobAction(BaseModel):
     jobId: str
 
 
+class ModelDownloadRequest(BaseModel):
+    name: str
+
+
 class ActionLogItem(BaseModel):
     id: str
     timestamp: str
@@ -47,12 +51,17 @@ class ActionLogItem(BaseModel):
 
 
 class AppSettings(BaseModel):
-    imapHost: str = ""
-    imapPort: int = 993
-    smtpHost: str = ""
-    smtpPort: int = 465
-    username: str = ""
-    recipientEmail: str = ""
-    summarisedTag: str = "summarised"
-    modelName: str = "gpt-5"
-    backendBaseURL: str = "http://127.0.0.1:8765"
+    imapHost: str
+    imapPort: int
+    smtpHost: str
+    smtpPort: int
+    username: str
+    recipientEmail: str
+    summarisedTag: str
+    llmProvider: str
+    openaiApiKey: str
+    anthropicApiKey: str
+    ollamaHost: str
+    ollamaAutoStart: bool
+    modelName: str
+    backendBaseURL: str
