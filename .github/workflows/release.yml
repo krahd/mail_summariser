@@ -62,10 +62,7 @@ jobs:
       - name: Package backend artifact (windows)
         if: matrix.platform == 'windows'
         run: |
-          python scripts/package_backend_release.py \
-            --platform "${{ matrix.platform }}" \
-            --arch "${{ matrix.arch }}" \
-            --input "dist/mail-summariser-backend-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.binary_ext }}"
+          python scripts/package_backend_release.py --platform "${{ matrix.platform }}" --arch "${{ matrix.arch }}" --input "dist/mail-summariser-backend-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.binary_ext }}"
 
       - name: Smoke test backend binary (unix)
         if: matrix.platform != 'windows'
