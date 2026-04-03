@@ -120,6 +120,31 @@ h1 {
   min-width: 64px;
 }
 
+.log-undo-btn {
+  min-width: 72px;
+}
+
+.log-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.log-badge-final {
+  background: #fff3dd;
+  border: 1px solid #e6c995;
+  color: #7a5a1f;
+}
+
+.log-badge-muted {
+  background: #f2f5f4;
+  border: 1px solid #ced7d3;
+  color: #4c5b55;
+}
+
 .is-hidden {
   display: none !important;
 }

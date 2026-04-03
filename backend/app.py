@@ -10,7 +10,19 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from config import ALLOWED_ORIGINS, API_KEY, API_KEY_HEADER, DEFAULT_SETTINGS
-from db import get_job, get_setting, init_db, insert_job, list_logs, list_settings, pop_undo, push_undo, set_setting
+from db import (
+    get_job,
+    get_setting,
+    init_db,
+    insert_job,
+    list_logs,
+    list_settings,
+    list_undoable_log_ids,
+    pop_undo,
+    pop_undo_by_log_id,
+    push_undo,
+    set_setting,
+)
 from logging_service import log_action
 from mail_service import add_keyword_tag, demo_search, mark_messages_read, remove_keyword_tag, send_summary_email
 from model_provider_service import (
@@ -161,12 +173,13 @@ def mark_read(action: JobAction) -> dict[str, str]:
 
     message_ids = [m["id"] for m in job["messages_json"]]
     mark_messages_read(message_ids)
+    action_log_id = log_action("mark_read", "ok",
+                               f"Marked {len(message_ids)} messages as read", job_id=action.jobId)
     push_undo(
-        {"type": "mark_read", "message_ids": message_ids, "job_id": action.jobId},
+        {"type": "mark_read", "message_ids": message_ids,
+            "job_id": action.jobId, "log_id": action_log_id},
         created_at=datetime.now().isoformat(timespec="seconds"),
     )
-    log_action("mark_read", "ok",
-               f"Marked {len(message_ids)} messages as read", job_id=action.jobId)
     return {"status": "ok"}
 
 
@@ -179,12 +192,13 @@ def tag_summarised(action: JobAction) -> dict[str, str]:
     message_ids = [m["id"] for m in job["messages_json"]]
     tag = get_setting("summarisedTag", "summarised")
     add_keyword_tag(message_ids, tag)
+    action_log_id = log_action("tag_summarised", "ok",
+                               f"Added tag '{tag}' to {len(message_ids)} messages", job_id=action.jobId)
     push_undo(
-        {"type": "tag_add", "message_ids": message_ids, "tag": tag, "job_id": action.jobId},
+        {"type": "tag_add", "message_ids": message_ids, "tag": tag,
+            "job_id": action.jobId, "log_id": action_log_id},
         created_at=datetime.now().isoformat(timespec="seconds"),
     )
-    log_action("tag_summarised", "ok",
-               f"Added tag '{tag}' to {len(message_ids)} messages", job_id=action.jobId)
     return {"status": "ok"}
 
 
@@ -203,17 +217,30 @@ def email_summary(action: JobAction) -> dict[str, str]:
         subject=f"Mail summary for {action.jobId}",
         body=job["summary_text"],
     )
+    action_log_id = log_action("email_summary", "ok", f"Sent summary email to {recipient}", job_id=action.jobId)
     push_undo(
-        {"type": "email_sent", "recipient": recipient, "job_id": action.jobId},
+        {"type": "email_sent", "recipient": recipient,
+            "job_id": action.jobId, "log_id": action_log_id},
         created_at=datetime.now().isoformat(timespec="seconds"),
     )
-    log_action("email_summary", "ok", f"Sent summary email to {recipient}", job_id=action.jobId)
     return {"status": "ok"}
 
 
 @app.get("/logs")
 def get_logs() -> list[dict]:
-    return list_logs()
+    logs = list_logs()
+    undoable_log_ids = list_undoable_log_ids()
+    undo_actions = {"mark_read", "tag_summarised", "email_summary"}
+    for log in logs:
+        is_undoable = log["id"] in undoable_log_ids
+        log["undoable"] = is_undoable
+        if is_undoable:
+            log["undo_status"] = "undoable"
+        elif log["action"] in undo_actions:
+            log["undo_status"] = "final"
+        else:
+            log["undo_status"] = "not_undoable"
+    return logs
 
 
 @app.get("/settings", response_model=AppSettings)
@@ -351,4 +378,43 @@ def undo_last_action() -> dict[str, str]:
         return {"status": "partial"}
 
     log_action("undo", "noop", f"No undo handler for {action_type}", job_id=last.get("job_id"))
+    return {"status": "noop"}
+
+
+@app.post("/actions/undo/logs/{log_id}")
+def undo_action_by_log(log_id: str) -> dict[str, str]:
+    payload = pop_undo_by_log_id(log_id)
+    if payload is None:
+        raise HTTPException(status_code=400, detail="Selected log item is not undoable")
+
+    action_type = payload.get("type")
+    if action_type == "tag_add":
+        remove_keyword_tag(payload["message_ids"], payload["tag"])
+        log_action(
+            "undo",
+            "ok",
+            f"Removed tag '{payload['tag']}' from selected log item",
+            job_id=payload.get("job_id"),
+        )
+        return {"status": "ok"}
+
+    if action_type == "mark_read":
+        log_action(
+            "undo",
+            "partial",
+            "mark_read undo placeholder: implement restoring prior unread/read flags in real mail backend",
+            job_id=payload.get("job_id"),
+        )
+        return {"status": "partial"}
+
+    if action_type == "email_sent":
+        log_action(
+            "undo",
+            "partial",
+            "Email cannot be unsent; action recorded only",
+            job_id=payload.get("job_id"),
+        )
+        return {"status": "partial"}
+
+    log_action("undo", "noop", f"No undo handler for {action_type}", job_id=payload.get("job_id"))
     return {"status": "noop"}

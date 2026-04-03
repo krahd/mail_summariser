@@ -40,6 +40,8 @@
  * @property {string} status
  * @property {string} details
  * @property {string|null} job_id
+ * @property {boolean} [undoable]
+ * @property {string} [undo_status]
  */
 
 /**
@@ -198,6 +200,10 @@ export function createApiClient(context) {
     },
     undo() {
       return request("/actions/undo", { method: "POST" });
+    },
+    /** @param {string} logId */
+    undoLog(logId) {
+      return request(`/actions/undo/logs/${encodeURIComponent(logId)}`, { method: "POST" });
     },
   };
 }

@@ -91,18 +91,30 @@ function renderMessages(messages) {
 
 function renderLogs(logs) {
   if (!Array.isArray(logs) || logs.length === 0) {
-    logsBody.innerHTML = "<tr><td colspan='5'>No logs available.</td></tr>";
+    logsBody.innerHTML = "<tr><td colspan='6'>No logs available.</td></tr>";
     return;
   }
 
   logsBody.innerHTML = logs
     .map(
-      (item) =>
+      (item) => {
+        let undoCell = '<span class="log-badge log-badge-muted">Not undoable</span>';
+        if (item.undoable) {
+          undoCell = `<button type="button" class="secondary tiny-btn log-undo-btn" data-log-id="${escapeHtml(
+            item.id || ""
+          )}">Undo</button>`;
+        } else if (item.undo_status === "final") {
+          undoCell = '<span class="log-badge log-badge-final">Final</span>';
+        }
+
+        return (
         `<tr><td>${escapeHtml(item.timestamp || "")}</td><td>${escapeHtml(
           item.action || ""
         )}</td><td>${escapeHtml(item.status || "")}</td><td>${escapeHtml(
           item.details || ""
-        )}</td><td>${escapeHtml(item.job_id || "")}</td></tr>`
+        )}</td><td>${escapeHtml(item.job_id || "")}</td><td>${undoCell}</td></tr>`
+        );
+      }
     )
     .join("");
 }
@@ -477,6 +489,33 @@ function wireEvents() {
       setStatus("Logs refreshed.");
     } catch (error) {
       setStatus(`Log refresh failed: ${error.message}`, true);
+    }
+  });
+
+  logsBody.addEventListener("click", async (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    const undoButton = target.closest(".log-undo-btn");
+    if (!undoButton) {
+      return;
+    }
+
+    const logId = undoButton.getAttribute("data-log-id");
+    if (!logId) {
+      setStatus("Undo failed: missing log id.", true);
+      return;
+    }
+
+    try {
+      undoButton.setAttribute("disabled", "disabled");
+      await api.undoLog(logId);
+      setStatus("Undo requested for selected log entry.");
+      renderLogs(await api.getLogs());
+    } catch (error) {
+      undoButton.removeAttribute("disabled");
+      setStatus(`Undo failed: ${error.message}`, true);
     }
   });
 

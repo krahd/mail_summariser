@@ -141,3 +141,35 @@ def pop_undo() -> dict[str, Any] | None:
             return None
         conn.execute("DELETE FROM undo_stack WHERE id = ?", (row["id"],))
         return json.loads(row["payload_json"])
+
+
+def list_undoable_log_ids() -> set[str]:
+    undoable_log_ids: set[str] = set()
+    with get_conn() as conn:
+        rows = conn.execute("SELECT payload_json FROM undo_stack ORDER BY id ASC").fetchall()
+        for row in rows:
+            try:
+                payload = json.loads(row["payload_json"])
+            except (TypeError, json.JSONDecodeError):
+                continue
+            if isinstance(payload, dict):
+                log_id = payload.get("log_id")
+                if isinstance(log_id, str) and log_id:
+                    undoable_log_ids.add(log_id)
+    return undoable_log_ids
+
+
+def pop_undo_by_log_id(log_id: str) -> dict[str, Any] | None:
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT id, payload_json FROM undo_stack ORDER BY id DESC"
+        ).fetchall()
+        for row in rows:
+            try:
+                payload = json.loads(row["payload_json"])
+            except (TypeError, json.JSONDecodeError):
+                continue
+            if isinstance(payload, dict) and payload.get("log_id") == log_id:
+                conn.execute("DELETE FROM undo_stack WHERE id = ?", (row["id"],))
+                return payload
+    return None
