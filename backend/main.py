@@ -2,6 +2,7 @@ import argparse
 import os
 
 import uvicorn
+from app import app
 
 
 def parse_args() -> argparse.Namespace:
@@ -13,7 +14,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    uvicorn.run("app:app", host=args.host, port=args.port, reload=False)
+    uvicorn.run(app, host=args.host, port=args.port, reload=False)
 
 
 if __name__ == "__main__":
