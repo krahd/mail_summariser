@@ -1,5 +1,26 @@
 # Mail Summariser (macOS + Web)
 
+Mail Summariser is a local-first email workflow assistant. It helps you find messages, generate concise actionable summaries, and apply follow-up actions from one interface.
+
+## What the project does
+
+- Collects email search criteria (keyword, sender, recipient, tags, unread/read flags, and logical filters)
+- Produces a short summary from matched messages using a selectable LLM provider
+- Supports local and remote providers:
+	- local Ollama models
+	- OpenAI models
+	- Anthropic models
+- Lets you run post-summary actions such as mark-as-read, add/remove tags, email summary, and undo
+- Persists app settings, logs, and summary jobs in SQLite so behaviour is reproducible between sessions
+
+## How it works
+
+1. The frontend (web or macOS) sends search criteria to the FastAPI backend.
+2. The backend fetches message data (currently via demo data scaffolding, with IMAP integration planned).
+3. The backend builds a provider-agnostic summarisation prompt and calls the selected model provider.
+4. Provider responses are validated; if they are unavailable or invalid, the backend falls back to a deterministic built-in summariser.
+5. The backend returns summary output plus message metadata, and records logs/jobs for traceability.
+
 Starter project with a Python backend, a native macOS GUI, and a new browser-based web client.
 
 ## Structure
