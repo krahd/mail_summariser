@@ -36,7 +36,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="Mail Summariser Backend",
-    version="0.0.2",
+    version="0.0.3",
     lifespan=lifespan,
 )
 

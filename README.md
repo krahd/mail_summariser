@@ -4,7 +4,7 @@ Mail Summariser is a local-first email assistant with a FastAPI backend, a Swift
 
 ## Project status
 
-- Current release target: `v0.0.2`
+- Current release target: `v0.0.3`
 - Mail source: demo dataset only (real IMAP integration is planned, not enabled yet)
 - Cross-platform release artifacts: backend binaries for macOS, Linux, and Windows
 - Desktop client release artifact: macOS `.app`
@@ -111,7 +111,7 @@ Note: backend binaries must be built on matching host OS (or CI matrix runners).
 
 ## Release process
 
-Tag convention: `v<semver>` (example: `v0.0.2`).
+Tag convention: `v<semver>` (example: `v0.0.3`).
 
 On tag push, GitHub Actions builds and publishes release assets for:
 
@@ -129,5 +129,5 @@ Packaged backend downloads are also published for easier installation:
 ## Known limitations
 
 - IMAP integration is not yet enabled.
-- Windows/Linux desktop native apps are not included in `v0.0.2`.
+- Windows/Linux desktop native apps are not included in `v0.0.3`.
 - Provider-dependent quality varies by selected model and availability.

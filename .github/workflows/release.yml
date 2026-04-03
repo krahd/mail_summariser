@@ -147,21 +147,34 @@ jobs:
         with:
           path: release-assets
 
+      - name: Collect release files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-bundle
+          cp "$(find release-assets -type f -name 'mail-summariser-backend-macos-arm64' | head -n1)" release-bundle/
+          cp "$(find release-assets -type f -name 'mail-summariser-backend-macos-arm64.tar.gz' | head -n1)" release-bundle/
+          cp "$(find release-assets -type f -name 'mail-summariser-backend-linux-x64' | head -n1)" release-bundle/
+          cp "$(find release-assets -type f -name 'mail-summariser-backend-linux-x64.tar.gz' | head -n1)" release-bundle/
+          cp "$(find release-assets -type f -name 'mail-summariser-backend-windows-x64.exe' | head -n1)" release-bundle/
+          cp "$(find release-assets -type f -name 'mail-summariser-backend-windows-x64.zip' | head -n1)" release-bundle/
+          cp "$(find release-assets -type f -name 'MailSummariser-macos-app.zip' | head -n1)" release-bundle/
+
       - name: Generate checksums
         run: |
-          cd release-assets
-          find . -type f -maxdepth 3 -print0 | xargs -0 sha256sum > SHA256SUMS.txt
+          cd release-bundle
+          find . -type f -print0 | xargs -0 sha256sum > SHA256SUMS.txt
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           files: |
-            release-assets/backend-macos-arm64/mail-summariser-backend-macos-arm64
-            release-assets/backend-macos-arm64/mail-summariser-backend-macos-arm64.tar.gz
-            release-assets/backend-linux-x64/mail-summariser-backend-linux-x64
-            release-assets/backend-linux-x64/mail-summariser-backend-linux-x64.tar.gz
-            release-assets/backend-windows-x64/mail-summariser-backend-windows-x64.exe
-            release-assets/backend-windows-x64/mail-summariser-backend-windows-x64.zip
-            release-assets/macos-app/MailSummariser-macos-app.zip
-            release-assets/SHA256SUMS.txt
+            release-bundle/mail-summariser-backend-macos-arm64
+            release-bundle/mail-summariser-backend-macos-arm64.tar.gz
+            release-bundle/mail-summariser-backend-linux-x64
+            release-bundle/mail-summariser-backend-linux-x64.tar.gz
+            release-bundle/mail-summariser-backend-windows-x64.exe
+            release-bundle/mail-summariser-backend-windows-x64.zip
+            release-bundle/MailSummariser-macos-app.zip
+            release-bundle/SHA256SUMS.txt
