@@ -51,6 +51,22 @@ jobs:
         run: |
           python scripts/build_backend_binary.py --platform "${{ matrix.platform }}" --arch "${{ matrix.arch }}"
 
+      - name: Package backend artifact (unix)
+        if: matrix.platform != 'windows'
+        run: |
+          python scripts/package_backend_release.py \
+            --platform "${{ matrix.platform }}" \
+            --arch "${{ matrix.arch }}" \
+            --input "dist/mail-summariser-backend-${{ matrix.platform }}-${{ matrix.arch }}"
+
+      - name: Package backend artifact (windows)
+        if: matrix.platform == 'windows'
+        run: |
+          python scripts/package_backend_release.py \
+            --platform "${{ matrix.platform }}" \
+            --arch "${{ matrix.arch }}" \
+            --input "dist/mail-summariser-backend-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.binary_ext }}"
+
       - name: Smoke test backend binary (unix)
         if: matrix.platform != 'windows'
         shell: bash
@@ -95,7 +111,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend-${{ matrix.platform }}-${{ matrix.arch }}
-          path: dist/mail-summariser-backend-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.binary_ext }}
+          path: |
+            dist/mail-summariser-backend-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.binary_ext }}
+            dist/packages/mail-summariser-backend-${{ matrix.platform }}-${{ matrix.arch }}*
 
   build-macos-app:
     name: Build macOS app
@@ -143,7 +161,10 @@ jobs:
           generate_release_notes: true
           files: |
             release-assets/backend-macos-arm64/mail-summariser-backend-macos-arm64
+            release-assets/backend-macos-arm64/mail-summariser-backend-macos-arm64.tar.gz
             release-assets/backend-linux-x64/mail-summariser-backend-linux-x64
+            release-assets/backend-linux-x64/mail-summariser-backend-linux-x64.tar.gz
             release-assets/backend-windows-x64/mail-summariser-backend-windows-x64.exe
+            release-assets/backend-windows-x64/mail-summariser-backend-windows-x64.zip
             release-assets/macos-app/MailSummariser-macos-app.zip
             release-assets/SHA256SUMS.txt

@@ -120,6 +120,12 @@ On tag push, GitHub Actions builds and publishes release assets for:
 - `mail-summariser-backend-windows-*.exe`
 - macOS app archive artifact
 
+Packaged backend downloads are also published for easier installation:
+
+- macOS: `mail-summariser-backend-macos-arm64.tar.gz`
+- Linux: `mail-summariser-backend-linux-x64.tar.gz`
+- Windows: `mail-summariser-backend-windows-x64.zip`
+
 ## Known limitations
 
 - IMAP integration is not yet enabled.
