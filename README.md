@@ -1,144 +1,127 @@
-# Mail Summariser (macOS + Web)
+# Mail Summariser
 
-Mail Summariser is a local-first email workflow assistant. It helps you find messages, generate concise actionable summaries, and apply follow-up actions from one interface.
+Mail Summariser is a local-first email assistant with a FastAPI backend, a SwiftUI macOS client, and a browser client. It searches messages, generates concise summaries, and supports post-summary actions while keeping settings and job history in SQLite.
 
-## What the project does
+## Project status
 
-- Collects email search criteria (keyword, sender, recipient, tags, unread/read flags, and logical filters)
-- Produces a short summary from matched messages using a selectable LLM provider
-- Supports local and remote providers:
-	- local Ollama models
-	- OpenAI models
-	- Anthropic models
-- Lets you run post-summary actions such as mark-as-read, add/remove tags, email summary, and undo
-- Persists app settings, logs, and summary jobs in SQLite so behaviour is reproducible between sessions
+- Current release target: `v0.0.1`
+- Mail source: demo dataset only (real IMAP integration is planned, not enabled yet)
+- Cross-platform release artifacts: backend binaries for macOS, Linux, and Windows
+- Desktop client release artifact: macOS `.app`
 
-## How it works
+## Architecture
 
-1. The frontend (web or macOS) sends search criteria to the FastAPI backend.
-2. The backend fetches message data (currently via demo data scaffolding, with IMAP integration planned).
-3. The backend builds a provider-agnostic summarisation prompt and calls the selected model provider.
-4. Provider responses are validated; if they are unavailable or invalid, the backend falls back to a deterministic built-in summariser.
-5. The backend returns summary output plus message metadata, and records logs/jobs for traceability.
+1. Frontend clients (web or macOS) send search criteria to the backend.
+2. Backend retrieves message candidates from demo data.
+3. Backend builds summarization input and calls selected provider.
+4. If provider output is unavailable or invalid, backend falls back to deterministic built-in summarization.
+5. Backend stores settings, logs, jobs, and undo events in SQLite for traceability.
 
-Starter project with a Python backend, a native macOS GUI, and a new browser-based web client.
+## Repository structure
 
-## Structure
+- `backend/`: FastAPI service, summary logic, provider integration, persistence
+- `webapp/`: static browser UI served at `/web`
+- `macos-app/`: SwiftUI macOS application source
+- `scripts/`: smoke tests and build scripts
+- `.vscode/tasks.json`: local tasks for backend startup and artifact creation
 
-- `macos-app/`: SwiftUI source files for the native macOS app
-- `backend/`: FastAPI backend with persisted settings, logs, jobs, and undo history
-- `webapp/`: Static web client served by the backend at `/web`
+## Prerequisites
 
-## Backend quick start
+- Python 3.10+
+- macOS + Xcode (for macOS app build)
+- Optional: Ollama for local model inference
 
-```bash
-cd backend
-./start_backend
-```
+## Quick start
 
-Then visit:
-- `http://127.0.0.1:8766/docs`
-- `http://127.0.0.1:8766/web`
-
-Environment variables for browser client support:
-- `ALLOWED_ORIGINS`: comma-separated origins for CORS. Defaults include local Vite and local backend URLs.
-- `API_KEY`: optional API key. When set, all API routes except docs/health/web static require this key.
-- `API_KEY_HEADER`: request header used for API key (default: `X-API-Key`).
-
-LLM settings:
-- `LLM_PROVIDER`: one of `ollama`, `openai`, `anthropic`.
-- `OPENAI_API_KEY`: optional OpenAI key used for OpenAI provider.
-- `ANTHROPIC_API_KEY`: optional Anthropic key used for Anthropic provider.
-- `LLM_API_KEY`: legacy shared key fallback (kept for backward compatibility).
-- `OLLAMA_HOST`: local Ollama endpoint (default `http://127.0.0.1:11434`).
-- `OLLAMA_AUTO_START`: `true`/`false`; if true the backend will attempt to start Ollama automatically.
-- `MODEL_NAME`: selected model name for the active provider.
-
-## macOS app quick start
-
-Open `MailSummariser.xcodeproj` in Xcode and run the `MailSummariser` scheme.
-
-The app defaults to the backend at `http://127.0.0.1:8766`.
-
-## Web app quick start
-
-1. Start backend from project root:
+From repository root:
 
 ```bash
 ./start_backend.sh
 ```
 
-2. Open:
+Open:
 
-```text
-http://127.0.0.1:8766/web
-```
+- `http://127.0.0.1:8766/docs`
+- `http://127.0.0.1:8766/web`
 
-3. (Optional) If backend auth is enabled via `API_KEY`, open `Settings` and enter the **Backend API Key** field.
+### macOS app
 
-## Backend smoke test
+Open `MailSummariser.xcodeproj` in Xcode and run scheme `MailSummariser`.
 
-Run an end-to-end API smoke test against a running backend:
+## Configuration
+
+Core environment variables:
+
+- `ALLOWED_ORIGINS`: comma-separated CORS origins
+- `API_KEY`: optional backend API key
+- `API_KEY_HEADER`: auth header name (default `X-API-Key`)
+- `LLM_PROVIDER`: `ollama`, `openai`, or `anthropic`
+- `OPENAI_API_KEY`: OpenAI key
+- `ANTHROPIC_API_KEY`: Anthropic key
+- `OLLAMA_HOST`: Ollama endpoint (default `http://127.0.0.1:11434`)
+- `OLLAMA_AUTO_START`: auto-start Ollama when possible
+- `MODEL_NAME`: selected provider model
+- `MAIL_SUMMARISER_DATA_DIR`: optional override for SQLite/log storage location
+
+## Testing
+
+### Smoke test
+
+Run the backend smoke checks against a running instance:
 
 ```bash
 ./scripts/smoke_test_backend.sh
 ```
 
-Optional custom base URL:
-
-```bash
-./scripts/smoke_test_backend.sh http://127.0.0.1:8766
-```
-
-If API key auth is enabled:
+With API key enabled:
 
 ```bash
 API_KEY=your-key ./scripts/smoke_test_backend.sh
 ```
 
-## Model Provider UX
+### Pre-IMAP confidence strategy
 
-The settings screen supports both remote and local models:
-- `Ollama (local)`: backend can auto-start Ollama and list locally available models.
-- `OpenAI` / `Anthropic`: shows suggested model names and stores provider-specific keys in app settings.
+The full testing strategy is documented in [docs/TESTING_STRATEGY.md](docs/TESTING_STRATEGY.md) and is designed to prove functional correctness before connecting a real IMAP account.
 
-There are now two different key types in the UI:
-- `Backend API Key`: used only for backend route authentication (`X-API-Key` header). Stored in browser localStorage.
-- `Provider API Keys` (OpenAI/Anthropic): used only for LLM inference. Stored in backend settings and returned masked.
+Release gate summary:
 
-For non-technical users, the recommended default is:
-1. Keep provider on Ollama.
-2. Keep auto-start enabled.
-3. Click "Refresh Available Models" and select one.
+1. Unit and integration checks must pass.
+2. Platform binary startup smoke checks must pass on macOS, Linux, and Windows.
+3. Release workflow publishes only when matrix jobs succeed.
 
-The app now supports provider-based summarization:
-- `ollama`: local inference via Ollama API.
-- `openai`: remote inference via OpenAI Chat Completions.
-- `anthropic`: remote inference via Anthropic Messages API.
+## Binary builds
 
-If the selected provider fails (missing key, service unavailable, etc.), the backend falls back to the built-in demo summarizer and logs a warning so the user still gets a result.
+VS Code task labels:
 
-### Downloading Ollama models from the app
+- `Build Backend Binary (macOS)`
+- `Build Backend Binary (Linux)`
+- `Build Backend Binary (Windows)`
+- `Build macOS App Archive`
 
-In Settings:
-1. Click `Discover Models` to fetch downloadable model names from the Ollama public catalog.
-2. Pick a model from `Discover Downloadable Ollama Models`.
-3. Click `Download Selected Model`.
+Direct script usage:
 
-The backend will ensure Ollama is running (if auto-start is enabled), then trigger `ollama pull` in the background.
+```bash
+python3 scripts/build_backend_binary.py --platform macos --arch arm64
+python3 scripts/build_backend_binary.py --platform linux --arch x64
+python3 scripts/build_backend_binary.py --platform windows --arch x64
+./scripts/build_macos_app.sh
+```
 
-## Notes
+Note: backend binaries must be built on matching host OS (or CI matrix runners).
 
-This is an MVP scaffold.
+## Release process
 
-Current backend behavior:
-- stores settings in SQLite
-- stores summary jobs in SQLite
-- stores logs in SQLite
-- supports a basic undo stack
-- uses **demo mail data** instead of real IMAP
+Tag convention: `v<semver>` (example: `v0.0.1`).
 
-Next step after this scaffold:
-- implement real IMAP search in `backend/mail_service.py`
-- implement real LLM summary generation in `backend/summary_service.py`
-- wire MailMate-specific send/compose helpers if desired
+On tag push, GitHub Actions builds and publishes release assets for:
+
+- `mail-summariser-backend-macos-*`
+- `mail-summariser-backend-linux-*`
+- `mail-summariser-backend-windows-*.exe`
+- macOS app archive artifact
+
+## Known limitations
+
+- IMAP integration is not yet enabled.
+- Windows/Linux desktop native apps are not included in `v0.0.1`.
+- Provider-dependent quality varies by selected model and availability.

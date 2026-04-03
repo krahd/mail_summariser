@@ -53,6 +53,75 @@
         "panel": "shared",
         "showReuseMessage": true
       }
+    },
+    {
+      "label": "Build Backend Binary (macOS)",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "scripts/build_backend_binary.py",
+        "--platform",
+        "macos",
+        "--arch",
+        "arm64"
+      ],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true
+      }
+    },
+    {
+      "label": "Build Backend Binary (Linux)",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "scripts/build_backend_binary.py",
+        "--platform",
+        "linux",
+        "--arch",
+        "x64"
+      ],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true
+      }
+    },
+    {
+      "label": "Build Backend Binary (Windows)",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "scripts/build_backend_binary.py",
+        "--platform",
+        "windows",
+        "--arch",
+        "x64"
+      ],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true
+      }
+    },
+    {
+      "label": "Build macOS App Archive",
+      "type": "shell",
+      "command": "./scripts/build_macos_app.sh",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true
+      }
     }
   ]
 }

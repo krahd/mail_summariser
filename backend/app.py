@@ -1,4 +1,5 @@
 import contextlib
+import sys
 from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
@@ -35,7 +36,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="Mail Summariser Backend",
-    version="0.1.0",
+    version="0.0.1",
     lifespan=lifespan,
 )
 
@@ -76,7 +77,18 @@ async def enforce_api_key(request: Request, call_next):
     return await call_next(request)
 
 
-WEBAPP_DIR = Path(__file__).resolve().parent.parent / "webapp"
+
+def _resolve_webapp_dir() -> Path:
+    # When bundled with PyInstaller, static files are unpacked under _MEIPASS.
+    meipass_dir = getattr(sys, "_MEIPASS", None)
+    if meipass_dir:
+        bundled = Path(meipass_dir) / "webapp"
+        if bundled.exists():
+            return bundled
+    return Path(__file__).resolve().parent.parent / "webapp"
+
+
+WEBAPP_DIR = _resolve_webapp_dir()
 if WEBAPP_DIR.exists():
     app.mount("/web", StaticFiles(directory=WEBAPP_DIR, html=True), name="web")
 

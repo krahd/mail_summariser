@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 
@@ -6,7 +7,21 @@ def _split_csv(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 APP_DIR = Path(__file__).resolve().parent
-DATA_DIR = APP_DIR / "data"
+
+
+def _resolve_data_dir() -> Path:
+    """Resolve a writable data directory for both source and packaged runs."""
+    override = os.getenv("MAIL_SUMMARISER_DATA_DIR", "").strip()
+    if override:
+        return Path(override).expanduser().resolve()
+
+    if getattr(sys, "frozen", False):
+        return Path.home() / ".mail-summariser"
+
+    return APP_DIR / "data"
+
+
+DATA_DIR = _resolve_data_dir()
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = DATA_DIR / "mail_summariser.sqlite3"
 
