@@ -9,7 +9,7 @@ struct SummaryView: View {
                 .font(.title2)
 
             if appState.currentMessages.isEmpty {
-                ContentUnavailableView("No summary yet", systemImage: "doc.text.magnifyingglass", description: Text("Create a summary in the Search tab."))
+                ContentUnavailableView("No summary yet", systemImage: "doc.text.magnifyingglass", description: Text("Create a summary in the Main tab."))
             } else {
                 Text("Job ID: \(appState.selectedJobId)")
                     .font(.caption)

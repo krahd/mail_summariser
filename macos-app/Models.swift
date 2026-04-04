@@ -37,20 +37,44 @@ struct ActionLogItem: Codable, Identifiable {
     var status: String
     var details: String
     var job_id: String?
+    var undoable: Bool?
+    var undo_status: String?
 }
 
 struct AppSettings: Codable {
+    var dummyMode: Bool = true
     var imapHost: String = ""
     var imapPort: Int = 993
+    var imapUseSSL: Bool = true
+    var imapPassword: String = ""
     var smtpHost: String = ""
     var smtpPort: Int = 465
+    var smtpUseSSL: Bool = true
+    var smtpPassword: String = ""
     var username: String = ""
     var recipientEmail: String = ""
     var summarisedTag: String = "summarised"
+    var llmProvider: String = "ollama"
+    var openaiApiKey: String = ""
+    var anthropicApiKey: String = ""
+    var ollamaHost: String = "http://127.0.0.1:11434"
+    var ollamaAutoStart: Bool = true
     var modelName: String = "gpt-5"
     var backendBaseURL: String = "http://127.0.0.1:8766"
 }
 
 struct EmptyResponse: Codable {
     let status: String?
+}
+
+struct ConnectionComponent: Codable {
+    let status: String
+    let message: String
+}
+
+struct ConnectionTestResponse: Codable {
+    let status: String
+    let mode: String
+    let imap: ConnectionComponent
+    let smtp: ConnectionComponent
 }

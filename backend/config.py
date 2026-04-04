@@ -40,10 +40,15 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()
 
 # Default application settings
 DEFAULT_SETTINGS = {
+    "dummyMode": os.getenv("DUMMY_MODE", "true").lower() in ("1", "true", "yes", "on"),
     "imapHost": os.getenv("IMAP_HOST", ""),
     "imapPort": int(os.getenv("IMAP_PORT", "993")),
+    "imapUseSSL": os.getenv("IMAP_USE_SSL", "true").lower() in ("1", "true", "yes", "on"),
+    "imapPassword": os.getenv("IMAP_PASSWORD", os.getenv("MAIL_PASSWORD", "")),
     "smtpHost": os.getenv("SMTP_HOST", ""),
     "smtpPort": int(os.getenv("SMTP_PORT", "465")),
+    "smtpUseSSL": os.getenv("SMTP_USE_SSL", "true").lower() in ("1", "true", "yes", "on"),
+    "smtpPassword": os.getenv("SMTP_PASSWORD", os.getenv("MAIL_PASSWORD", "")),
     "username": os.getenv("MAIL_USERNAME", ""),
     "recipientEmail": os.getenv("RECIPIENT_EMAIL", ""),
     "summarisedTag": os.getenv("SUMMARISED_TAG", "summarised"),

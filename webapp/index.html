@@ -16,17 +16,14 @@
       <button id="help-button" class="help-btn" title="Help and manual" aria-label="Open help">?</button>
     </div>
     <p>Cross-platform mail summarising workspace</p>
-    <div class="connection-bar">
-      <button id="test-connection" type="button" class="secondary">Test Connection</button>
-      <p id="connection-test-status" class="status-line connection-status">Connection not tested yet.</p>
-    </div>
     <p id="status-line" class="status-line">Ready</p>
   </header>
 
   <nav class="tabs" aria-label="Main views">
-    <button class="tab active" data-tab="search">Search and Summary</button>
-    <button class="tab" data-tab="logs">Logs</button>
+    <button class="tab active" data-tab="search">Main</button>
+    <button class="tab" data-tab="logs">Log</button>
     <button class="tab" data-tab="settings">Settings</button>
+    <button id="dummy-mode-toggle" type="button" class="mode-toggle">Dummy Mode: On</button>
   </nav>
 
   <main>
@@ -84,7 +81,7 @@
     <section id="tab-logs" class="tab-panel">
       <section class="card">
         <div class="section-header">
-          <h2>Action Logs</h2>
+          <h2>Action Log</h2>
           <button id="refresh-logs" type="button" class="secondary">Refresh</button>
         </div>
         <div class="table-wrapper">
@@ -102,14 +99,37 @@
 
     <section id="tab-settings" class="tab-panel">
       <form id="settings-form" class="card grid-form">
-        <h2>Settings</h2>
-        <label>IMAP Host <input name="imapHost" required /></label>
-        <label>IMAP Port <input name="imapPort" type="number" required /></label>
-        <label>SMTP Host <input name="smtpHost" required /></label>
-        <label>SMTP Port <input name="smtpPort" type="number" required /></label>
-        <label>Username <input name="username" required /></label>
-        <label>Recipient Email <input name="recipientEmail" type="email" required /></label>
-        <label>Summarised Tag <input name="summarisedTag" required /></label>
+        <div class="section-header settings-top-row">
+          <h2>Settings</h2>
+          <button id="test-connection" type="button" class="secondary">Test Connection</button>
+        </div>
+        <p id="connection-test-status" class="status-line connection-status">Connection not tested yet.</p>
+        <div class="mode-summary">
+          <strong>Current Mail Mode</strong>
+          <p id="dummy-mode-description">Dummy mode is on. Searches and actions use the built-in test mailbox.</p>
+          <input name="dummyMode" id="dummy-mode-field" type="checkbox" class="is-hidden" />
+        </div>
+        <label>IMAP Host <input name="imapHost" /></label>
+        <label>IMAP Port <input name="imapPort" type="number" /></label>
+        <label class="checkbox"><input name="imapUseSSL" type="checkbox" /> Use SSL for IMAP</label>
+        <label>IMAP Password
+          <div class="secret-row">
+            <input name="imapPassword" id="imap-password" type="password" placeholder="Used when dummy mode is off" autocomplete="off" />
+            <button id="toggle-imap-password" type="button" class="secondary tiny-btn">Show</button>
+          </div>
+        </label>
+        <label>SMTP Host <input name="smtpHost" /></label>
+        <label>SMTP Port <input name="smtpPort" type="number" /></label>
+        <label class="checkbox"><input name="smtpUseSSL" type="checkbox" /> Use SSL for SMTP</label>
+        <label>SMTP Password
+          <div class="secret-row">
+            <input name="smtpPassword" id="smtp-password" type="password" placeholder="Defaults to IMAP password when blank" autocomplete="off" />
+            <button id="toggle-smtp-password" type="button" class="secondary tiny-btn">Show</button>
+          </div>
+        </label>
+        <label>Username <input name="username" /></label>
+        <label>Recipient Email <input name="recipientEmail" type="email" /></label>
+        <label>Summarised Tag <input name="summarisedTag" /></label>
         <label>LLM Provider
           <select name="llmProvider" id="llm-provider" required>
             <option value="ollama">Ollama (local)</option>
@@ -179,8 +199,8 @@
         <section>
           <h3>Tabs</h3>
           <ul>
-            <li><strong>Search and Summary</strong>: The main interface. Search for messages and create summaries.</li>
-            <li><strong>Logs</strong>: View the history of actions performed. You can undo recent actions here.</li>
+            <li><strong>Main</strong>: The main interface. Search for messages and create summaries.</li>
+            <li><strong>Log</strong>: View the history of actions performed. You can undo recent actions here.</li>
             <li><strong>Settings</strong>: Configure backend connection, LLM provider, email settings, and Ollama models.</li>
             <li><strong>Help</strong>: This page.</li>
           </ul>
@@ -216,7 +236,7 @@
             <li><strong>Mark Read</strong>: Mark all messages in the summary result as read.</li>
             <li><strong>Tag Summarised</strong>: Add the configured tag to all messages in the result.</li>
             <li><strong>Email Summary</strong>: Send the summary text to the configured recipient email.</li>
-            <li><strong>Undo Last</strong>: Reverse the last action (available in Logs tab).</li>
+            <li><strong>Undo Last</strong>: Reverse the last action (available in the Log tab).</li>
           </ul>
         </section>
 
@@ -224,6 +244,8 @@
           <h3>Settings</h3>
           <p>Configure IMAP/SMTP connection details, choose an LLM provider, and set up Ollama if using local inference.</p>
           <ul>
+            <li><strong>Dummy Mode</strong>: Toggle between the built-in test mailbox and a real IMAP/SMTP account.</li>
+            <li><strong>Test Connection</strong>: Validate the current settings against dummy mode or the configured IMAP/SMTP servers before saving.</li>
             <li><strong>LLM Provider</strong>: Choose between Ollama (local), OpenAI (remote), or Anthropic (remote).</li>
             <li><strong>Backend URL</strong>: Point to a different backend service if needed.</li>
             <li><strong>Backend API Key</strong>: Optional authentication for the backend (if enabled).</li>

@@ -46,10 +46,15 @@
 
 /**
  * @typedef {Object} AppSettings
+ * @property {boolean} dummyMode
  * @property {string} imapHost
  * @property {number} imapPort
+ * @property {boolean} imapUseSSL
+ * @property {string} imapPassword
  * @property {string} smtpHost
  * @property {number} smtpPort
+ * @property {boolean} smtpUseSSL
+ * @property {string} smtpPassword
  * @property {string} username
  * @property {string} recipientEmail
  * @property {string} summarisedTag
@@ -168,6 +173,20 @@ export function createApiClient(context) {
       return request("/settings", {
         method: "POST",
         body: JSON.stringify(settings),
+      });
+    },
+    /** @param {AppSettings} settings */
+    testConnection(settings) {
+      return request("/settings/test-connection", {
+        method: "POST",
+        body: JSON.stringify(settings),
+      });
+    },
+    /** @param {boolean} dummyMode */
+    setDummyMode(dummyMode) {
+      return request("/settings/dummy-mode", {
+        method: "POST",
+        body: JSON.stringify({ dummyMode }),
       });
     },
     /** @param {SummaryRequest} payload @returns {Promise<SummaryResponse>} */

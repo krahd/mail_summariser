@@ -13,6 +13,7 @@ Mail Summariser is a local-first email assistant with a FastAPI backend, a Swift
 3. Backend builds summarization input and calls selected provider.
 4. If provider output is unavailable or invalid, backend falls back to deterministic built-in summarization.
 5. Backend stores settings, logs, jobs, and undo events in SQLite for traceability.
+6. Mail workflows can run against a built-in dummy mailbox or a real IMAP/SMTP account.
 
 ## Repository structure
 
@@ -78,7 +79,7 @@ API_KEY=your-key ./scripts/smoke_test_backend.sh
 
 ### Pre-IMAP confidence strategy
 
-The full testing strategy is documented in [docs/TESTING_STRATEGY.md](docs/TESTING_STRATEGY.md) and is designed to prove functional correctness before connecting a real IMAP account.
+The full testing strategy is documented in [docs/TESTING_STRATEGY.md](docs/TESTING_STRATEGY.md). The controlled IMAP account plan and execution command live in [docs/IMAP_TEST_PLAN.md](docs/IMAP_TEST_PLAN.md).
 
 Release gate summary:
 
@@ -125,6 +126,6 @@ Packaged backend downloads are also published for easier installation:
 
 ## Known limitations
 
-- IMAP integration is not yet enabled.
 - Windows/Linux desktop native apps are not included in `v0.0.3`.
 - Provider-dependent quality varies by selected model and availability.
+- The automated fake IMAP/SMTP server is intentionally narrow and only implements the protocol subset this app needs.

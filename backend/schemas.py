@@ -48,13 +48,20 @@ class ActionLogItem(BaseModel):
     status: str
     details: str
     job_id: str | None = None
+    undoable: bool | None = None
+    undo_status: str | None = None
 
 
 class AppSettings(BaseModel):
+    dummyMode: bool
     imapHost: str
     imapPort: int
+    imapUseSSL: bool
+    imapPassword: str
     smtpHost: str
     smtpPort: int
+    smtpUseSSL: bool
+    smtpPassword: str
     username: str
     recipientEmail: str
     summarisedTag: str
@@ -65,3 +72,7 @@ class AppSettings(BaseModel):
     ollamaAutoStart: bool
     modelName: str
     backendBaseURL: str
+
+
+class DummyModeUpdate(BaseModel):
+    dummyMode: bool

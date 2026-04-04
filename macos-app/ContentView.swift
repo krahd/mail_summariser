@@ -6,9 +6,7 @@ struct ContentView: View {
     var body: some View {
         TabView {
             SearchView()
-                .tabItem { Text("Search") }
-            SummaryView()
-                .tabItem { Text("Summary") }
+                .tabItem { Text("Main") }
             LogView()
                 .tabItem { Text("Log") }
         }

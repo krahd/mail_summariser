@@ -1,6 +1,6 @@
-# Testing Strategy (Pre-IMAP)
+# Testing Strategy
 
-This strategy is designed to prove the application behavior before connecting to a real IMAP account.
+This strategy covers both the built-in dummy mailbox and the controlled IMAP/SMTP workflow used before testing against an external provider.
 
 ## Goals
 
@@ -31,9 +31,9 @@ This strategy is designed to prove the application behavior before connecting to
 - Scope: start binary, call `/health`, create summary, verify fallback resilience.
 - Requirement: same smoke flow in local validation and release CI.
 
-## Readiness Gates Before Real IMAP
+## Readiness Gates Before External IMAP
 
-All gates must pass before introducing a real IMAP account.
+All gates must pass before introducing an external IMAP account.
 
 1. Unit test gate
 - Target: stable pass rate for all service-level tests.

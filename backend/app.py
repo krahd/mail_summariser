@@ -24,7 +24,17 @@ from db import (
     set_setting,
 )
 from logging_service import log_action
-from mail_service import add_keyword_tag, demo_search, mark_messages_read, remove_keyword_tag, send_summary_email
+from mail_service import (
+    MailServiceError,
+    add_keyword_tag,
+    is_dummy_mode,
+    mark_messages_read,
+    remove_keyword_tag,
+    restore_messages_unread,
+    search_messages,
+    send_summary_email,
+    test_mail_connection,
+)
 from model_provider_service import (
     ensure_ollama_running,
     get_model_download_status,
@@ -33,7 +43,7 @@ from model_provider_service import (
     list_remote_models,
     start_ollama_model_download,
 )
-from schemas import AppSettings, JobAction, MessageItem, ModelDownloadRequest, SummaryRequest, SummaryResponse
+from schemas import AppSettings, DummyModeUpdate, JobAction, MessageItem, ModelDownloadRequest, SummaryRequest, SummaryResponse
 from summary_service import summarize_messages
 
 @contextlib.asynccontextmanager
@@ -67,6 +77,9 @@ PUBLIC_PATH_PREFIXES = (
     "/redoc",
     "/web",
 )
+
+MAIL_CONTEXT_KEYS = ("dummyMode",)
+SECRET_SETTING_KEYS = ("openaiApiKey", "anthropicApiKey", "imapPassword", "smtpPassword")
 
 
 @app.middleware("http")
@@ -130,18 +143,59 @@ def root():
     }
 
 
+def _merged_settings() -> dict[str, object]:
+    return DEFAULT_SETTINGS | list_settings()
+
+
+def _job_mail_context(settings: dict[str, object]) -> dict[str, object]:
+    return {key: settings.get(key) for key in MAIL_CONTEXT_KEYS}
+
+
+def _resolve_masked_settings(data: dict[str, object]) -> dict[str, object]:
+    resolved = data.copy()
+    current = _merged_settings()
+    for key_name in SECRET_SETTING_KEYS:
+        if resolved.get(key_name) == "__MASKED__":
+            resolved[key_name] = current.get(key_name, "")
+    return resolved
+
+
+def _job_effective_mail_settings(job: dict | None = None, payload: dict | None = None) -> dict[str, object]:
+    settings = _merged_settings()
+    mail_context: dict[str, object] = {}
+    if job is not None:
+        criteria = job.get("criteria_json", {})
+        if isinstance(criteria, dict):
+            candidate = criteria.get("mailContext", {})
+            if isinstance(candidate, dict):
+                mail_context = candidate
+    if payload is not None:
+        candidate = payload.get("mail_context", {})
+        if isinstance(candidate, dict):
+            mail_context = candidate
+    for key in MAIL_CONTEXT_KEYS:
+        if key in mail_context:
+            settings[key] = mail_context[key]
+    return settings
+
+
 @app.post("/summaries", response_model=SummaryResponse)
 def create_summary(request: SummaryRequest) -> SummaryResponse:
-    messages = demo_search(request.criteria)
-    settings = DEFAULT_SETTINGS | list_settings()
+    settings = _merged_settings()
+    try:
+        messages = search_messages(request.criteria, settings)
+    except MailServiceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     summary, summary_meta = summarize_messages(messages, request.summaryLength, settings=settings)
     job_id = f"job-{uuid4()}"
     created_at = datetime.now().isoformat(timespec="seconds")
+    criteria_payload = request.criteria.model_dump()
+    criteria_payload["mailContext"] = _job_mail_context(settings)
 
     insert_job(
         job_id=job_id,
         created_at=created_at,
-        criteria=request.criteria.model_dump(),
+        criteria=criteria_payload,
         summary_length=request.summaryLength,
         summary_text=summary,
         messages=messages,
@@ -171,13 +225,28 @@ def mark_read(action: JobAction) -> dict[str, str]:
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
 
+    settings = _job_effective_mail_settings(job)
     message_ids = [m["id"] for m in job["messages_json"]]
-    mark_messages_read(message_ids)
-    action_log_id = log_action("mark_read", "ok",
-                               f"Marked {len(message_ids)} messages as read", job_id=action.jobId)
+    try:
+        undo_data = mark_messages_read(message_ids, settings)
+    except MailServiceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    action_log_id = log_action(
+        "mark_read",
+        "ok",
+        f"Marked {len(message_ids)} messages as read",
+        job_id=action.jobId,
+    )
     push_undo(
-        {"type": "mark_read", "message_ids": message_ids,
-            "job_id": action.jobId, "log_id": action_log_id},
+        {
+            "type": "mark_read",
+            "message_ids": message_ids,
+            "restore_unread_ids": undo_data.get("restore_unread_ids", []),
+            "job_id": action.jobId,
+            "log_id": action_log_id,
+            "mail_context": _job_mail_context(settings),
+        },
         created_at=datetime.now().isoformat(timespec="seconds"),
     )
     return {"status": "ok"}
@@ -189,14 +258,30 @@ def tag_summarised(action: JobAction) -> dict[str, str]:
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
 
+    settings = _job_effective_mail_settings(job)
     message_ids = [m["id"] for m in job["messages_json"]]
-    tag = get_setting("summarisedTag", "summarised")
-    add_keyword_tag(message_ids, tag)
-    action_log_id = log_action("tag_summarised", "ok",
-                               f"Added tag '{tag}' to {len(message_ids)} messages", job_id=action.jobId)
+    tag = str(settings.get("summarisedTag", get_setting("summarisedTag", "summarised")))
+    try:
+        undo_data = add_keyword_tag(message_ids, tag, settings)
+    except MailServiceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    action_log_id = log_action(
+        "tag_summarised",
+        "ok",
+        f"Added tag '{tag}' to {len(message_ids)} messages",
+        job_id=action.jobId,
+    )
     push_undo(
-        {"type": "tag_add", "message_ids": message_ids, "tag": tag,
-            "job_id": action.jobId, "log_id": action_log_id},
+        {
+            "type": "tag_add",
+            "message_ids": message_ids,
+            "added_message_ids": undo_data.get("added_message_ids", []),
+            "tag": tag,
+            "job_id": action.jobId,
+            "log_id": action_log_id,
+            "mail_context": _job_mail_context(settings),
+        },
         created_at=datetime.now().isoformat(timespec="seconds"),
     )
     return {"status": "ok"}
@@ -208,21 +293,22 @@ def email_summary(action: JobAction) -> dict[str, str]:
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
 
+    settings = _job_effective_mail_settings(job)
     recipient = get_setting("recipientEmail", "")
     if not recipient:
         raise HTTPException(status_code=400, detail="No recipientEmail configured")
 
-    send_summary_email(
-        recipient=recipient,
-        subject=f"Mail summary for {action.jobId}",
-        body=job["summary_text"],
-    )
-    action_log_id = log_action("email_summary", "ok", f"Sent summary email to {recipient}", job_id=action.jobId)
-    push_undo(
-        {"type": "email_sent", "recipient": recipient,
-            "job_id": action.jobId, "log_id": action_log_id},
-        created_at=datetime.now().isoformat(timespec="seconds"),
-    )
+    try:
+        send_summary_email(
+            recipient=recipient,
+            subject=f"Mail summary for {action.jobId}",
+            body=job["summary_text"],
+            settings=settings,
+        )
+    except MailServiceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    log_action("email_summary", "ok", f"Sent summary email to {recipient}", job_id=action.jobId)
     return {"status": "ok"}
 
 
@@ -245,7 +331,7 @@ def get_logs() -> list[dict]:
 
 @app.get("/settings", response_model=AppSettings)
 def get_settings() -> AppSettings:
-    merged = DEFAULT_SETTINGS | list_settings()
+    merged = _merged_settings()
     legacy_key = str(merged.get("llmApiKey", ""))
     if legacy_key:
         if not str(merged.get("openaiApiKey", "")):
@@ -254,10 +340,9 @@ def get_settings() -> AppSettings:
             merged["anthropicApiKey"] = legacy_key
 
     # Never return real provider keys over the wire.
-    if merged.get("openaiApiKey", ""):
-        merged["openaiApiKey"] = "__MASKED__"
-    if merged.get("anthropicApiKey", ""):
-        merged["anthropicApiKey"] = "__MASKED__"
+    for key_name in SECRET_SETTING_KEYS:
+        if merged.get(key_name, ""):
+            merged[key_name] = "__MASKED__"
 
     return AppSettings(**merged)
 
@@ -330,7 +415,7 @@ def download_status(name: str) -> dict[str, str]:
 def save_settings(settings: AppSettings) -> dict[str, str]:
     data = settings.model_dump()
     # __MASKED__ means "keep existing stored key".
-    for key_name in ("openaiApiKey", "anthropicApiKey"):
+    for key_name in SECRET_SETTING_KEYS:
         if data.get(key_name) == "__MASKED__":
             data.pop(key_name)
     for key, value in data.items():
@@ -345,6 +430,28 @@ def save_settings(settings: AppSettings) -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.post("/settings/dummy-mode")
+def save_dummy_mode(update: DummyModeUpdate) -> dict[str, object]:
+    set_setting("dummyMode", update.dummyMode)
+    label = "enabled" if update.dummyMode else "disabled"
+    log_action("dummy_mode", "ok", f"Dummy mode {label}")
+    return {"status": "ok", "dummyMode": update.dummyMode}
+
+
+@app.post("/settings/test-connection")
+def settings_test_connection(settings: AppSettings) -> dict[str, object]:
+    try:
+        payload = _resolve_masked_settings(settings.model_dump())
+        result = test_mail_connection(payload)
+    except MailServiceError as exc:
+        log_action("test_connection", "error", str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    mode = "dummy" if is_dummy_mode(payload) else "imap"
+    log_action("test_connection", "ok", f"Connection test succeeded in {mode} mode")
+    return result
+
+
 @app.post("/actions/undo")
 def undo_last_action() -> dict[str, str]:
     last = pop_undo()
@@ -353,29 +460,28 @@ def undo_last_action() -> dict[str, str]:
         return {"status": "noop"}
 
     action_type = last.get("type")
+    settings = _job_effective_mail_settings(payload=last)
     if action_type == "tag_add":
-        remove_keyword_tag(last["message_ids"], last["tag"])
+        try:
+            remove_keyword_tag(last.get("added_message_ids", []), last["tag"], settings)
+        except MailServiceError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         log_action(
             "undo", "ok", f"Removed tag '{last['tag']}' from prior job", job_id=last.get("job_id"))
         return {"status": "ok"}
 
     if action_type == "mark_read":
+        try:
+            restore_messages_unread(last.get("restore_unread_ids", []), settings)
+        except MailServiceError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         log_action(
             "undo",
-            "partial",
-            "mark_read undo placeholder: implement restoring prior unread/read flags in real mail backend",
+            "ok",
+            f"Restored unread state for {len(last.get('restore_unread_ids', []))} messages",
             job_id=last.get("job_id"),
         )
-        return {"status": "partial"}
-
-    if action_type == "email_sent":
-        log_action(
-            "undo",
-            "partial",
-            "Email cannot be unsent; action recorded only",
-            job_id=last.get("job_id"),
-        )
-        return {"status": "partial"}
+        return {"status": "ok"}
 
     log_action("undo", "noop", f"No undo handler for {action_type}", job_id=last.get("job_id"))
     return {"status": "noop"}
@@ -388,8 +494,12 @@ def undo_action_by_log(log_id: str) -> dict[str, str]:
         raise HTTPException(status_code=400, detail="Selected log item is not undoable")
 
     action_type = payload.get("type")
+    settings = _job_effective_mail_settings(payload=payload)
     if action_type == "tag_add":
-        remove_keyword_tag(payload["message_ids"], payload["tag"])
+        try:
+            remove_keyword_tag(payload.get("added_message_ids", []), payload["tag"], settings)
+        except MailServiceError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         log_action(
             "undo",
             "ok",
@@ -399,22 +509,17 @@ def undo_action_by_log(log_id: str) -> dict[str, str]:
         return {"status": "ok"}
 
     if action_type == "mark_read":
+        try:
+            restore_messages_unread(payload.get("restore_unread_ids", []), settings)
+        except MailServiceError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         log_action(
             "undo",
-            "partial",
-            "mark_read undo placeholder: implement restoring prior unread/read flags in real mail backend",
+            "ok",
+            f"Restored unread state for {len(payload.get('restore_unread_ids', []))} messages",
             job_id=payload.get("job_id"),
         )
-        return {"status": "partial"}
-
-    if action_type == "email_sent":
-        log_action(
-            "undo",
-            "partial",
-            "Email cannot be unsent; action recorded only",
-            job_id=payload.get("job_id"),
-        )
-        return {"status": "partial"}
+        return {"status": "ok"}
 
     log_action("undo", "noop", f"No undo handler for {action_type}", job_id=payload.get("job_id"))
     return {"status": "noop"}

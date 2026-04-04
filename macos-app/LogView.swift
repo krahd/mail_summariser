@@ -25,6 +25,18 @@ struct LogView: View {
                     TableColumn("Details") { item in
                         Text(item.details)
                     }
+                    TableColumn("Undo") { item in
+                        if item.undoable == true {
+                            Button("Undo") {
+                                Task { await undoLog(item) }
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        } else {
+                            Text("Final")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
             }
         }
@@ -40,6 +52,19 @@ struct LogView: View {
             appState.statusText = "Loaded \(logs.count) log entries"
         } catch {
             appState.statusText = "Failed to load logs: \(error.localizedDescription)"
+        }
+    }
+
+    private func undoLog(_ item: ActionLogItem) async {
+        do {
+            let response: EmptyResponse = try await appState.bridge.postJSON(
+                path: "actions/undo/logs/\(item.id)",
+                body: [String: String]()
+            )
+            appState.statusText = response.status ?? "Undo complete"
+            await loadLogs()
+        } catch {
+            appState.statusText = "Undo failed: \(error.localizedDescription)"
         }
     }
 }

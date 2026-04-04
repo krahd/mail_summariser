@@ -10,6 +10,9 @@ let currentJobId = null;
 const statusLine = document.getElementById("status-line");
 const testConnectionBtn = document.getElementById("test-connection");
 const connectionTestStatusLine = document.getElementById("connection-test-status");
+const dummyModeToggleBtn = document.getElementById("dummy-mode-toggle");
+const dummyModeField = document.getElementById("dummy-mode-field");
+const dummyModeDescription = document.getElementById("dummy-mode-description");
 
 const searchForm = document.getElementById("search-form");
 const summaryText = document.getElementById("summary-text");
@@ -36,9 +39,13 @@ const backendApiKeyInput = document.getElementById("backend-api-key");
 const providerKeyWarningLine = document.getElementById("provider-key-warning");
 const openaiApiKeyInput = document.getElementById("openai-api-key");
 const anthropicApiKeyInput = document.getElementById("anthropic-api-key");
+const imapPasswordInput = document.getElementById("imap-password");
+const smtpPasswordInput = document.getElementById("smtp-password");
 const toggleOpenAiKeyBtn = document.getElementById("toggle-openai-key");
 const toggleAnthropicKeyBtn = document.getElementById("toggle-anthropic-key");
 const toggleBackendKeyBtn = document.getElementById("toggle-backend-key");
+const toggleImapPasswordBtn = document.getElementById("toggle-imap-password");
+const toggleSmtpPasswordBtn = document.getElementById("toggle-smtp-password");
 const openaiKeyGroup = document.getElementById("openai-key-group");
 const anthropicKeyGroup = document.getElementById("anthropic-key-group");
 
@@ -100,7 +107,7 @@ function renderLogs(logs) {
       (item) => {
         let undoCell = '<span class="log-badge log-badge-final">Final</span>';
         if (item.undoable) {
-          undoCell = `<button type="button" class="secondary tiny-btn log-undo-btn" data-log-id="${escapeHtml(
+          undoCell = `<button type="button" class="log-undo-btn" data-log-id="${escapeHtml(
             item.id || ""
           )}">Undo</button>`;
         }
@@ -118,7 +125,7 @@ function renderLogs(logs) {
 }
 
 function fillSettings(settings) {
-  const keyFieldNames = ["openaiApiKey", "anthropicApiKey"];
+  const keyFieldNames = ["openaiApiKey", "anthropicApiKey", "imapPassword", "smtpPassword"];
   Object.entries(settings).forEach(([name, value]) => {
     const input = settingsForm.elements.namedItem(name);
     if (input) {
@@ -136,8 +143,24 @@ function fillSettings(settings) {
       }
     }
   });
+  syncDummyModeUI(Boolean(settings.dummyMode));
   refreshProviderKeyWarning();
   refreshProviderKeyFieldVisibility();
+}
+
+function syncDummyModeUI(enabled) {
+  if (dummyModeField) {
+    dummyModeField.checked = enabled;
+  }
+  if (dummyModeToggleBtn) {
+    dummyModeToggleBtn.textContent = enabled ? "Dummy Mode: On" : "Dummy Mode: Off";
+    dummyModeToggleBtn.classList.toggle("is-live", !enabled);
+  }
+  if (dummyModeDescription) {
+    dummyModeDescription.textContent = enabled
+      ? "Dummy mode is on. Searches and actions use the built-in test mailbox."
+      : "Dummy mode is off. Searches and actions use the configured IMAP and SMTP servers.";
+  }
 }
 
 function setOllamaStatus(message, isError = false) {
@@ -351,10 +374,15 @@ function collectSearchCriteria() {
 function collectSettings() {
   const payload = {};
   [
+    "dummyMode",
     "imapHost",
     "imapPort",
+    "imapUseSSL",
+    "imapPassword",
     "smtpHost",
     "smtpPort",
+    "smtpUseSSL",
+    "smtpPassword",
     "username",
     "recipientEmail",
     "summarisedTag",
@@ -371,7 +399,7 @@ function collectSettings() {
       payload[key] = Boolean(input.checked);
     } else if (["imapPort", "smtpPort"].includes(key)) {
       payload[key] = Number(input.value);
-    } else if (["openaiApiKey", "anthropicApiKey"].includes(key)) {
+    } else if (["openaiApiKey", "anthropicApiKey", "imapPassword", "smtpPassword"].includes(key)) {
       // If user left the field blank and we know a key is already stored, send the sentinel
       payload[key] = input.dataset.wasMasked === "1" && input.value === "" ? "__MASKED__" : input.value;
     } else {
@@ -490,10 +518,12 @@ async function runJobAction(action) {
 function wireEvents() {
   testConnectionBtn.addEventListener("click", async () => {
     try {
-      const result = await api.health();
-      setConnectionTestStatus(`Health check OK: ${JSON.stringify(result)}`);
+      const result = await api.testConnection(collectSettings());
+      const imapMessage = result?.imap?.message || "IMAP test passed";
+      const smtpMessage = result?.smtp?.message || "SMTP test passed";
+      setConnectionTestStatus(`${imapMessage} | ${smtpMessage}`);
     } catch (error) {
-      setConnectionTestStatus(`Health check failed: ${error.message}`, true);
+      setConnectionTestStatus(`Connection test failed: ${error.message}`, true);
     }
   });
 
@@ -533,7 +563,7 @@ function wireEvents() {
   refreshLogsBtn.addEventListener("click", async () => {
     try {
       renderLogs(await api.getLogs());
-      setStatus("Logs refreshed.");
+      setStatus("Log refreshed.");
     } catch (error) {
       setStatus(`Log refresh failed: ${error.message}`, true);
     }
@@ -577,17 +607,32 @@ function wireEvents() {
   toggleOpenAiKeyBtn?.addEventListener("click", () => toggleSecretField(openaiApiKeyInput, toggleOpenAiKeyBtn));
   toggleAnthropicKeyBtn?.addEventListener("click", () => toggleSecretField(anthropicApiKeyInput, toggleAnthropicKeyBtn));
   toggleBackendKeyBtn?.addEventListener("click", () => toggleSecretField(backendApiKeyInput, toggleBackendKeyBtn));
+  toggleImapPasswordBtn?.addEventListener("click", () => toggleSecretField(imapPasswordInput, toggleImapPasswordBtn));
+  toggleSmtpPasswordBtn?.addEventListener("click", () => toggleSecretField(smtpPasswordInput, toggleSmtpPasswordBtn));
   refreshCatalogBtn.addEventListener("click", refreshDownloadCatalog);
   downloadModelBtn.addEventListener("click", downloadSelectedModel);
+  dummyModeToggleBtn?.addEventListener("click", async () => {
+    const nextMode = !(dummyModeField?.checked);
+    try {
+      await api.setDummyMode(nextMode);
+      syncDummyModeUI(nextMode);
+      setStatus(nextMode ? "Dummy mode enabled." : "Dummy mode disabled.");
+      renderLogs(await api.getLogs());
+    } catch (error) {
+      setStatus(`Dummy mode update failed: ${error.message}`, true);
+    }
+  });
 
   settingsForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
       const previousBaseUrl = localStorage.getItem(storageKeys.baseUrl) || "";
       const nextBaseUrl = getBaseUrl();
+      const payload = collectSettings();
       localStorage.setItem(storageKeys.baseUrl, getBaseUrl());
       localStorage.setItem(storageKeys.apiKey, backendApiKeyInput?.value || "");
-      await api.saveSettings(collectSettings());
+      await api.saveSettings(payload);
+      syncDummyModeUI(Boolean(payload.dummyMode));
       if (previousBaseUrl && previousBaseUrl !== nextBaseUrl) {
         setStatus("Settings saved. Backend target updated; no backend restart was performed.");
       } else {

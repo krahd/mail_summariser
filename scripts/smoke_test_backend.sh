@@ -44,18 +44,22 @@ assert_json_has_status_ok() {
   python3 -c 'import json,sys; obj=json.loads(sys.stdin.read()); assert obj.get("status") == "ok", f"unexpected status: {obj}"'
 }
 
-echo "[1/10] Health check"
+echo "[1/11] Health check"
 health_json="$(request GET /health)"
 echo "$health_json" | assert_json_has_status_ok
 
-echo "[2/10] Read settings"
+echo "[2/11] Read settings"
 settings_json="$(request GET /settings)"
-python3 -c 'import json,sys; obj=json.loads(sys.stdin.read()); required=["imapHost","imapPort","smtpHost","smtpPort","username","recipientEmail","summarisedTag","llmProvider","openaiApiKey","anthropicApiKey","ollamaHost","ollamaAutoStart","modelName","backendBaseURL"]; missing=[k for k in required if k not in obj]; assert not missing, f"missing settings keys: {missing}"' <<< "$settings_json"
+python3 -c 'import json,sys; obj=json.loads(sys.stdin.read()); required=["dummyMode","imapHost","imapPort","imapUseSSL","imapPassword","smtpHost","smtpPort","smtpUseSSL","smtpPassword","username","recipientEmail","summarisedTag","llmProvider","openaiApiKey","anthropicApiKey","ollamaHost","ollamaAutoStart","modelName","backendBaseURL"]; missing=[k for k in required if k not in obj]; assert not missing, f"missing settings keys: {missing}"' <<< "$settings_json"
 
-echo "[3/10] Save settings"
+echo "[3/11] Save settings"
 request POST /settings "$settings_json" >/dev/null
 
-echo "[4/10] Create summary"
+echo "[4/11] Connection test"
+connection_json="$(request POST /settings/test-connection "$settings_json")"
+python3 -c 'import json,sys; obj=json.loads(sys.stdin.read()); assert obj.get("status") == "ok", f"unexpected connection status: {obj}"; assert obj.get("mode") == "dummy", f"expected dummy mode but got {obj.get('"'"'mode'"'"')}"' <<< "$connection_json"
+
+echo "[5/11] Create summary"
 summary_payload='{"criteria":{"keyword":"","rawSearch":"","sender":"","recipient":"","unreadOnly":true,"readOnly":false,"replied":null,"tag":"","useAnd":true},"summaryLength":5}'
 summary_json="$(request POST /summaries "$summary_payload")"
 job_id="$(echo "$summary_json" | extract_json_field jobId)"
@@ -64,24 +68,24 @@ if [[ -z "$job_id" ]]; then
   exit 1
 fi
 
-echo "[5/10] Mark read action"
+echo "[6/11] Mark read action"
 request POST /actions/mark-read "{\"jobId\":\"$job_id\"}" >/dev/null
 
-echo "[6/10] Tag summarised action"
+echo "[7/11] Tag summarised action"
 request POST /actions/tag-summarised "{\"jobId\":\"$job_id\"}" >/dev/null
 
-echo "[7/10] Undo action"
+echo "[8/11] Undo action"
 request POST /actions/undo >/dev/null
 
-echo "[8/10] Logs available"
+echo "[9/11] Logs available"
 logs_json="$(request GET /logs)"
-python3 -c 'import json,sys; obj=json.loads(sys.stdin.read()); assert isinstance(obj, list), "logs response is not a list"' <<< "$logs_json"
+python3 -c 'import json,sys; logs=json.loads(sys.stdin.read()); job_id=sys.argv[1]; assert isinstance(logs, list), "logs response is not a list"; mine=[item for item in logs if item.get("job_id")==job_id]; assert mine, f"no logs found for job {job_id}"; assert any(item.get("action")=="mark_read" and item.get("undoable") for item in mine), "mark_read should still be undoable after one undo"; assert any(item.get("action")=="tag_summarised" and item.get("undo_status")=="final" for item in mine), "tag_summarised should become final after undo"' "$job_id" <<< "$logs_json"
 
-echo "[9/10] Model options endpoint"
+echo "[10/11] Model options endpoint"
 model_options_json="$(request GET '/models/options?provider=openai')"
 python3 -c 'import json,sys; obj=json.loads(sys.stdin.read()); assert obj.get("provider") == "openai", f"unexpected provider: {obj.get('"'"'provider'"'"')}"; assert isinstance(obj.get("models"), list), "models is not a list"' <<< "$model_options_json"
 
-echo "[10/10] Model catalog endpoint"
+echo "[11/11] Model catalog endpoint"
 model_catalog_json="$(request GET '/models/catalog?query=&limit=20')"
 python3 -c 'import json,sys; obj=json.loads(sys.stdin.read()); assert obj.get("provider") == "ollama", f"unexpected provider: {obj.get('"'"'provider'"'"')}"; assert isinstance(obj.get("models"), list), "catalog models is not a list"' <<< "$model_catalog_json"
 
