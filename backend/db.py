@@ -16,8 +16,13 @@ def _dict_factory(cursor: sqlite3.Cursor, row: tuple[Any, ...]) -> dict[str, Any
     return {col[0]: row[idx] for idx, col in enumerate(cursor.description)}
 
 
+def _ensure_db_parent_dir() -> None:
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+
 @contextmanager
 def get_conn():
+    _ensure_db_parent_dir()
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = _dict_factory
     try:

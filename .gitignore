@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 .DS_Store
 temp.txt
+backend/data/*.sqlite3
+backend/data/*.sqlite3-*
