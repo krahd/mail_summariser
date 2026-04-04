@@ -6,172 +6,369 @@
   <title>Mail Summariser</title>
   <meta
     name="description"
-    content="Mail Summariser is a local-first email assistant with a FastAPI backend, browser client, and SwiftUI macOS app."
+    content="Mail Summariser is a local-first mail workflow with a FastAPI backend, a browser client, a macOS app, dummy-mode onboarding, real IMAP/SMTP support, and provider-backed summaries."
   />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%230d8a75'/%3E%3Cstop offset='1' stop-color='%23d76b31'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='18' fill='%2312352f'/%3E%3Ccircle cx='32' cy='32' r='16' fill='url(%23g)'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Syne:wght@500;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./site.css" />
 </head>
 <body>
-  <div class="bg-orb orb-a" aria-hidden="true"></div>
-  <div class="bg-orb orb-b" aria-hidden="true"></div>
+  <div class="page-noise" aria-hidden="true"></div>
+  <div class="page-aura aura-left" aria-hidden="true"></div>
+  <div class="page-aura aura-right" aria-hidden="true"></div>
 
-  <main class="page-shell">
-    <section class="hero card">
-      <div class="hero-copy">
-        <p class="eyebrow">Local-first email assistant</p>
-        <h1>Mail Summariser</h1>
+  <header class="site-header">
+    <a class="brand" href="#top">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-copy">
+        <strong>Mail Summariser</strong>
+        <span>GitHub Pages project site</span>
+      </span>
+    </a>
+
+    <nav class="site-nav" aria-label="Primary">
+      <a href="#workflow">Workflow</a>
+      <a href="#screenshots">Screenshots</a>
+      <a href="#downloads">Downloads</a>
+      <a href="#developer">Developer Notes</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-copy reveal">
+        <p class="kicker">Local-first mail workflow</p>
+        <h1>Summaries first. Real mail when you are ready.</h1>
         <p class="hero-text">
-          Search a mailbox, generate concise summaries, and apply follow-up actions from a lightweight
-          FastAPI backend with a browser client and a macOS app.
+          Mail Summariser starts in a built-in dummy mailbox, can switch to real IMAP and SMTP
+          accounts, and keeps summaries, actions, logs, and undo state in SQLite while letting you
+          choose Ollama, OpenAI, or Anthropic for model-backed digests.
         </p>
+
         <div class="hero-actions">
-          <a class="btn btn-primary" href="#downloads">Download Latest Release</a>
-          <a class="btn btn-secondary" href="https://github.com/krahd/Mail-Summariser">View Repository</a>
+          <a class="button button-primary" href="#downloads">Download Latest Release</a>
+          <a class="button button-secondary" href="https://github.com/krahd/Mail-Summariser">View Repository</a>
         </div>
+
+        <dl class="hero-facts">
+          <div>
+            <dt>Mail modes</dt>
+            <dd>Dummy by default, real IMAP and SMTP supported</dd>
+          </div>
+          <div>
+            <dt>Clients</dt>
+            <dd>Browser UI plus macOS SwiftUI shell</dd>
+          </div>
+          <div>
+            <dt>Storage</dt>
+            <dd>SQLite for settings, jobs, logs, and undo stack</dd>
+          </div>
+          <div>
+            <dt>Latest release</dt>
+            <dd id="latest-release-label">Use the releases page</dd>
+          </div>
+        </dl>
       </div>
-      <div class="hero-meta">
-        <div class="meta-chip">
-          <span class="meta-label">Status</span>
-             <span>Demo mail source</span>
-        </div>
-        <div class="meta-chip">
-          <span class="meta-label">Clients</span>
-             <span>Web and macOS</span>
-        </div>
-        <div class="meta-chip">
-          <span class="meta-label">Releases</span>
-             <span id="latest-release-label">Loading latest tag...</span>
-        </div>
+
+      <figure class="hero-visual reveal" data-float>
+        <img
+          src="./assets/web-main.png"
+          alt="Mail Summariser browser workspace showing search criteria, summary text, actions, and message results."
+        />
+        <figcaption>
+          The browser client after a dummy-mode summary run. The same backend also powers the macOS app.
+        </figcaption>
+      </figure>
+    </section>
+
+    <section class="section feature-band reveal" id="overview">
+      <div class="section-heading">
+        <p class="kicker">What the current source actually does</p>
+        <h2>Source-aligned feature set</h2>
+      </div>
+
+      <div class="feature-grid">
+        <article>
+          <h3>Two mailbox paths</h3>
+          <p>
+            Use the in-memory dummy mailbox to validate the workflow quickly, then switch
+            <code>dummyMode</code> off and point the same UI at a real IMAP inbox and SMTP server.
+          </p>
+        </article>
+        <article>
+          <h3>Provider fallback built in</h3>
+          <p>
+            Summaries can run through Ollama, OpenAI, or Anthropic. If the provider is unavailable,
+            returns invalid output, or sends placeholder text, the backend falls back to a deterministic digest.
+          </p>
+        </article>
+        <article>
+          <h3>Traceable actions</h3>
+          <p>
+            Every summary job, follow-up action, and undoable operation is persisted so the log view can show
+            what happened and whether a row is still reversible.
+          </p>
+        </article>
+        <article>
+          <h3>Model management</h3>
+          <p>
+            The browser settings view can check Ollama availability, list installed models, browse a downloadable
+            catalogue, and request local pulls without leaving the app surface.
+          </p>
+        </article>
       </div>
     </section>
 
-    <section class="card screenshot-card">
-      <div class="section-heading">
+    <section class="section workflow reveal" id="workflow">
+      <div class="section-heading split-heading">
         <div>
-          <p class="eyebrow">Product view</p>
-          <h2>Main Screen</h2>
+          <p class="kicker">Workflow</p>
+          <h2>From dummy mailbox to real account</h2>
         </div>
+        <p class="section-copy">
+          The current codebase is structured so you can validate the whole experience locally first,
+          then reuse the same actions and logging flow against a real mailbox.
+        </p>
       </div>
-      <img
-        class="screenshot"
-        src="./assets/main-screen.png"
-        alt="Mail Summariser main screen showing search criteria, summary output, actions, and messages."
-      />
-    </section>
 
-    <section class="card manual-card">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">Quick start</p>
-          <h2>Short User Manual</h2>
-        </div>
-      </div>
-      <ol class="manual-list">
-        <li>Start the backend locally or download a packaged release for your operating system.</li>
-        <li>Open the browser UI at <code>/web</code> or launch the macOS app archive on Apple Silicon Macs.</li>
-        <li>Fill in the search fields, choose a summary length, and run <strong>Create Summary</strong>.</li>
-        <li>Review the returned messages and summary, then use <strong>Mark Read</strong>, <strong>Tag Summarised</strong>, or <strong>Email Summary</strong> if needed.</li>
-        <li>Open the Log tab to review activity and use row-level <strong>Undo</strong> where it is available.</li>
-        <li>Open Settings to switch model providers, configure provider keys, and point the UI at a different backend URL.</li>
+      <ol class="workflow-list">
+        <li>
+          <span>01</span>
+          <div>
+            <h3>Start the backend</h3>
+            <p>Run <code>./start_backend.sh</code>, then open <code>/web</code> in a browser or launch the macOS app.</p>
+          </div>
+        </li>
+        <li>
+          <span>02</span>
+          <div>
+            <h3>Validate in dummy mode</h3>
+            <p>Search the built-in messages, create a summary, and try <strong>Mark Read</strong>, <strong>Tag Summarised</strong>, and <strong>Email Summary</strong>.</p>
+          </div>
+        </li>
+        <li>
+          <span>03</span>
+          <div>
+            <h3>Configure providers and mail settings</h3>
+            <p>Use the browser Settings tab or the macOS Settings window to point at Ollama, OpenAI, or Anthropic and save IMAP/SMTP details.</p>
+          </div>
+        </li>
+        <li>
+          <span>04</span>
+          <div>
+            <h3>Switch to live mail</h3>
+            <p>Turn dummy mode off, run <strong>Test Connection</strong>, then repeat the same summary and action flow against a disposable real mailbox.</p>
+          </div>
+        </li>
       </ol>
     </section>
 
-    <section class="card downloads-card" id="downloads">
+    <section class="section gallery reveal" id="screenshots">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Downloads</p>
-          <h2>Latest Published Release</h2>
+          <p class="kicker">Screenshots</p>
+          <h2>Current browser client</h2>
         </div>
-        <a class="text-link" id="release-page-link" href="https://github.com/krahd/Mail-Summariser/releases/latest">
-          Open release page
-        </a>
       </div>
 
-      <p class="downloads-intro" id="downloads-status">
-        Looking up the latest release and download assets...
+      <div class="shot-grid">
+        <figure class="shot" data-float>
+          <img
+            src="./assets/web-main.png"
+            alt="Mail Summariser main tab with a generated summary and a message result table."
+          />
+          <figcaption>
+            <strong>Main</strong>
+            Create a summary from search criteria, inspect the returned messages, and trigger follow-up actions.
+          </figcaption>
+        </figure>
+
+        <figure class="shot" data-float>
+          <img
+            src="./assets/web-settings.png"
+            alt="Mail Summariser settings tab showing dummy mode, provider selection, API key inputs, and backend configuration."
+          />
+          <figcaption>
+            <strong>Settings</strong>
+            Configure dummy mode, IMAP/SMTP, model providers, local Ollama, remote keys, and backend targeting.
+          </figcaption>
+        </figure>
+
+        <figure class="shot" data-float>
+          <img
+            src="./assets/web-log.png"
+            alt="Mail Summariser log tab showing action history, statuses, and undo controls."
+          />
+          <figcaption>
+            <strong>Log</strong>
+            Review summary jobs and actions, then use row-level undo where the backend still has a reversible state.
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section surfaces reveal">
+      <div class="section-heading split-heading">
+        <div>
+          <p class="kicker">Client surfaces</p>
+          <h2>Browser and macOS</h2>
+        </div>
+        <p class="section-copy">
+          The browser client exposes the fuller operator surface today. The SwiftUI app is intentionally thinner and relies on the same backend API.
+        </p>
+      </div>
+
+      <div class="surface-grid">
+        <article>
+          <h3>Browser client</h3>
+          <ul>
+            <li><strong>Main</strong>: search criteria, summary generation, result table, and action buttons.</li>
+            <li><strong>Log</strong>: action history with final versus undoable state.</li>
+            <li><strong>Settings</strong>: dummy mode toggle, connection test, provider keys, Ollama model management, backend URL, and backend API key.</li>
+            <li><strong>Help</strong>: in-product user manual and project links.</li>
+          </ul>
+        </article>
+
+        <article>
+          <h3>macOS app</h3>
+          <ul>
+            <li><strong>Main tab</strong>: summary workflow and action buttons.</li>
+            <li><strong>Log tab</strong>: log table with per-row undo.</li>
+            <li><strong>Settings window</strong>: separate macOS Settings scene for mail and provider configuration.</li>
+            <li><strong>Backend dependency</strong>: the desktop app is a client for the FastAPI service, not a bundled all-in-one runtime.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="section downloads reveal" id="downloads">
+      <div class="section-heading split-heading">
+        <div>
+          <p class="kicker">Downloads</p>
+          <h2>Latest published release</h2>
+        </div>
+        <div class="release-meta">
+          <a class="inline-link" id="release-page-link" href="https://github.com/krahd/Mail-Summariser/releases">Open release page</a>
+          <p id="release-published-at">Published assets and source archives are linked from GitHub Releases.</p>
+        </div>
+      </div>
+
+      <p class="downloads-status" id="downloads-status">
+        Use the buttons below to reach the current GitHub Releases page or source archives.
       </p>
 
-      <div class="download-grid">
-        <article class="download-card" data-card="macos">
-          <div class="icon-wrap" aria-hidden="true">
-            <svg viewBox="0 0 64 64" class="os-icon">
-              <rect x="14" y="18" width="36" height="28" rx="10"></rect>
-              <path d="M23 50h18"></path>
-              <path d="M28 13c2 2 3 4 3 6"></path>
-            </svg>
+      <div class="download-list">
+        <article class="download-row" data-card="macos">
+          <div>
+            <h3>macOS</h3>
+            <p>Apple Silicon backend archive plus the native SwiftUI app archive.</p>
           </div>
-          <h3>macOS</h3>
-          <p>Apple Silicon backend archive and native SwiftUI app.</p>
+          <p class="availability">Native app + backend</p>
           <div class="download-actions">
-            <a class="btn btn-primary" data-asset="mail-summariser-backend-macos-arm64.tar.gz" href="https://github.com/krahd/Mail-Summariser/releases/latest">Backend Bundle</a>
-            <a class="btn btn-secondary" data-asset="MailSummariser-macos-app.zip" href="https://github.com/krahd/Mail-Summariser/releases/latest">macOS App</a>
+            <a class="button button-primary" data-asset="mail-summariser-backend-macos-arm64.tar.gz" href="https://github.com/krahd/Mail-Summariser/releases">Backend Bundle</a>
+            <a class="button button-secondary" data-asset="MailSummariser-macos-app.zip" href="https://github.com/krahd/Mail-Summariser/releases">macOS App</a>
           </div>
         </article>
 
-        <article class="download-card" data-card="windows">
-          <div class="icon-wrap" aria-hidden="true">
-            <svg viewBox="0 0 64 64" class="os-icon">
-              <path d="M10 16l18-3v18H10z"></path>
-              <path d="M34 12l20-4v23H34z"></path>
-              <path d="M10 33h18v18l-18-3z"></path>
-              <path d="M34 33h20v23l-20-4z"></path>
-            </svg>
+        <article class="download-row" data-card="windows">
+          <div>
+            <h3>Windows</h3>
+            <p>Packaged x64 backend release. The current release flow does not publish a native desktop shell for Windows.</p>
           </div>
-          <h3>Windows</h3>
-          <p>Packaged Windows backend release for x64 systems.</p>
+          <p class="availability">Backend only</p>
           <div class="download-actions">
-            <a class="btn btn-primary" data-asset="mail-summariser-backend-windows-x64.zip" href="https://github.com/krahd/Mail-Summariser/releases/latest">Download ZIP</a>
+            <a class="button button-primary" data-asset="mail-summariser-backend-windows-x64.zip" href="https://github.com/krahd/Mail-Summariser/releases">Download ZIP</a>
           </div>
         </article>
 
-        <article class="download-card" data-card="linux">
-          <div class="icon-wrap" aria-hidden="true">
-            <svg viewBox="0 0 64 64" class="os-icon">
-              <path d="M32 12c8 0 13 8 13 17 0 5-2 10-6 14l3 8H22l3-8c-4-4-6-9-6-14 0-9 5-17 13-17z"></path>
-              <circle cx="26" cy="27" r="2"></circle>
-              <circle cx="38" cy="27" r="2"></circle>
-              <path d="M27 35c2 2 8 2 10 0"></path>
-            </svg>
+        <article class="download-row" data-card="linux">
+          <div>
+            <h3>Linux</h3>
+            <p>Packaged x64 backend release. The browser client is included in the backend bundle and served from the binary.</p>
           </div>
-          <h3>Linux</h3>
-          <p>Packaged Linux backend release for x64 systems.</p>
+          <p class="availability">Backend only</p>
           <div class="download-actions">
-            <a class="btn btn-primary" data-asset="mail-summariser-backend-linux-x64.tar.gz" href="https://github.com/krahd/Mail-Summariser/releases/latest">Download TAR.GZ</a>
+            <a class="button button-primary" data-asset="mail-summariser-backend-linux-x64.tar.gz" href="https://github.com/krahd/Mail-Summariser/releases">Download TAR.GZ</a>
           </div>
         </article>
 
-        <article class="download-card" data-card="source">
-          <div class="icon-wrap" aria-hidden="true">
-            <svg viewBox="0 0 64 64" class="os-icon">
-              <path d="M16 18h32v28H16z"></path>
-              <path d="M22 25l-6 7 6 7"></path>
-              <path d="M42 25l6 7-6 7"></path>
-              <path d="M36 21l-8 22"></path>
-            </svg>
+        <article class="download-row" data-card="source">
+          <div>
+            <h3>Source code</h3>
+            <p>Source archives for the latest published tag, plus the repo for development workflows and the GitHub Pages site source.</p>
           </div>
-          <h3>Source Code</h3>
-          <p>Compressed source archives for the latest published tag.</p>
+          <p class="availability">Source</p>
           <div class="download-actions">
-            <a class="btn btn-primary" data-source="zip" href="https://github.com/krahd/Mail-Summariser/releases/latest">ZIP</a>
-            <a class="btn btn-secondary" data-source="tar" href="https://github.com/krahd/Mail-Summariser/releases/latest">TAR.GZ</a>
+            <a class="button button-primary" data-source="zip" href="https://github.com/krahd/Mail-Summariser/releases">ZIP</a>
+            <a class="button button-secondary" data-source="tar" href="https://github.com/krahd/Mail-Summariser/releases">TAR.GZ</a>
           </div>
         </article>
       </div>
     </section>
 
-    <section class="card links-card">
+    <section class="section runbook reveal">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Repository</p>
-          <h2>Project Links</h2>
+          <p class="kicker">Quick start</p>
+          <h2>Run it locally</h2>
         </div>
       </div>
-      <div class="link-list">
-        <a class="text-link" href="https://github.com/krahd/Mail-Summariser">GitHub repository</a>
-        <a class="text-link" href="https://github.com/krahd/Mail-Summariser/releases/latest">Latest release</a>
-        <a class="text-link" href="https://github.com/krahd/Mail-Summariser/blob/main/README.md">README</a>
+
+      <div class="runbook-grid">
+        <article>
+          <h3>Start the backend</h3>
+          <pre><code>./start_backend.sh</code></pre>
+          <p>
+            The browser client is available at <code>http://127.0.0.1:8766/web</code>.
+            FastAPI docs are exposed at <code>/docs</code>.
+          </p>
+        </article>
+
+        <article>
+          <h3>Move from dummy mode to live mail</h3>
+          <p>
+            Save IMAP and SMTP settings, switch dummy mode off, click <strong>Test Connection</strong>,
+            then repeat the summary flow against a disposable mailbox before using a production account.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section developer reveal" id="developer">
+      <div class="section-heading">
+        <div>
+          <p class="kicker">Developer references</p>
+          <h2>Repository docs</h2>
+        </div>
+      </div>
+
+      <div class="developer-grid">
+        <a class="doc-link" href="https://github.com/krahd/Mail-Summariser/blob/main/README.md">
+          <strong>README</strong>
+          <span>Setup, configuration, testing, build scripts, and release notes.</span>
+        </a>
+        <a class="doc-link" href="https://github.com/krahd/Mail-Summariser/blob/main/docs/TESTING_STRATEGY.md">
+          <strong>Testing strategy</strong>
+          <span>How the dummy mailbox, backend integration tests, smoke tests, and release gates fit together.</span>
+        </a>
+        <a class="doc-link" href="https://github.com/krahd/Mail-Summariser/blob/main/docs/IMAP_TEST_PLAN.md">
+          <strong>IMAP test plan</strong>
+          <span>Controlled fake-server validation before pointing the app at a real mailbox.</span>
+        </a>
+        <a class="doc-link" href="https://github.com/krahd/Mail-Summariser/releases/latest">
+          <strong>Release assets</strong>
+          <span>Current packaged backend builds and the macOS app archive published by GitHub Actions.</span>
+        </a>
       </div>
     </section>
   </main>
+
+  <footer class="site-footer">
+    <p>Mail Summariser is a FastAPI backend with browser and macOS clients. GitHub Pages source lives in <code>docs/</code>.</p>
+    <a class="inline-link" href="https://github.com/krahd/Mail-Summariser">github.com/krahd/Mail-Summariser</a>
+  </footer>
 
   <script src="./site.js"></script>
 </body>

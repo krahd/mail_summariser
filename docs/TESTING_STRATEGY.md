@@ -5,19 +5,19 @@ This strategy covers both the built-in dummy mailbox and the controlled IMAP/SMT
 ## Goals
 
 - Verify summary generation and action workflows are stable.
-- Verify API contracts and persistence behavior are deterministic.
-- Verify provider fallback behavior is safe when dependencies are unavailable.
-- Verify build artifacts start correctly on each release platform.
+- Verify API contracts and persistence behaviour are deterministic.
+- Verify provider fallback behaviour is safe when dependencies are unavailable.
+- Verify build artefacts start correctly on each release platform.
 
 ## Test Pyramid
 
 1. Unit tests
-- Focus: pure logic and service behavior.
+- Focus: pure logic and service behaviour.
 - Scope: `backend/summary_service.py`, `backend/mail_service.py` filtering, `backend/model_provider_service.py` parsing and fallback, `backend/db.py` CRUD helpers.
 - Requirement: no network calls.
 
 2. Integration tests
-- Focus: FastAPI endpoint behavior with an isolated SQLite database.
+- Focus: FastAPI endpoint behaviour with an isolated SQLite database.
 - Scope: `/health`, `/summaries`, `/settings`, `/logs`, `/actions/*`, model endpoints.
 - Requirement: run with deterministic fixtures and stubbed provider calls.
 
@@ -27,7 +27,7 @@ This strategy covers both the built-in dummy mailbox and the controlled IMAP/SMT
 - Requirement: explicit assertions for required fields and error responses.
 
 4. Smoke tests
-- Focus: startup and critical path behavior from built artifacts.
+- Focus: startup and critical path behaviour from built artefacts.
 - Scope: start binary, call `/health`, create summary, verify fallback resilience.
 - Requirement: same smoke flow in local validation and release CI.
 
@@ -37,7 +37,7 @@ All gates must pass before introducing an external IMAP account.
 
 1. Unit test gate
 - Target: stable pass rate for all service-level tests.
-- Required checks: provider fallback logic, summary construction, settings masking, undo stack behavior.
+- Required checks: provider fallback logic, summary construction, settings masking, undo stack behaviour.
 
 2. Integration test gate
 - Target: all API endpoints covered for successful and failure responses.
@@ -66,4 +66,4 @@ After all gates pass, enable IMAP in a staged rollout:
 2. Enable read-only validation mode first.
 3. Validate message search and summary output correctness.
 4. Enable action endpoints only after read validations pass.
-5. Keep rollback path available via fallback summarizer and undo operations.
+5. Keep rollback path available via fallback summariser and undo operations.

@@ -69,6 +69,8 @@ Run:
 ./scripts/run_imap_test_plan.sh
 ```
 
+A successful full run ends with `IMAP test plan passed` after the automated tests, backend compile check, HTTP smoke test, and macOS Swift typecheck.
+
 ## Manual external account checklist
 
 After the controlled plan passes, use a disposable mailbox and verify:
