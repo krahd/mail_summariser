@@ -1,5 +1,5 @@
 import XCTest
-@testable import MailSummariser
+@testable import mail_summariser
 
 @MainActor
 final class BackendBridgeTests: XCTestCase {
@@ -84,5 +84,31 @@ final class BackendBridgeTests: XCTestCase {
         let defaults: SystemMessageDefaultsResponse = try await bridge.get(path: "settings/system-message-defaults")
 
         XCTAssertEqual(defaults.openaiSystemMessage, "OpenAI prompt")
+    }
+
+    func testGetMessageDetailDecodesPayloadFromEncodedPath() async throws {
+        MockURLProtocol.requestHandler = { request in
+                        XCTAssertEqual(request.url?.absoluteString, "http://127.0.0.1:8766/jobs/job%20123/messages/msg%201")
+            XCTAssertEqual(request.httpMethod, "GET")
+            let payload = """
+            {
+                            "id": "msg 1",
+              "subject": "Project update",
+              "sender": "sender@example.com",
+              "recipient": "recipient@example.com",
+              "date": "2026-04-05T10:00:00",
+              "body": "Here is the full message body."
+            }
+            """.data(using: .utf8)!
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!
+            return (response, payload)
+        }
+
+        let bridge = makeBridge()
+        let detail = try await bridge.getMessageDetail(jobId: "job 123", messageId: "msg 1")
+
+        XCTAssertEqual(detail.id, "msg 1")
+        XCTAssertEqual(detail.subject, "Project update")
+        XCTAssertEqual(detail.body, "Here is the full message body.")
     }
 }

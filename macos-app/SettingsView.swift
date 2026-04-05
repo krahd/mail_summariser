@@ -16,75 +16,104 @@ struct SettingsView: View {
     @State private var resetConfirmationText = ""
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    Toggle("Dummy Mode", isOn: $localSettings.dummyMode)
-                    Text(localSettings.dummyMode ? "Using the built-in test mailbox and outbox." : "Using the configured IMAP and SMTP servers.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+        ZStack {
+            BrandBackdrop()
+
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .top, spacing: 16) {
+                    BrandSectionTitle(
+                        eyebrow: "Configuration",
+                        title: "Settings",
+                        subtitle: "Mail, provider, runtime, and operator controls."
+                    )
+
+                    Spacer()
+                    BrandStatusPill(text: saveStatus.isEmpty ? "Ready" : saveStatus)
                 }
 
-                Section("Mail") {
-                    TextField("IMAP Host", text: $localSettings.imapHost)
-                    TextField("IMAP Port", value: $localSettings.imapPort, format: .number)
-                    Toggle("Use SSL for IMAP", isOn: $localSettings.imapUseSSL)
-                    if imapPasswordVisible {
-                        TextField("IMAP Password", text: $localSettings.imapPassword)
-                    } else {
-                        SecureField("IMAP Password", text: $localSettings.imapPassword)
-                    }
-                    Button(imapPasswordVisible ? "Hide IMAP Password" : "Show IMAP Password") {
-                        imapPasswordVisible.toggle()
-                    }
-
-                    TextField("SMTP Host", text: $localSettings.smtpHost)
-                    TextField("SMTP Port", value: $localSettings.smtpPort, format: .number)
-                    Toggle("Use SSL for SMTP", isOn: $localSettings.smtpUseSSL)
-                    if smtpPasswordVisible {
-                        TextField("SMTP Password", text: $localSettings.smtpPassword)
-                    } else {
-                        SecureField("SMTP Password", text: $localSettings.smtpPassword)
-                    }
-                    Button(smtpPasswordVisible ? "Hide SMTP Password" : "Show SMTP Password") {
-                        smtpPasswordVisible.toggle()
-                    }
-
-                    TextField("Username", text: $localSettings.username)
-                    TextField("Digest recipient", text: $localSettings.recipientEmail)
-                    TextField("Summarised tag", text: $localSettings.summarisedTag)
-                }
-
-                Section("Connection Check") {
-                    Button("Test Connection") {
-                        Task { await testConnection() }
-                    }
-                    Text(saveStatus)
-                        .foregroundStyle(.secondary)
-                }
-
-                Section {
-                    NavigationLink("Advanced Settings") {
-                        advancedSettingsView
-                    }
-                }
-
-                Section {
-                    HStack {
-                        Button("Load") {
-                            Task { await loadSettings() }
+                NavigationStack {
+                    Form {
+                        Section {
+                            Toggle("Dummy Mode", isOn: $localSettings.dummyMode)
+                            Text(localSettings.dummyMode ? "Using the built-in test mailbox and outbox." : "Using the configured IMAP and SMTP servers.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
-                        Button("Save") {
-                            Task { await saveSettings() }
+
+                        Section("Mail") {
+                            TextField("IMAP Host", text: $localSettings.imapHost)
+                            TextField("IMAP Port", value: $localSettings.imapPort, format: .number)
+                            Toggle("Use SSL for IMAP", isOn: $localSettings.imapUseSSL)
+                            if imapPasswordVisible {
+                                TextField("IMAP Password", text: $localSettings.imapPassword)
+                            } else {
+                                SecureField("IMAP Password", text: $localSettings.imapPassword)
+                            }
+                            Button(imapPasswordVisible ? "Hide IMAP Password" : "Show IMAP Password") {
+                                imapPasswordVisible.toggle()
+                            }
+
+                            TextField("SMTP Host", text: $localSettings.smtpHost)
+                            TextField("SMTP Port", value: $localSettings.smtpPort, format: .number)
+                            Toggle("Use SSL for SMTP", isOn: $localSettings.smtpUseSSL)
+                            if smtpPasswordVisible {
+                                TextField("SMTP Password", text: $localSettings.smtpPassword)
+                            } else {
+                                SecureField("SMTP Password", text: $localSettings.smtpPassword)
+                            }
+                            Button(smtpPasswordVisible ? "Hide SMTP Password" : "Show SMTP Password") {
+                                smtpPasswordVisible.toggle()
+                            }
+
+                            TextField("Username", text: $localSettings.username)
+                            TextField("Digest recipient", text: $localSettings.recipientEmail)
+                            TextField("Summarised tag", text: $localSettings.summarisedTag)
+                        }
+
+                        Section("Connection Check") {
+                            Button("Test Connection") {
+                                Task { await testConnection() }
+                            }
+                            Text(saveStatus.isEmpty ? "Connection not tested yet." : saveStatus)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Section {
+                            NavigationLink("Advanced Settings") {
+                                advancedSettingsView
+                            }
+                        }
+
+                        Section {
+                            HStack {
+                                Button("Load") {
+                                    Task { await loadSettings() }
+                                }
+                                Button("Save") {
+                                    Task { await saveSettings() }
+                                }
+                            }
                         }
                     }
+                    .navigationTitle("Settings")
+                    .formStyle(.grouped)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.clear)
                 }
+                .padding(8)
+                .background(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(BrandPalette.panelStrong)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(BrandPalette.line, lineWidth: 1)
+                )
             }
-            .navigationTitle("Settings")
-            .formStyle(.grouped)
         }
-        .padding()
-        .frame(width: 620, height: 760)
+        .padding(20)
+        .frame(width: 700, height: 820)
+        .tint(BrandPalette.accent)
         .task {
             localSettings = appState.settings
             if appState.runtimeStatus.ollama.message == "Runtime status not loaded yet." {
@@ -95,7 +124,7 @@ struct SettingsView: View {
             }
             await loadSystemMessageDefaults()
         }
-        .alert("Stop Mail Summariser?", isPresented: $showStopConfirmation) {
+        .alert("Stop mail_summariser?", isPresented: $showStopConfirmation) {
             Button("Stop", role: .destructive) {
                 Task { await stopMailSummariser() }
             }
@@ -147,9 +176,14 @@ struct SettingsView: View {
                     TextEditor(text: systemMessageBinding)
                         .font(.body)
                         .frame(minHeight: 180)
+                        .padding(8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(BrandPalette.panelMuted)
+                        )
                         .overlay {
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.gray.opacity(0.25), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(BrandPalette.line, lineWidth: 1)
                         }
                     Text("\(providerDisplayName) stores its own system message. Switching providers swaps the prompt shown here.")
                         .font(.caption)
@@ -268,7 +302,7 @@ struct SettingsView: View {
                 Text("This removes every stored setting, job, log, and undo entry from the backend database and restores defaults.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Button("Stop Mail Summariser", role: .destructive) {
+                Button("Stop mail_summariser", role: .destructive) {
                     showStopConfirmation = true
                 }
                 Text("This shuts down the connected backend. If shutdown succeeds, the macOS app also closes.")
@@ -289,6 +323,8 @@ struct SettingsView: View {
         }
         .navigationTitle("Advanced Settings")
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+        .background(Color.clear)
     }
 
     private var providerBinding: Binding<String> {

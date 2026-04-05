@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "A100001A2C00000100000001"
-               BuildableName = "MailSummariser.app"
-               BlueprintName = "MailSummariser"
-               ReferencedContainer = "container:MailSummariser.xcodeproj">
+               BuildableName = "mail_summariser.app"
+               BlueprintName = "mail_summariser"
+               ReferencedContainer = "container:mail_summariser.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
@@ -30,9 +30,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "B10000102C00000100000001"
-               BuildableName = "MailSummariserTests.xctest"
-               BlueprintName = "MailSummariserTests"
-               ReferencedContainer = "container:MailSummariser.xcodeproj">
+               BuildableName = "mail_summariserTests.xctest"
+               BlueprintName = "mail_summariserTests"
+               ReferencedContainer = "container:mail_summariser.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -49,9 +49,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "B10000102C00000100000001"
-               BuildableName = "MailSummariserTests.xctest"
-               BlueprintName = "MailSummariserTests"
-               ReferencedContainer = "container:MailSummariser.xcodeproj">
+               BuildableName = "mail_summariserTests.xctest"
+               BlueprintName = "mail_summariserTests"
+               ReferencedContainer = "container:mail_summariser.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -59,9 +59,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A100001A2C00000100000001"
-            BuildableName = "MailSummariser.app"
-            BlueprintName = "MailSummariser"
-            ReferencedContainer = "container:MailSummariser.xcodeproj">
+            BuildableName = "mail_summariser.app"
+            BlueprintName = "mail_summariser"
+            ReferencedContainer = "container:mail_summariser.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
    </TestAction>
@@ -80,9 +80,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A100001A2C00000100000001"
-            BuildableName = "MailSummariser.app"
-            BlueprintName = "MailSummariser"
-            ReferencedContainer = "container:MailSummariser.xcodeproj">
+            BuildableName = "mail_summariser.app"
+            BlueprintName = "mail_summariser"
+            ReferencedContainer = "container:mail_summariser.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -97,9 +97,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A100001A2C00000100000001"
-            BuildableName = "MailSummariser.app"
-            BlueprintName = "MailSummariser"
-            ReferencedContainer = "container:MailSummariser.xcodeproj">
+            BuildableName = "mail_summariser.app"
+            BlueprintName = "mail_summariser"
+            ReferencedContainer = "container:mail_summariser.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

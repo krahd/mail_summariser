@@ -24,6 +24,15 @@ struct MessageItem: Codable, Identifiable {
     var date: String
 }
 
+struct MessageDetail: Codable, Identifiable {
+    var id: String
+    var subject: String
+    var sender: String
+    var recipient: String
+    var date: String
+    var body: String
+}
+
 struct SummaryResponse: Codable {
     var jobId: String
     var messages: [MessageItem]

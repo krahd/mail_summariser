@@ -6,7 +6,7 @@ from app import app
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run Mail Summariser backend")
+    parser = argparse.ArgumentParser(description="Run mail_summariser backend")
     parser.add_argument("--host", default=os.getenv("BACKEND_HOST", "127.0.0.1"))
     parser.add_argument("--port", type=int, default=int(os.getenv("BACKEND_PORT", "8766")))
     return parser.parse_args()

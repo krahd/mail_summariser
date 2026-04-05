@@ -1,22 +1,25 @@
-# Mail Summariser
+# mail_summariser
 
-Mail Summariser is a local-first mail workflow with a FastAPI backend, a browser client, and a SwiftUI macOS client. It can run entirely against a built-in dummy mailbox for safe validation, or switch to a real IMAP inbox and SMTP server while keeping persistent settings and live-mail history in SQLite.
+mail_summariser is a local-first mail workflow with a FastAPI backend, a browser client, and a SwiftUI macOS client. It can run entirely against a built-in dummy mailbox for safe validation, or switch to a real IMAP inbox and SMTP server while keeping persistent settings and live-mail history in SQLite.
+
+The main workflow in both clients now keeps the returned messages in a list while opening the selected mail's sender, recipient, and body in a side-by-side detail pane.
 
 User-facing docs, screenshots, and release downloads live on the GitHub Pages project site: [krahd.github.io/Mail-Summariser](https://krahd.github.io/Mail-Summariser/).
 
 <p align="center">
-  <img src="docs/assets/web-main.png" alt="Mail Summariser main browser workspace" width="100%" />
+  <img src="docs/assets/web-main.png" alt="mail_summariser main browser workspace" width="100%" />
 </p>
 
 <p align="center">
-  <img src="docs/assets/web-settings.png" alt="Mail Summariser settings view" width="49%" />
-  <img src="docs/assets/web-log.png" alt="Mail Summariser log view" width="49%" />
+  <img src="docs/assets/web-settings.png" alt="mail_summariser settings view" width="49%" />
+  <img src="docs/assets/web-log.png" alt="mail_summariser log view" width="49%" />
 </p>
 
 ## Current product surface
 
 - Browser client: `Main`, `Log`, `Settings`, and `Help`
 - macOS client: `Main` and `Log` tabs, plus a separate Settings window
+- Review flow: split message list plus selected-mail detail pane in both Main surfaces
 - Mail modes: built-in dummy mailbox by default, real IMAP/SMTP when configured
 - Summary providers: `ollama`, `openai`, or `anthropic`
 - Ollama lifecycle controls: install/start prompts on startup, optional startup launch, optional stop-on-exit
@@ -49,16 +52,18 @@ Then open:
 
 The default path is dummy mode. You can create summaries, exercise follow-up actions, and inspect logs without touching a real mailbox. Dummy-mode jobs, logs, undo state, mailbox flags, and outbox are intentionally non-persistent and reset on backend restart or mode changes.
 
+After each summary run, the first returned message is auto-selected so you can review the full mail body inline without leaving the summary view.
+
 ### macOS app
 
-Open `MailSummariser.xcodeproj` in Xcode and run the `MailSummariser` scheme. The app talks to the backend service, so start the backend first unless you are pointing it at another running instance.
+Open `mail_summariser.xcodeproj` in Xcode and run the `mail_summariser` scheme. The app talks to the backend service, so start the backend first unless you are pointing it at another running instance.
 
 When the saved provider is `ollama`, both clients now check local Ollama status at startup:
 
 - If Ollama is not installed, they offer to open the Ollama download page.
 - If Ollama is installed but not running, they offer to start it using the saved `modelName`.
 - If `ollamaStartOnStartup` is enabled, the backend starts Ollama automatically on boot and warms the saved model.
-- If `ollamaStopOnExit` is enabled, the backend stops only the Ollama instance that Mail Summariser itself started.
+- If `ollamaStopOnExit` is enabled, the backend stops only the Ollama instance that mail_summariser itself started.
 
 ## Configuration
 
@@ -118,7 +123,7 @@ Run the current automated test layers from the repo root:
 python3 -m unittest discover -s tests -v
 ./scripts/smoke_test_backend.sh
 ./scripts/run_imap_test_plan.sh
-xcodebuild -project MailSummariser.xcodeproj -scheme MailSummariser -configuration Debug CODE_SIGNING_ALLOWED=NO -derivedDataPath /tmp/mail-summariser-deriveddata test
+xcodebuild -project mail_summariser.xcodeproj -scheme mail_summariser -configuration Debug CODE_SIGNING_ALLOWED=NO -derivedDataPath /tmp/mail-summariser-deriveddata test
 ```
 
 `./scripts/smoke_test_backend.sh` now also verifies the runtime status endpoint, the fake-mail status endpoint, the expanded settings payload, and the database reset endpoint.
@@ -153,10 +158,10 @@ The release workflow publishes:
   - `mail-summariser-backend-macos-arm64.tar.gz`
   - `mail-summariser-backend-linux-x64.tar.gz`
   - `mail-summariser-backend-windows-x64.zip`
-- `MailSummariser-macos-app.zip`
+- `mail_summariser-macos-app.zip`
 
 ## Known limitations
 
 - Windows and Linux releases currently ship the backend and browser UI, not native desktop apps.
-- Installing Ollama still opens the official download page; Mail Summariser does not perform unattended package installation.
+- Installing Ollama still opens the official download page; mail_summariser does not perform unattended package installation.
 - Provider-backed summaries can fall back to the built-in deterministic digest when a model is unavailable or returns invalid output.

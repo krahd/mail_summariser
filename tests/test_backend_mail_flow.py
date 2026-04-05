@@ -13,11 +13,13 @@ BACKEND_DIR = REPO_ROOT / "backend"
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
+
 import app as backend_app
 import db
 import dummy_state
 import mail_service
 from fake_mail_server import FakeMailEnvironment
+
 
 
 SUMMARY_PAYLOAD = {
@@ -69,12 +71,21 @@ class BackendMailFlowTests(unittest.TestCase):
             self.assertEqual(connection.status_code, 200)
             self.assertEqual(connection.json()["mode"], "dummy")
 
-            summary = client.post("/summaries", json={**SUMMARY_PAYLOAD, "criteria": {**SUMMARY_PAYLOAD["criteria"], "keyword": "project"}})
+            summary = client.post(
+                "/summaries", json={**SUMMARY_PAYLOAD, "criteria": {**SUMMARY_PAYLOAD["criteria"], "keyword": "project"}})
             self.assertEqual(summary.status_code, 200)
-            job_id = summary.json()["jobId"]
+            payload = summary.json()
+            self.assertNotIn("body", payload["messages"][0])
+            job_id = payload["jobId"]
 
-            self.assertEqual(client.post("/actions/mark-read", json={"jobId": job_id}).status_code, 200)
-            self.assertEqual(client.post("/actions/tag-summarised", json={"jobId": job_id}).status_code, 200)
+            detail_response = client.get(f"/jobs/{job_id}/messages/{payload['messages'][0]['id']}")
+            self.assertEqual(detail_response.status_code, 200)
+            self.assertIn("deployment schedule", detail_response.json()["body"].lower())
+
+            self.assertEqual(client.post("/actions/mark-read",
+                             json={"jobId": job_id}).status_code, 200)
+            self.assertEqual(client.post("/actions/tag-summarised",
+                             json={"jobId": job_id}).status_code, 200)
 
             logs = client.get("/logs").json()
             job_logs = [item for item in logs if item.get("job_id") == job_id]
@@ -87,9 +98,12 @@ class BackendMailFlowTests(unittest.TestCase):
             self.assertEqual(undo_response.status_code, 200)
 
             logs_after_tag_undo = client.get("/logs").json()
-            job_logs_after_tag_undo = [item for item in logs_after_tag_undo if item.get("job_id") == job_id]
-            mark_log_after = next(item for item in job_logs_after_tag_undo if item["id"] == mark_log["id"])
-            tag_log_after = next(item for item in job_logs_after_tag_undo if item["id"] == tag_log["id"])
+            job_logs_after_tag_undo = [
+                item for item in logs_after_tag_undo if item.get("job_id") == job_id]
+            mark_log_after = next(
+                item for item in job_logs_after_tag_undo if item["id"] == mark_log["id"])
+            tag_log_after = next(
+                item for item in job_logs_after_tag_undo if item["id"] == tag_log["id"])
             self.assertTrue(mark_log_after["undoable"])
             self.assertEqual(tag_log_after["undo_status"], "final")
 
@@ -97,10 +111,25 @@ class BackendMailFlowTests(unittest.TestCase):
             self.assertEqual(undo_mark_response.status_code, 200)
 
             restored = mail_service.search_messages(
-                backend_app.SummaryRequest(**{**SUMMARY_PAYLOAD, "criteria": {**SUMMARY_PAYLOAD["criteria"], "keyword": "project"}}).criteria,
+                backend_app.SummaryRequest(
+                    **{**SUMMARY_PAYLOAD, "criteria": {**SUMMARY_PAYLOAD["criteria"], "keyword": "project"}}).criteria,
                 {"dummyMode": True},
             )
             self.assertTrue(restored[0]["unread"])
+
+    def test_message_detail_endpoint_returns_404_for_unknown_job_or_message(self) -> None:
+        with self._client() as client:
+            summary = client.post(
+                "/summaries", json={**SUMMARY_PAYLOAD, "criteria": {**SUMMARY_PAYLOAD["criteria"], "keyword": "project"}})
+            self.assertEqual(summary.status_code, 200)
+            payload = summary.json()
+            job_id = payload["jobId"]
+
+            missing_job = client.get(f"/jobs/missing-job/messages/{payload['messages'][0]['id']}")
+            self.assertEqual(missing_job.status_code, 404)
+
+            missing_message = client.get(f"/jobs/{job_id}/messages/missing-message")
+            self.assertEqual(missing_message.status_code, 404)
 
         self.assertEqual(self._table_count("jobs"), 0)
         self.assertEqual(self._table_count("logs"), 0)
@@ -108,7 +137,8 @@ class BackendMailFlowTests(unittest.TestCase):
 
     def test_dummy_mode_jobs_are_invalidated_when_switching_to_live_mode(self) -> None:
         with self._client() as client:
-            summary = client.post("/summaries", json={**SUMMARY_PAYLOAD, "criteria": {**SUMMARY_PAYLOAD["criteria"], "keyword": "project"}})
+            summary = client.post(
+                "/summaries", json={**SUMMARY_PAYLOAD, "criteria": {**SUMMARY_PAYLOAD["criteria"], "keyword": "project"}})
             self.assertEqual(summary.status_code, 200)
             job_id = summary.json()["jobId"]
 
@@ -135,18 +165,26 @@ class BackendMailFlowTests(unittest.TestCase):
 
             summary = client.post(
                 "/summaries",
-                json={**SUMMARY_PAYLOAD, "criteria": {**SUMMARY_PAYLOAD["criteria"], "keyword": "invoice"}},
+                json={**SUMMARY_PAYLOAD, "criteria": {**
+                                                      SUMMARY_PAYLOAD["criteria"], "keyword": "invoice"}},
             )
             self.assertEqual(summary.status_code, 200)
             payload = summary.json()
             self.assertEqual(len(payload["messages"]), 1)
             self.assertEqual(payload["messages"][0]["id"], "102")
+            self.assertNotIn("body", payload["messages"][0])
             job_id = payload["jobId"]
 
-            self.assertEqual(client.post("/actions/mark-read", json={"jobId": job_id}).status_code, 200)
+            detail_response = client.get(f"/jobs/{job_id}/messages/{payload['messages'][0]['id']}")
+            self.assertEqual(detail_response.status_code, 200)
+            self.assertIn("invoice", detail_response.json()["body"].lower())
+
+            self.assertEqual(client.post("/actions/mark-read",
+                             json={"jobId": job_id}).status_code, 200)
             self.assertIn("\\Seen", environment.flags_for("102"))
 
-            self.assertEqual(client.post("/actions/tag-summarised", json={"jobId": job_id}).status_code, 200)
+            self.assertEqual(client.post("/actions/tag-summarised",
+                             json={"jobId": job_id}).status_code, 200)
             self.assertIn("summarised", environment.flags_for("102"))
 
             logs = client.get("/logs").json()
@@ -166,7 +204,8 @@ class BackendMailFlowTests(unittest.TestCase):
             self.assertIn("Mail summary", environment.sent_messages[0]["subject"])
 
             latest_logs = client.get("/logs").json()
-            email_log = next(item for item in latest_logs if item["action"] == "email_summary" and item.get("job_id") == job_id)
+            email_log = next(
+                item for item in latest_logs if item["action"] == "email_summary" and item.get("job_id") == job_id)
             self.assertEqual(email_log["undo_status"], "final")
             self.assertFalse(email_log["undoable"])
 
@@ -182,19 +221,23 @@ class BackendMailFlowTests(unittest.TestCase):
             save_response = client.post("/settings", json=status_payload["suggestedSettings"])
             self.assertEqual(save_response.status_code, 200)
 
-            connection = client.post("/settings/test-connection", json=status_payload["suggestedSettings"])
+            connection = client.post("/settings/test-connection",
+                                     json=status_payload["suggestedSettings"])
             self.assertEqual(connection.status_code, 200)
             self.assertEqual(connection.json()["mode"], "imap")
 
             summary = client.post(
                 "/summaries",
-                json={**SUMMARY_PAYLOAD, "criteria": {**SUMMARY_PAYLOAD["criteria"], "keyword": "invoice"}},
+                json={**SUMMARY_PAYLOAD, "criteria": {**
+                                                      SUMMARY_PAYLOAD["criteria"], "keyword": "invoice"}},
             )
             self.assertEqual(summary.status_code, 200)
             job_id = summary.json()["jobId"]
 
-            self.assertEqual(client.post("/actions/mark-read", json={"jobId": job_id}).status_code, 200)
-            self.assertEqual(client.post("/actions/tag-summarised", json={"jobId": job_id}).status_code, 200)
+            self.assertEqual(client.post("/actions/mark-read",
+                             json={"jobId": job_id}).status_code, 200)
+            self.assertEqual(client.post("/actions/tag-summarised",
+                             json={"jobId": job_id}).status_code, 200)
 
             environment = backend_app._fake_mail_manager._environment
             self.assertIsNotNone(environment)

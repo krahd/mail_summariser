@@ -29,12 +29,12 @@
 			containerPortal = A100001B2C00000100000001 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = A100001A2C00000100000001;
-			remoteInfo = MailSummariser;
+			remoteInfo = mail_summariser;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		A10000012C00000100000001 /* MailSummariser.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MailSummariser.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000012C00000100000001 /* mail_summariser.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = mail_summariser.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000032C00000100000001 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppState.swift; path = macos-app/AppState.swift; sourceTree = SOURCE_ROOT; };
 		A10000042C00000100000001 /* BackendBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BackendBridge.swift; path = macos-app/BackendBridge.swift; sourceTree = SOURCE_ROOT; };
 		A10000052C00000100000001 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ContentView.swift; path = macos-app/ContentView.swift; sourceTree = SOURCE_ROOT; };
@@ -45,7 +45,7 @@
 		A100000A2C00000100000001 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = macos-app/SettingsView.swift; sourceTree = SOURCE_ROOT; };
 		A100000B2C00000100000001 /* SummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SummaryView.swift; path = macos-app/SummaryView.swift; sourceTree = SOURCE_ROOT; };
 		A100000C2C00000100000001 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
-		B10000052C00000100000001 /* MailSummariserTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MailSummariserTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B10000052C00000100000001 /* mail_summariserTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = mail_summariserTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B10000062C00000100000001 /* MockURLProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MockURLProtocol.swift; path = macos-app-tests/MockURLProtocol.swift; sourceTree = SOURCE_ROOT; };
 		B10000072C00000100000001 /* BackendBridgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BackendBridgeTests.swift; path = macos-app-tests/BackendBridgeTests.swift; sourceTree = SOURCE_ROOT; };
 		B10000082C00000100000001 /* AppStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppStateTests.swift; path = macos-app-tests/AppStateTests.swift; sourceTree = SOURCE_ROOT; };
@@ -84,8 +84,8 @@
 		A10000182C00000100000001 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A10000012C00000100000001 /* MailSummariser.app */,
-				B10000052C00000100000001 /* MailSummariserTests.xctest */,
+				A10000012C00000100000001 /* mail_summariser.app */,
+				B10000052C00000100000001 /* mail_summariserTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -119,9 +119,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A100001A2C00000100000001 /* MailSummariser */ = {
+		A100001A2C00000100000001 /* mail_summariser */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A10000242C00000100000001 /* Build configuration list for PBXNativeTarget "MailSummariser" */;
+			buildConfigurationList = A10000242C00000100000001 /* Build configuration list for PBXNativeTarget "mail_summariser" */;
 			buildPhases = (
 				A100001C2C00000100000001 /* Sources */,
 				A100001D2C00000100000001 /* Frameworks */,
@@ -131,14 +131,14 @@
 			);
 			dependencies = (
 			);
-			name = MailSummariser;
-			productName = MailSummariser;
-			productReference = A10000012C00000100000001 /* MailSummariser.app */;
+			name = mail_summariser;
+			productName = mail_summariser;
+			productReference = A10000012C00000100000001 /* mail_summariser.app */;
 			productType = "com.apple.product-type.application";
 		};
-		B10000102C00000100000001 /* MailSummariserTests */ = {
+		B10000102C00000100000001 /* mail_summariserTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = B10000132C00000100000001 /* Build configuration list for PBXNativeTarget "MailSummariserTests" */;
+			buildConfigurationList = B10000132C00000100000001 /* Build configuration list for PBXNativeTarget "mail_summariserTests" */;
 			buildPhases = (
 				B100000D2C00000100000001 /* Sources */,
 				B100000B2C00000100000001 /* Frameworks */,
@@ -149,9 +149,9 @@
 			dependencies = (
 				B100000F2C00000100000001 /* PBXTargetDependency */,
 			);
-			name = MailSummariserTests;
-			productName = MailSummariserTests;
-			productReference = B10000052C00000100000001 /* MailSummariserTests.xctest */;
+			name = mail_summariserTests;
+			productName = mail_summariserTests;
+			productReference = B10000052C00000100000001 /* mail_summariserTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
@@ -173,7 +173,7 @@
 					};
 				};
 			};
-			buildConfigurationList = A100001F2C00000100000001 /* Build configuration list for PBXProject "MailSummariser" */;
+			buildConfigurationList = A100001F2C00000100000001 /* Build configuration list for PBXProject "mail_summariser" */;
 			compatibilityVersion = "Xcode 15.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -186,8 +186,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				A100001A2C00000100000001 /* MailSummariser */,
-				B10000102C00000100000001 /* MailSummariserTests */,
+				A100001A2C00000100000001 /* mail_summariser */,
+				B10000102C00000100000001 /* mail_summariserTests */,
 			);
 		};
 /* End PBXProject section */
@@ -241,7 +241,7 @@
 /* Begin PBXTargetDependency section */
 		B100000F2C00000100000001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = A100001A2C00000100000001 /* MailSummariser */;
+			target = A100001A2C00000100000001 /* mail_summariser */;
 			targetProxy = B100000E2C00000100000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -366,19 +366,19 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Mail Summariser";
+				INFOPLIST_KEY_CFBundleDisplayName = mail_summariser;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.0.3;
-				PRODUCT_BUNDLE_IDENTIFIER = com.tom.MailSummariser;
+				MARKETING_VERSION = 0.0.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tom.mail-summariser;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SUPPORTED_PLATFORMS = macosx;
@@ -392,19 +392,19 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Mail Summariser";
+				INFOPLIST_KEY_CFBundleDisplayName = mail_summariser;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.0.3;
-				PRODUCT_BUNDLE_IDENTIFIER = com.tom.MailSummariser;
+				MARKETING_VERSION = 0.0.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tom.mail-summariser;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SUPPORTED_PLATFORMS = macosx;
@@ -421,20 +421,20 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = MailSummariserTests;
+				INFOPLIST_KEY_CFBundleDisplayName = mail_summariserTests;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.tom.MailSummariserTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tom.mail-summariser-tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SUPPORTED_PLATFORMS = macosx;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MailSummariser.app/Contents/MacOS/MailSummariser";
-				TEST_TARGET_NAME = MailSummariser;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/mail_summariser.app/Contents/MacOS/mail_summariser";
+				TEST_TARGET_NAME = mail_summariser;
 			};
 			name = Debug;
 		};
@@ -446,27 +446,27 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = MailSummariserTests;
+				INFOPLIST_KEY_CFBundleDisplayName = mail_summariserTests;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.tom.MailSummariserTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tom.mail-summariser-tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SUPPORTED_PLATFORMS = macosx;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MailSummariser.app/Contents/MacOS/MailSummariser";
-				TEST_TARGET_NAME = MailSummariser;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/mail_summariser.app/Contents/MacOS/mail_summariser";
+				TEST_TARGET_NAME = mail_summariser;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A100001F2C00000100000001 /* Build configuration list for PBXProject "MailSummariser" */ = {
+		A100001F2C00000100000001 /* Build configuration list for PBXProject "mail_summariser" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A10000202C00000100000001 /* Debug */,
@@ -475,7 +475,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A10000242C00000100000001 /* Build configuration list for PBXNativeTarget "MailSummariser" */ = {
+		A10000242C00000100000001 /* Build configuration list for PBXNativeTarget "mail_summariser" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A10000222C00000100000001 /* Debug */,
@@ -484,7 +484,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		B10000132C00000100000001 /* Build configuration list for PBXNativeTarget "MailSummariserTests" */ = {
+		B10000132C00000100000001 /* Build configuration list for PBXNativeTarget "mail_summariserTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				B10000112C00000100000001 /* Debug */,

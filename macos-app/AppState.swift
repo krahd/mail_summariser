@@ -3,6 +3,7 @@ import Foundation
 @MainActor
 final class AppState: ObservableObject {
     private static let backendAPIKeyDefaultsKey = "mail-summariser-backend-api-key"
+    private var messageDetailRequestToken = UUID()
 
     let bridge: BackendBridge
 
@@ -11,6 +12,10 @@ final class AppState: ObservableObject {
     @Published var currentSummary: String = ""
     @Published var currentMessages: [MessageItem] = []
     @Published var selectedJobId: String = ""
+    @Published var selectedMessageId: String? = nil
+    @Published var selectedMessageDetail: MessageDetail? = nil
+    @Published var isLoadingSelectedMessage = false
+    @Published var selectedMessageErrorText: String = ""
     @Published var statusText: String = "Ready"
     @Published var settings = AppSettings()
     @Published var backendAPIKey: String
@@ -96,5 +101,48 @@ final class AppState: ObservableObject {
         currentSummary = ""
         currentMessages = []
         selectedJobId = ""
+        clearSelectedMessageState()
+    }
+
+    func selectMessage(_ messageId: String?) async {
+        messageDetailRequestToken = UUID()
+        selectedMessageId = messageId
+        selectedMessageDetail = nil
+        selectedMessageErrorText = ""
+
+        guard let messageId, !messageId.isEmpty, !selectedJobId.isEmpty else {
+            isLoadingSelectedMessage = false
+            return
+        }
+
+        let requestToken = UUID()
+        messageDetailRequestToken = requestToken
+        isLoadingSelectedMessage = true
+
+        do {
+            let detail = try await bridge.getMessageDetail(jobId: selectedJobId, messageId: messageId)
+            guard messageDetailRequestToken == requestToken, selectedMessageId == messageId else {
+                return
+            }
+
+            selectedMessageDetail = detail
+            isLoadingSelectedMessage = false
+        } catch {
+            guard messageDetailRequestToken == requestToken, selectedMessageId == messageId else {
+                return
+            }
+
+            isLoadingSelectedMessage = false
+            selectedMessageErrorText = error.localizedDescription
+            statusText = "Message load failed: \(error.localizedDescription)"
+        }
+    }
+
+    private func clearSelectedMessageState() {
+        messageDetailRequestToken = UUID()
+        selectedMessageId = nil
+        selectedMessageDetail = nil
+        isLoadingSelectedMessage = false
+        selectedMessageErrorText = ""
     }
 }
