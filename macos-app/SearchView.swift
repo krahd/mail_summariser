@@ -275,7 +275,7 @@ struct SearchView: View {
                     eyebrow: "Review",
                     title: "Messages",
                     subtitle: appState.currentMessages.isEmpty
-                        ? "The current result set appears here after each summary run."
+                        ? nil
                         : "\(appState.currentMessages.count) messages in the current job."
                 )
                 Spacer()

@@ -149,7 +149,7 @@ function renderMessages(messages) {
 
   if (messagesSummary) {
     messagesSummary.textContent = currentMessages.length === 0
-      ? "The current result set appears here after each summary run."
+      ? ""
       : `${currentMessages.length} messages in the current job.`;
   }
 
