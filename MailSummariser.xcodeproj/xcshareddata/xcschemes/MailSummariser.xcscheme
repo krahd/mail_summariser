@@ -21,15 +21,49 @@
                ReferencedContainer = "container:MailSummariser.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "B10000102C00000100000001"
+               BuildableName = "MailSummariserTests.xctest"
+               BlueprintName = "MailSummariserTests"
+               ReferencedContainer = "container:MailSummariser.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
       buildConfiguration = "Debug"
+      codeCoverageEnabled = "YES"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES">
       <Testables>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "B10000102C00000100000001"
+               BuildableName = "MailSummariserTests.xctest"
+               BlueprintName = "MailSummariserTests"
+               ReferencedContainer = "container:MailSummariser.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "A100001A2C00000100000001"
+            BuildableName = "MailSummariser.app"
+            BlueprintName = "MailSummariser"
+            ReferencedContainer = "container:MailSummariser.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"

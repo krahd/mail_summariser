@@ -6,8 +6,15 @@ const storageKeys = {
 };
 
 let currentJobId = null;
+let currentRuntimeStatus = null;
+let currentFakeMailStatus = null;
+let backendStopping = false;
+let activeDummyMode = true;
 
 const statusLine = document.getElementById("status-line");
+const runtimeStartupBanner = document.getElementById("runtime-startup-banner");
+const runtimeStartupMessage = document.getElementById("runtime-startup-message");
+const runtimeStartupActionBtn = document.getElementById("runtime-startup-action");
 const testConnectionBtn = document.getElementById("test-connection");
 const connectionTestStatusLine = document.getElementById("connection-test-status");
 const dummyModeToggleBtn = document.getElementById("dummy-mode-toggle");
@@ -31,10 +38,15 @@ const settingsForm = document.getElementById("settings-form");
 const providerSelect = document.getElementById("llm-provider");
 const refreshModelsBtn = document.getElementById("refresh-models");
 const ollamaStatusLine = document.getElementById("ollama-status");
+const ollamaRuntimeStatusLine = document.getElementById("ollama-runtime-status");
+const runtimeOllamaActionBtn = document.getElementById("runtime-ollama-action");
+const refreshRuntimeStatusBtn = document.getElementById("refresh-runtime-status");
 const downloadableModelSelect = document.getElementById("downloadable-model");
 const refreshCatalogBtn = document.getElementById("refresh-catalog");
 const downloadModelBtn = document.getElementById("download-model");
 const catalogStatusLine = document.getElementById("catalog-status");
+const stopMailSummariserBtn = document.getElementById("stop-mail-summariser");
+const resetLocalDatabaseBtn = document.getElementById("reset-local-database");
 const backendApiKeyInput = document.getElementById("backend-api-key");
 const providerKeyWarningLine = document.getElementById("provider-key-warning");
 const openaiApiKeyInput = document.getElementById("openai-api-key");
@@ -48,6 +60,12 @@ const toggleImapPasswordBtn = document.getElementById("toggle-imap-password");
 const toggleSmtpPasswordBtn = document.getElementById("toggle-smtp-password");
 const openaiKeyGroup = document.getElementById("openai-key-group");
 const anthropicKeyGroup = document.getElementById("anthropic-key-group");
+const fakeMailCard = document.getElementById("fake-mail-card");
+const fakeMailStatusLine = document.getElementById("fake-mail-status");
+const fakeMailCredentialsLine = document.getElementById("fake-mail-credentials");
+const startFakeMailBtn = document.getElementById("start-fake-mail");
+const stopFakeMailBtn = document.getElementById("stop-fake-mail");
+const useFakeMailSettingsBtn = document.getElementById("use-fake-mail-settings");
 
 const api = createApiClient({
   getBaseUrl,
@@ -78,6 +96,14 @@ function setActionButtons(enabled) {
   markReadBtn.disabled = !enabled;
   tagSummaryBtn.disabled = !enabled;
   emailSummaryBtn.disabled = !enabled;
+}
+
+function clearCurrentWorkspaceState() {
+  currentJobId = null;
+  jobIdLabel.textContent = "No job yet";
+  summaryText.textContent = "Run a summary to see output here.";
+  renderMessages([]);
+  setActionButtons(false);
 }
 
 function renderMessages(messages) {
@@ -124,7 +150,8 @@ function renderLogs(logs) {
     .join("");
 }
 
-function fillSettings(settings) {
+function fillSettings(settings, options = {}) {
+  const updateActiveMode = options.updateActiveMode !== false;
   const keyFieldNames = ["openaiApiKey", "anthropicApiKey", "imapPassword", "smtpPassword"];
   Object.entries(settings).forEach(([name, value]) => {
     const input = settingsForm.elements.namedItem(name);
@@ -143,7 +170,13 @@ function fillSettings(settings) {
       }
     }
   });
-  syncDummyModeUI(Boolean(settings.dummyMode));
+  if (updateActiveMode) {
+    activeDummyMode = Boolean(settings.dummyMode);
+  }
+  if (dummyModeField) {
+    dummyModeField.checked = Boolean(settings.dummyMode);
+  }
+  syncDummyModeUI(activeDummyMode);
   refreshProviderKeyWarning();
   refreshProviderKeyFieldVisibility();
 }
@@ -171,12 +204,172 @@ function setOllamaStatus(message, isError = false) {
   ollamaStatusLine.style.color = isError ? "#b5312e" : "#245f58";
 }
 
+function setOllamaRuntimeStatus(message, isError = false) {
+  if (!ollamaRuntimeStatusLine) {
+    return;
+  }
+  ollamaRuntimeStatusLine.textContent = message;
+  ollamaRuntimeStatusLine.style.color = isError ? "#b5312e" : "#245f58";
+}
+
 function setCatalogStatus(message, isError = false) {
   if (!catalogStatusLine) {
     return;
   }
   catalogStatusLine.textContent = message;
   catalogStatusLine.style.color = isError ? "#b5312e" : "#245f58";
+}
+
+function selectedProvider() {
+  return providerSelect?.value || "ollama";
+}
+
+function runtimeNeedsAttention(runtime) {
+  const action = runtime?.ollama?.startupAction || "none";
+  return action === "install" || action === "start";
+}
+
+function configureRuntimeActionButton(button, runtime) {
+  if (!button) {
+    return;
+  }
+
+  if (!runtime || selectedProvider() !== "ollama") {
+    button.classList.add("is-hidden");
+    return;
+  }
+
+  const action = runtime?.ollama?.startupAction || "none";
+  if (action === "install") {
+    button.textContent = "Install Ollama";
+    button.classList.remove("is-hidden");
+    return;
+  }
+  if (action === "start") {
+    button.textContent = "Start Ollama";
+    button.classList.remove("is-hidden");
+    return;
+  }
+  button.classList.add("is-hidden");
+}
+
+function updateRuntimeStartupBanner(runtime) {
+  if (!runtimeStartupBanner || !runtimeStartupMessage) {
+    return;
+  }
+
+  if (!runtime || selectedProvider() !== "ollama" || !runtimeNeedsAttention(runtime) || backendStopping) {
+    runtimeStartupBanner.classList.add("is-hidden");
+    return;
+  }
+
+  runtimeStartupMessage.textContent = runtime.ollama.message || "Ollama needs attention.";
+  runtimeStartupBanner.classList.remove("is-hidden");
+  configureRuntimeActionButton(runtimeStartupActionBtn, runtime);
+}
+
+function renderRuntimeStatus(runtime) {
+  currentRuntimeStatus = runtime;
+  const needsAttention = runtimeNeedsAttention(runtime);
+  const message = runtime?.ollama?.message || "Runtime status not available.";
+  setOllamaRuntimeStatus(message, needsAttention);
+  configureRuntimeActionButton(runtimeOllamaActionBtn, runtime);
+  updateRuntimeStartupBanner(runtime);
+}
+
+async function refreshRuntimeStatus() {
+  const runtime = await api.getRuntimeStatus();
+  renderRuntimeStatus(runtime);
+  return runtime;
+}
+
+function renderFakeMailStatus(status) {
+  currentFakeMailStatus = status;
+
+  if (!fakeMailCard || !fakeMailStatusLine || !fakeMailCredentialsLine) {
+    return;
+  }
+
+  if (!status?.enabled) {
+    fakeMailCard.classList.add("is-hidden");
+    return;
+  }
+
+  fakeMailCard.classList.remove("is-hidden");
+  fakeMailStatusLine.textContent = status.message || "Developer fake mail server is available.";
+  fakeMailStatusLine.style.color = status.running ? "#245f58" : "#7a5f19";
+
+  if (status.running) {
+    fakeMailCredentialsLine.textContent =
+      `IMAP ${status.imapHost}:${status.imapPort} | SMTP ${status.smtpHost}:${status.smtpPort} | ` +
+      `Username ${status.username} | Password ${status.password} | Recipient ${status.recipientEmail}`;
+  } else {
+    fakeMailCredentialsLine.textContent =
+      "Start the local fake IMAP/SMTP server to generate disposable test credentials.";
+  }
+
+  if (startFakeMailBtn) {
+    startFakeMailBtn.disabled = Boolean(status.running);
+  }
+  if (stopFakeMailBtn) {
+    stopFakeMailBtn.disabled = !status.running;
+  }
+  if (useFakeMailSettingsBtn) {
+    useFakeMailSettingsBtn.disabled = !status.running || !status.suggestedSettings;
+  }
+}
+
+async function refreshFakeMailStatus() {
+  const status = await api.getFakeMailStatus();
+  renderFakeMailStatus(status);
+  return status;
+}
+
+function openOllamaInstallPage() {
+  const url = currentRuntimeStatus?.ollama?.installUrl || "https://ollama.com/download";
+  window.open(url, "_blank", "noopener");
+  setStatus("Opened the Ollama download page.");
+}
+
+async function handleRuntimeAction() {
+  const action = currentRuntimeStatus?.ollama?.startupAction || "none";
+
+  if (action === "install") {
+    openOllamaInstallPage();
+    return;
+  }
+
+  if (action !== "start") {
+    return;
+  }
+
+  try {
+    const response = await api.startOllamaRuntime();
+    setStatus(response.message || "Ollama start requested.", response.status === "warning");
+    if (response.runtime) {
+      renderRuntimeStatus(response.runtime);
+    } else {
+      await refreshRuntimeStatus();
+    }
+    await refreshModelOptions();
+  } catch (error) {
+    setStatus(`Ollama start failed: ${error.message}`, true);
+  }
+}
+
+function setBackendStoppedState(message) {
+  backendStopping = true;
+  setStatus(message, true);
+  setConnectionTestStatus("Backend is stopped.", true);
+  setOllamaRuntimeStatus("Backend is stopped.", true);
+  setOllamaStatus("Backend is stopped.", true);
+  setCatalogStatus("Backend is stopped.", true);
+  updateRuntimeStartupBanner(null);
+  document.querySelectorAll("button, input, select, textarea").forEach((element) => {
+    if (element.id !== "help-button") {
+      element.disabled = true;
+    }
+  });
 }
 
 function hasConfiguredKey(input) {
@@ -195,7 +388,7 @@ function setProviderKeyWarning(message, isError = false) {
 }
 
 function refreshProviderKeyWarning() {
-  const provider = providerSelect?.value || "ollama";
+  const provider = selectedProvider();
 
   if (provider === "openai") {
     if (hasConfiguredKey(openaiApiKeyInput)) {
@@ -219,7 +412,7 @@ function refreshProviderKeyWarning() {
 }
 
 function refreshProviderKeyFieldVisibility() {
-  const provider = providerSelect?.value || "ollama";
+  const provider = selectedProvider();
   openaiKeyGroup?.classList.toggle("is-hidden", provider !== "openai");
   anthropicKeyGroup?.classList.toggle("is-hidden", provider !== "anthropic");
 }
@@ -327,7 +520,7 @@ function _startDownloadPoll(modelName) {
 }
 
 async function refreshModelOptions() {
-  const provider = providerSelect?.value || "ollama";
+  const provider = selectedProvider();
   try {
     const result = await api.getModelOptions(provider);
     const modelInput = settingsForm.elements.namedItem("modelName");
@@ -391,6 +584,8 @@ function collectSettings() {
     "anthropicApiKey",
     "ollamaHost",
     "ollamaAutoStart",
+    "ollamaStartOnStartup",
+    "ollamaStopOnExit",
     "modelName",
     "backendBaseURL",
   ].forEach((key) => {
@@ -492,8 +687,10 @@ async function loadInitialData() {
     const [logs, settings] = await Promise.all([api.getLogs(), api.getSettings()]);
     renderLogs(logs);
     fillSettings(settings);
+    await refreshRuntimeStatus();
     await refreshModelOptions();
     await refreshDownloadCatalog();
+    await refreshFakeMailStatus();
     setStatus("Connected and loaded initial data.");
   } catch (error) {
     setStatus(`Initial load failed: ${error.message}`, true);
@@ -597,11 +794,24 @@ function wireEvents() {
   });
 
   refreshModelsBtn.addEventListener("click", refreshModelOptions);
+  refreshRuntimeStatusBtn?.addEventListener("click", async () => {
+    try {
+      await refreshRuntimeStatus();
+      setStatus("Runtime status refreshed.");
+    } catch (error) {
+      setStatus(`Runtime status refresh failed: ${error.message}`, true);
+    }
+  });
   providerSelect.addEventListener("change", () => {
     refreshModelOptions();
+    refreshRuntimeStatus().catch((error) => {
+      setStatus(`Runtime status refresh failed: ${error.message}`, true);
+    });
     refreshProviderKeyWarning();
     refreshProviderKeyFieldVisibility();
   });
+  runtimeStartupActionBtn?.addEventListener("click", handleRuntimeAction);
+  runtimeOllamaActionBtn?.addEventListener("click", handleRuntimeAction);
   openaiApiKeyInput?.addEventListener("input", refreshProviderKeyWarning);
   anthropicApiKeyInput?.addEventListener("input", refreshProviderKeyWarning);
   toggleOpenAiKeyBtn?.addEventListener("click", () => toggleSecretField(openaiApiKeyInput, toggleOpenAiKeyBtn));
@@ -611,11 +821,78 @@ function wireEvents() {
   toggleSmtpPasswordBtn?.addEventListener("click", () => toggleSecretField(smtpPasswordInput, toggleSmtpPasswordBtn));
   refreshCatalogBtn.addEventListener("click", refreshDownloadCatalog);
   downloadModelBtn.addEventListener("click", downloadSelectedModel);
+  stopMailSummariserBtn?.addEventListener("click", async () => {
+    const confirmed = window.confirm("Stop the connected Mail Summariser backend now?");
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const response = await api.shutdownRuntime();
+      setBackendStoppedState(response.message || "Mail Summariser is shutting down.");
+    } catch (error) {
+      setStatus(`Shutdown failed: ${error.message}`, true);
+    }
+  });
+  resetLocalDatabaseBtn?.addEventListener("click", async () => {
+    const confirmation = window.prompt("Type RESET DATABASE to delete all stored backend data.");
+    if (confirmation !== "RESET DATABASE") {
+      setStatus("Database reset cancelled.");
+      return;
+    }
+
+    try {
+      const response = await api.resetDatabase("RESET DATABASE");
+      clearCurrentWorkspaceState();
+      fillSettings(response.settings);
+      renderLogs(await api.getLogs());
+      await refreshRuntimeStatus();
+      await refreshModelOptions();
+      await refreshDownloadCatalog();
+      await refreshFakeMailStatus();
+      setConnectionTestStatus("Connection not tested yet.");
+      setStatus(response.message || "Local database reset to defaults.");
+    } catch (error) {
+      setStatus(`Database reset failed: ${error.message}`, true);
+    }
+  });
+  startFakeMailBtn?.addEventListener("click", async () => {
+    try {
+      const status = await api.startFakeMailServer();
+      renderFakeMailStatus(status);
+      setStatus(status.message || "Fake mail server started.");
+    } catch (error) {
+      setStatus(`Fake mail start failed: ${error.message}`, true);
+    }
+  });
+  stopFakeMailBtn?.addEventListener("click", async () => {
+    try {
+      const status = await api.stopFakeMailServer();
+      renderFakeMailStatus(status);
+      setStatus(status.message || "Fake mail server stopped.");
+    } catch (error) {
+      setStatus(`Fake mail stop failed: ${error.message}`, true);
+    }
+  });
+  useFakeMailSettingsBtn?.addEventListener("click", () => {
+    const suggested = currentFakeMailStatus?.suggestedSettings;
+    if (!suggested) {
+      setStatus("Start the fake mail server before applying its settings.", true);
+      return;
+    }
+    fillSettings(suggested, { updateActiveMode: false });
+    setStatus("Fake mail settings loaded into the form. Save settings to use them.");
+  });
   dummyModeToggleBtn?.addEventListener("click", async () => {
-    const nextMode = !(dummyModeField?.checked);
+    const nextMode = !activeDummyMode;
     try {
       await api.setDummyMode(nextMode);
+      activeDummyMode = nextMode;
+      if (dummyModeField) {
+        dummyModeField.checked = nextMode;
+      }
       syncDummyModeUI(nextMode);
+      clearCurrentWorkspaceState();
       setStatus(nextMode ? "Dummy mode enabled." : "Dummy mode disabled.");
       renderLogs(await api.getLogs());
     } catch (error) {
@@ -626,13 +903,21 @@ function wireEvents() {
   settingsForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
+      const previousDummyMode = activeDummyMode;
       const previousBaseUrl = localStorage.getItem(storageKeys.baseUrl) || "";
       const nextBaseUrl = getBaseUrl();
       const payload = collectSettings();
       localStorage.setItem(storageKeys.baseUrl, getBaseUrl());
       localStorage.setItem(storageKeys.apiKey, backendApiKeyInput?.value || "");
       await api.saveSettings(payload);
-      syncDummyModeUI(Boolean(payload.dummyMode));
+      const refreshedSettings = await api.getSettings();
+      fillSettings(refreshedSettings);
+      if (previousDummyMode !== Boolean(refreshedSettings.dummyMode)) {
+        clearCurrentWorkspaceState();
+      }
+      await refreshRuntimeStatus();
+      await refreshModelOptions();
+      await refreshFakeMailStatus();
       if (previousBaseUrl && previousBaseUrl !== nextBaseUrl) {
         setStatus("Settings saved. Backend target updated; no backend restart was performed.");
       } else {

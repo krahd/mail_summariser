@@ -14,11 +14,25 @@ class WebContractTests(unittest.TestCase):
         self.assertIn(">Log<", html)
         self.assertIn('id="dummy-mode-toggle"', html)
         self.assertIn('id="test-connection"', html)
+        self.assertIn("Start Ollama automatically on startup", html)
+        self.assertIn("Stop Ollama automatically on exit", html)
+        self.assertIn("Stop Mail Summariser", html)
+        self.assertIn("Reset Local Database", html)
+        self.assertIn("Fake Mail Server", html)
+        self.assertIn('id="reset-local-database"', html)
+        self.assertIn('id="start-fake-mail"', html)
+        self.assertIn('id="stop-fake-mail"', html)
+        self.assertIn('id="use-fake-mail-settings"', html)
 
     def test_log_ui_uses_final_and_not_no_undo(self) -> None:
         app_js = (REPO_ROOT / "webapp" / "app.js").read_text(encoding="utf-8")
         self.assertIn("Final", app_js)
         self.assertNotIn("No undo", app_js)
+        self.assertIn("shutdownRuntime", app_js)
+        self.assertIn("resetDatabase", app_js)
+        self.assertIn("startFakeMailServer", app_js)
+        self.assertIn("stopFakeMailServer", app_js)
+        self.assertIn("runtime-startup-banner", (REPO_ROOT / "webapp" / "index.html").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

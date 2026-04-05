@@ -63,8 +63,72 @@
  * @property {string} anthropicApiKey
  * @property {string} ollamaHost
  * @property {boolean} ollamaAutoStart
+ * @property {boolean} ollamaStartOnStartup
+ * @property {boolean} ollamaStopOnExit
  * @property {string} modelName
  * @property {string} backendBaseURL
+ */
+
+/**
+ * @typedef {Object} BackendRuntimeStatus
+ * @property {boolean} running
+ * @property {boolean} canShutdown
+ */
+
+/**
+ * @typedef {Object} OllamaRuntimeStatus
+ * @property {boolean} installed
+ * @property {boolean} running
+ * @property {boolean} startedByApp
+ * @property {string} host
+ * @property {string} modelName
+ * @property {string} startupAction
+ * @property {string} message
+ * @property {string} installUrl
+ */
+
+/**
+ * @typedef {Object} RuntimeStatusResponse
+ * @property {BackendRuntimeStatus} backend
+ * @property {OllamaRuntimeStatus} ollama
+ */
+
+/**
+ * @typedef {Object} RuntimeActionResponse
+ * @property {string} status
+ * @property {string} message
+ * @property {RuntimeStatusResponse} runtime
+ */
+
+/**
+ * @typedef {Object} DatabaseResetCounts
+ * @property {number} settings
+ * @property {number} logs
+ * @property {number} jobs
+ * @property {number} undo
+ */
+
+/**
+ * @typedef {Object} DatabaseResetResponse
+ * @property {string} status
+ * @property {string} message
+ * @property {DatabaseResetCounts} removed
+ * @property {AppSettings} settings
+ */
+
+/**
+ * @typedef {Object} FakeMailStatusResponse
+ * @property {boolean} enabled
+ * @property {boolean} running
+ * @property {string} message
+ * @property {string} imapHost
+ * @property {number} imapPort
+ * @property {string} smtpHost
+ * @property {number} smtpPort
+ * @property {string} username
+ * @property {string} password
+ * @property {string} recipientEmail
+ * @property {AppSettings | null} suggestedSettings
  */
 
 /**
@@ -146,6 +210,49 @@ export function createApiClient(context) {
     /** @returns {Promise<AppSettings>} */
     getSettings() {
       return request("/settings");
+    },
+    /** @returns {Promise<RuntimeStatusResponse>} */
+    getRuntimeStatus() {
+      return request("/runtime/status");
+    },
+    /** @returns {Promise<RuntimeActionResponse>} */
+    startOllamaRuntime() {
+      return request("/runtime/ollama/start", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+    },
+    /** @returns {Promise<{status: string, message?: string}>} */
+    shutdownRuntime() {
+      return request("/runtime/shutdown", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+    },
+    /** @param {string} confirmation @returns {Promise<DatabaseResetResponse>} */
+    resetDatabase(confirmation) {
+      return request("/admin/database/reset", {
+        method: "POST",
+        body: JSON.stringify({ confirmation }),
+      });
+    },
+    /** @returns {Promise<FakeMailStatusResponse>} */
+    getFakeMailStatus() {
+      return request("/dev/fake-mail/status");
+    },
+    /** @returns {Promise<FakeMailStatusResponse>} */
+    startFakeMailServer() {
+      return request("/dev/fake-mail/start", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+    },
+    /** @returns {Promise<FakeMailStatusResponse>} */
+    stopFakeMailServer() {
+      return request("/dev/fake-mail/stop", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
     },
     /** @param {string} provider @returns {Promise<ModelOptionsResponse>} */
     getModelOptions(provider) {

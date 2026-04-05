@@ -43,7 +43,8 @@
         <h1>Summaries first. Real mail when you are ready.</h1>
         <p class="hero-text">
           Mail Summariser starts in a built-in dummy mailbox, can switch to real IMAP and SMTP
-          accounts, and keeps summaries, actions, logs, and undo state in SQLite while letting you
+          accounts, keeps live-mail history in SQLite, and isolates dummy-mode activity in an
+          ephemeral sandbox while letting you
           choose Ollama, OpenAI, or Anthropic for model-backed digests.
         </p>
 
@@ -63,7 +64,7 @@
           </div>
           <div>
             <dt>Storage</dt>
-            <dd>SQLite for settings, jobs, logs, and undo stack</dd>
+            <dd>SQLite for settings and live-mail history, plus an ephemeral dummy sandbox</dd>
           </div>
           <div>
             <dt>Latest release</dt>
@@ -95,6 +96,7 @@
           <p>
             Use the in-memory dummy mailbox to validate the workflow quickly, then switch
             <code>dummyMode</code> off and point the same UI at a real IMAP inbox and SMTP server.
+            Dummy-mode jobs, logs, undo entries, mailbox state, and outbox are reset whenever the backend restarts or the mode changes.
           </p>
         </article>
         <article>
@@ -107,15 +109,23 @@
         <article>
           <h3>Traceable actions</h3>
           <p>
-            Every summary job, follow-up action, and undoable operation is persisted so the log view can show
-            what happened and whether a row is still reversible.
+            Live-mail summary jobs, follow-up actions, and undoable operations are persisted so the log view can show
+            what happened and whether a row is still reversible, while dummy-mode activity stays isolated from the database.
+          </p>
+        </article>
+        <article>
+          <h3>Local fake mailbox</h3>
+          <p>
+            When <code>MAIL_SUMMARISER_ENABLE_DEV_TOOLS=true</code>, both clients can start a localhost-only fake IMAP/SMTP server,
+            copy disposable credentials into Settings, and exercise the live-mail flow without leaving the app surface.
           </p>
         </article>
         <article>
           <h3>Model management</h3>
           <p>
-            The browser settings view can check Ollama availability, list installed models, browse a downloadable
-            catalogue, and request local pulls without leaving the app surface.
+            The browser and macOS settings surfaces can check Ollama availability, offer install or start actions on
+            startup, list installed models, browse a downloadable catalogue, and request local pulls without leaving
+            the app surface.
           </p>
         </article>
       </div>
@@ -138,28 +148,28 @@
           <span>01</span>
           <div>
             <h3>Start the backend</h3>
-            <p>Run <code>./start_backend.sh</code>, then open <code>/web</code> in a browser or launch the macOS app.</p>
+            <p>Run <code>./start_backend.sh</code>, then open <code>/web</code> in a browser or launch the macOS app. If Ollama is your saved provider, Mail Summariser now checks whether it needs to be installed or started.</p>
           </div>
         </li>
         <li>
           <span>02</span>
           <div>
             <h3>Validate in dummy mode</h3>
-            <p>Search the built-in messages, create a summary, and try <strong>Mark Read</strong>, <strong>Tag Summarised</strong>, and <strong>Email Summary</strong>.</p>
+            <p>Search the built-in messages, create a summary, and try <strong>Mark Read</strong>, <strong>Tag Summarised</strong>, and <strong>Email Summary</strong>. These dummy-mode artifacts stay in an in-memory sandbox and never touch the SQLite database.</p>
           </div>
         </li>
         <li>
           <span>03</span>
           <div>
             <h3>Configure providers and mail settings</h3>
-            <p>Use the browser Settings tab or the macOS Settings window to point at Ollama, OpenAI, or Anthropic and save IMAP/SMTP details.</p>
+            <p>Use the browser Settings tab or the macOS Settings window to point at Ollama, OpenAI, or Anthropic, save IMAP/SMTP details, reset the local database if needed, and choose whether Ollama should start on app startup or stop on exit.</p>
           </div>
         </li>
         <li>
           <span>04</span>
           <div>
             <h3>Switch to live mail</h3>
-            <p>Turn dummy mode off, run <strong>Test Connection</strong>, then repeat the same summary and action flow against a disposable real mailbox.</p>
+            <p>Turn dummy mode off, run <strong>Test Connection</strong>, or start the dev-only fake IMAP/SMTP server and apply its suggested settings, then repeat the same summary and action flow against that disposable mailbox.</p>
           </div>
         </li>
       </ol>
@@ -192,7 +202,7 @@
           />
           <figcaption>
             <strong>Settings</strong>
-            Configure dummy mode, IMAP/SMTP, model providers, local Ollama, remote keys, and backend targeting.
+            Configure dummy mode, IMAP/SMTP, model providers, local Ollama, reset the local database, use the fake mail server, and retarget the backend.
           </figcaption>
         </figure>
 
@@ -226,7 +236,7 @@
           <ul>
             <li><strong>Main</strong>: search criteria, summary generation, result table, and action buttons.</li>
             <li><strong>Log</strong>: action history with final versus undoable state.</li>
-            <li><strong>Settings</strong>: dummy mode toggle, connection test, provider keys, Ollama model management, backend URL, and backend API key.</li>
+            <li><strong>Settings</strong>: dummy mode toggle, connection test, provider keys, Ollama startup and exit controls, model management, database reset, fake mail server tools, backend URL, backend API key, and backend shutdown.</li>
             <li><strong>Help</strong>: in-product user manual and project links.</li>
           </ul>
         </article>
@@ -236,7 +246,7 @@
           <ul>
             <li><strong>Main tab</strong>: summary workflow and action buttons.</li>
             <li><strong>Log tab</strong>: log table with per-row undo.</li>
-            <li><strong>Settings window</strong>: separate macOS Settings scene for mail and provider configuration.</li>
+            <li><strong>Settings window</strong>: separate macOS Settings scene for mail, provider configuration, Ollama lifecycle controls, database reset, fake mail server tools, and backend shutdown.</li>
             <li><strong>Backend dependency</strong>: the desktop app is a client for the FastAPI service, not a bundled all-in-one runtime.</li>
           </ul>
         </article>

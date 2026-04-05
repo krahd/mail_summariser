@@ -59,13 +59,18 @@ struct AppSettings: Codable {
     var anthropicApiKey: String = ""
     var ollamaHost: String = "http://127.0.0.1:11434"
     var ollamaAutoStart: Bool = true
-    var modelName: String = "gpt-5"
+    var ollamaStartOnStartup: Bool = false
+    var ollamaStopOnExit: Bool = false
+    var modelName: String = "llama3.2:latest"
     var backendBaseURL: String = "http://127.0.0.1:8766"
 }
 
 struct EmptyResponse: Codable {
     let status: String?
+    let message: String?
 }
+
+struct EmptyPayload: Codable {}
 
 struct ConnectionComponent: Codable {
     let status: String
@@ -77,4 +82,63 @@ struct ConnectionTestResponse: Codable {
     let mode: String
     let imap: ConnectionComponent
     let smtp: ConnectionComponent
+}
+
+struct BackendRuntimeStatus: Codable {
+    var running: Bool = true
+    var canShutdown: Bool = true
+}
+
+struct OllamaRuntimeStatus: Codable {
+    var installed: Bool = false
+    var running: Bool = false
+    var startedByApp: Bool = false
+    var host: String = "http://127.0.0.1:11434"
+    var modelName: String = "llama3.2:latest"
+    var startupAction: String = "none"
+    var message: String = "Runtime status not loaded yet."
+    var installUrl: String = "https://ollama.com/download"
+}
+
+struct RuntimeStatusResponse: Codable {
+    var backend = BackendRuntimeStatus()
+    var ollama = OllamaRuntimeStatus()
+}
+
+struct RuntimeActionResponse: Codable {
+    let status: String
+    let message: String
+    let runtime: RuntimeStatusResponse
+}
+
+struct DatabaseResetCounts: Codable {
+    var settings: Int
+    var logs: Int
+    var jobs: Int
+    var undo: Int
+}
+
+struct DatabaseResetResponse: Codable {
+    var status: String
+    var message: String
+    var removed: DatabaseResetCounts
+    var settings: AppSettings
+}
+
+struct FakeMailStatusResponse: Codable {
+    var enabled: Bool = false
+    var running: Bool = false
+    var message: String = "Developer fake mail server is disabled."
+    var imapHost: String = "127.0.0.1"
+    var imapPort: Int = 0
+    var smtpHost: String = "127.0.0.1"
+    var smtpPort: Int = 0
+    var username: String = ""
+    var password: String = ""
+    var recipientEmail: String = ""
+    var suggestedSettings: AppSettings? = nil
+}
+
+struct ConfirmationPayload: Codable {
+    let confirmation: String
 }

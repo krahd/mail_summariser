@@ -17,7 +17,21 @@
 		A10000142C00000100000001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000A2C00000100000001 /* SettingsView.swift */; };
 		A10000152C00000100000001 /* SummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000B2C00000100000001 /* SummaryView.swift */; };
 		A10000162C00000100000001 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A100000C2C00000100000001 /* SwiftUI.framework */; };
+		B10000012C00000100000001 /* MockURLProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000062C00000100000001 /* MockURLProtocol.swift */; };
+		B10000022C00000100000001 /* BackendBridgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000072C00000100000001 /* BackendBridgeTests.swift */; };
+		B10000032C00000100000001 /* AppStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000082C00000100000001 /* AppStateTests.swift */; };
+		B10000042C00000100000001 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B10000092C00000100000001 /* XCTest.framework */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		B100000E2C00000100000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A100001B2C00000100000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A100001A2C00000100000001;
+			remoteInfo = MailSummariser;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		A10000012C00000100000001 /* MailSummariser.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MailSummariser.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -31,6 +45,11 @@
 		A100000A2C00000100000001 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = macos-app/SettingsView.swift; sourceTree = SOURCE_ROOT; };
 		A100000B2C00000100000001 /* SummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SummaryView.swift; path = macos-app/SummaryView.swift; sourceTree = SOURCE_ROOT; };
 		A100000C2C00000100000001 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		B10000052C00000100000001 /* MailSummariserTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MailSummariserTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B10000062C00000100000001 /* MockURLProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MockURLProtocol.swift; path = macos-app-tests/MockURLProtocol.swift; sourceTree = SOURCE_ROOT; };
+		B10000072C00000100000001 /* BackendBridgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BackendBridgeTests.swift; path = macos-app-tests/BackendBridgeTests.swift; sourceTree = SOURCE_ROOT; };
+		B10000082C00000100000001 /* AppStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppStateTests.swift; path = macos-app-tests/AppStateTests.swift; sourceTree = SOURCE_ROOT; };
+		B10000092C00000100000001 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Platforms/MacOSX.platform/Developer/Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -42,6 +61,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B100000B2C00000100000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10000042C00000100000001 /* XCTest.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -49,6 +76,7 @@
 			isa = PBXGroup;
 			children = (
 				A10000192C00000100000001 /* macos-app */,
+				B100000A2C00000100000001 /* macos-app-tests */,
 				A10000182C00000100000001 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -57,6 +85,7 @@
 			isa = PBXGroup;
 			children = (
 				A10000012C00000100000001 /* MailSummariser.app */,
+				B10000052C00000100000001 /* MailSummariserTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -75,6 +104,16 @@
 				A100000B2C00000100000001 /* SummaryView.swift */,
 			);
 			name = macos-app;
+			sourceTree = "<group>";
+		};
+		B100000A2C00000100000001 /* macos-app-tests */ = {
+			isa = PBXGroup;
+			children = (
+				B10000082C00000100000001 /* AppStateTests.swift */,
+				B10000072C00000100000001 /* BackendBridgeTests.swift */,
+				B10000062C00000100000001 /* MockURLProtocol.swift */,
+			);
+			name = "macos-app-tests";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -97,6 +136,24 @@
 			productReference = A10000012C00000100000001 /* MailSummariser.app */;
 			productType = "com.apple.product-type.application";
 		};
+		B10000102C00000100000001 /* MailSummariserTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B10000132C00000100000001 /* Build configuration list for PBXNativeTarget "MailSummariserTests" */;
+			buildPhases = (
+				B100000D2C00000100000001 /* Sources */,
+				B100000B2C00000100000001 /* Frameworks */,
+				B100000C2C00000100000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B100000F2C00000100000001 /* PBXTargetDependency */,
+			);
+			name = MailSummariserTests;
+			productName = MailSummariserTests;
+			productReference = B10000052C00000100000001 /* MailSummariserTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -109,6 +166,10 @@
 				TargetAttributes = {
 					A100001A2C00000100000001 = {
 						CreatedOnToolsVersion = 16.0;
+					};
+					B10000102C00000100000001 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = A100001A2C00000100000001;
 					};
 				};
 			};
@@ -126,12 +187,20 @@
 			projectRoot = "";
 			targets = (
 				A100001A2C00000100000001 /* MailSummariser */,
+				B10000102C00000100000001 /* MailSummariserTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		A100001E2C00000100000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B100000C2C00000100000001 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -157,7 +226,25 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B100000D2C00000100000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10000032C00000100000001 /* AppStateTests.swift in Sources */,
+				B10000022C00000100000001 /* BackendBridgeTests.swift in Sources */,
+				B10000012C00000100000001 /* MockURLProtocol.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B100000F2C00000100000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A100001A2C00000100000001 /* MailSummariser */;
+			targetProxy = B100000E2C00000100000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A10000202C00000100000001 /* Debug */ = {
@@ -326,6 +413,56 @@
 			};
 			name = Release;
 		};
+		B10000112C00000100000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = MailSummariserTests;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tom.MailSummariserTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MailSummariser.app/Contents/MacOS/MailSummariser";
+				TEST_TARGET_NAME = MailSummariser;
+			};
+			name = Debug;
+		};
+		B10000122C00000100000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = MailSummariserTests;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tom.MailSummariserTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MailSummariser.app/Contents/MacOS/MailSummariser";
+				TEST_TARGET_NAME = MailSummariser;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -343,6 +480,15 @@
 			buildConfigurations = (
 				A10000222C00000100000001 /* Debug */,
 				A10000232C00000100000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B10000132C00000100000001 /* Build configuration list for PBXNativeTarget "MailSummariserTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B10000112C00000100000001 /* Debug */,
+				B10000122C00000100000001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

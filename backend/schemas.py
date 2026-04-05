@@ -70,9 +70,70 @@ class AppSettings(BaseModel):
     anthropicApiKey: str
     ollamaHost: str
     ollamaAutoStart: bool
+    ollamaStartOnStartup: bool
+    ollamaStopOnExit: bool
     modelName: str
     backendBaseURL: str
 
 
 class DummyModeUpdate(BaseModel):
     dummyMode: bool
+
+
+class BackendRuntimeStatus(BaseModel):
+    running: bool
+    canShutdown: bool
+
+
+class OllamaRuntimeStatus(BaseModel):
+    installed: bool
+    running: bool
+    startedByApp: bool
+    host: str
+    modelName: str
+    startupAction: str
+    message: str
+    installUrl: str
+
+
+class RuntimeStatusResponse(BaseModel):
+    backend: BackendRuntimeStatus
+    ollama: OllamaRuntimeStatus
+
+
+class RuntimeActionResponse(BaseModel):
+    status: str
+    message: str
+    runtime: RuntimeStatusResponse
+
+
+class DatabaseResetRequest(BaseModel):
+    confirmation: str
+
+
+class DatabaseResetCounts(BaseModel):
+    settings: int
+    logs: int
+    jobs: int
+    undo: int
+
+
+class DatabaseResetResponse(BaseModel):
+    status: str
+    message: str
+    removed: DatabaseResetCounts
+    settings: AppSettings
+
+
+class FakeMailStatusResponse(BaseModel):
+    enabled: bool = False
+    running: bool = False
+    message: str = "Developer fake mail server is disabled."
+    imapHost: str = "127.0.0.1"
+    imapPort: int = 0
+    smtpHost: str = "127.0.0.1"
+    smtpPort: int = 0
+    username: str = ""
+    password: str = ""
+    recipientEmail: str = ""
+    suggestedSettings: AppSettings | None = None

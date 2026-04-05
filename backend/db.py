@@ -200,6 +200,26 @@ def list_settings() -> dict[str, Any]:
         return {row["key"]: json.loads(row["value"]) for row in rows}
 
 
+def reset_database(default_settings: dict[str, Any]) -> dict[str, int]:
+    with get_conn() as conn:
+        counts = {
+            "settings": int(conn.execute("SELECT COUNT(*) AS count FROM settings").fetchone()["count"]),
+            "logs": int(conn.execute("SELECT COUNT(*) AS count FROM logs").fetchone()["count"]),
+            "jobs": int(conn.execute("SELECT COUNT(*) AS count FROM jobs").fetchone()["count"]),
+            "undo": int(conn.execute("SELECT COUNT(*) AS count FROM undo_stack").fetchone()["count"]),
+        }
+        conn.execute("DELETE FROM settings")
+        conn.execute("DELETE FROM logs")
+        conn.execute("DELETE FROM jobs")
+        conn.execute("DELETE FROM undo_stack")
+        for key, value in default_settings.items():
+            conn.execute(
+                "INSERT INTO settings(key, value) VALUES (?, ?)",
+                (key, json.dumps(value)),
+            )
+    return counts
+
+
 def insert_job(job_id: str, created_at: str, criteria: dict[str, Any], summary_length: int, summary_text: str, messages: list[dict[str, Any]]) -> None:
     with get_conn() as conn:
         conn.execute(

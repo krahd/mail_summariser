@@ -10,6 +10,16 @@ from email.parser import BytesParser
 from email.policy import default
 from email.utils import format_datetime
 from typing import Any
+from uuid import uuid4
+
+
+def _generated_identity() -> tuple[str, str, str]:
+    suffix = uuid4().hex[:8]
+    return (
+        f"tester+{suffix}@example.com",
+        f"fake-{uuid4().hex[:16]}",
+        f"digest+{suffix}@example.com",
+    )
 
 
 @dataclass
@@ -193,8 +203,6 @@ class _SMTPHandler(socketserver.StreamRequestHandler):
 
     def handle(self) -> None:
         self._write_line("220 FakeMail SMTP ready")
-        mail_from = ""
-        rcpt_to: list[str] = []
 
         while True:
             raw = self.rfile.readline()
@@ -229,13 +237,10 @@ class _SMTPHandler(socketserver.StreamRequestHandler):
                 continue
 
             if upper.startswith("MAIL FROM:"):
-                mail_from = line[10:].strip()
-                rcpt_to = []
                 self._write_line("250 Sender OK")
                 continue
 
             if upper.startswith("RCPT TO:"):
-                rcpt_to.append(line[8:].strip())
                 self._write_line("250 Recipient OK")
                 continue
 
@@ -256,8 +261,6 @@ class _SMTPHandler(socketserver.StreamRequestHandler):
                 continue
 
             if upper == "RSET":
-                mail_from = ""
-                rcpt_to = []
                 self._write_line("250 Reset OK")
                 continue
 
@@ -291,16 +294,28 @@ class _SMTPServer(_ThreadedServer):
 
 
 class FakeMailEnvironment:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        username: str | None = None,
+        password: str | None = None,
+        recipient_email: str | None = None,
+        messages: list[FakeMessage] | None = None,
+    ) -> None:
+        generated_username, generated_password, generated_recipient = _generated_identity()
+        self.username = username or generated_username
+        self.password = password or generated_password
+        self.recipient_email = recipient_email or generated_recipient
         self.state = FakeMailState(
-            username="tester@example.com",
-            password="test-secret",
-            messages=[
+            username=self.username,
+            password=self.password,
+            messages=messages
+            or [
                 FakeMessage(
                     uid="101",
                     subject="Quarterly project update",
                     sender="alice@example.com",
-                    recipient="tester@example.com",
+                    recipient=self.username,
                     body="Budget is approved. Please review the launch checklist by Friday.",
                     date=datetime(2026, 4, 1, 15, 0, tzinfo=timezone.utc),
                     flags=set(),
@@ -309,7 +324,7 @@ class FakeMailEnvironment:
                     uid="102",
                     subject="Invoice follow-up",
                     sender="finance@example.com",
-                    recipient="tester@example.com",
+                    recipient=self.username,
                     body="Can you confirm whether the April invoice is ready to send?",
                     date=datetime(2026, 4, 2, 9, 30, tzinfo=timezone.utc),
                     flags={"\\Answered"},
@@ -319,20 +334,34 @@ class FakeMailEnvironment:
         self.imap_server = _IMAPServer(("127.0.0.1", 0), self.state)
         self.smtp_server = _SMTPServer(("127.0.0.1", 0), self.state)
         self._threads: list[threading.Thread] = []
+        self._running = False
 
-    def __enter__(self) -> "FakeMailEnvironment":
+    def start(self) -> "FakeMailEnvironment":
+        if self._running:
+            return self
         for server in (self.imap_server, self.smtp_server):
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
             self._threads.append(thread)
+        self._running = True
         return self
 
-    def __exit__(self, exc_type, exc, tb) -> None:
+    def stop(self) -> None:
+        if not self._running:
+            return
         for server in (self.imap_server, self.smtp_server):
             server.shutdown()
             server.server_close()
         for thread in self._threads:
             thread.join(timeout=1)
+        self._threads = []
+        self._running = False
+
+    def __enter__(self) -> "FakeMailEnvironment":
+        return self.start()
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        self.stop()
 
     @property
     def settings_payload(self) -> dict[str, Any]:
@@ -341,13 +370,13 @@ class FakeMailEnvironment:
             "imapHost": "127.0.0.1",
             "imapPort": self.imap_server.server_address[1],
             "imapUseSSL": False,
-            "imapPassword": self.state.password,
+            "imapPassword": self.password,
             "smtpHost": "127.0.0.1",
             "smtpPort": self.smtp_server.server_address[1],
             "smtpUseSSL": False,
-            "smtpPassword": self.state.password,
-            "username": self.state.username,
-            "recipientEmail": "digest@example.com",
+            "smtpPassword": self.password,
+            "username": self.username,
+            "recipientEmail": self.recipient_email,
             "summarisedTag": "summarised",
             "llmProvider": "ollama",
             "openaiApiKey": "",
@@ -360,9 +389,129 @@ class FakeMailEnvironment:
             "backendBaseURL": "http://127.0.0.1:8766",
         }
 
+    def status_payload(self, backend_base_url: str = "http://127.0.0.1:8766") -> dict[str, Any]:
+        if not self._running:
+            return {
+                "enabled": True,
+                "running": False,
+                "message": "Developer fake mail server is not running.",
+                "imapHost": "127.0.0.1",
+                "imapPort": 0,
+                "smtpHost": "127.0.0.1",
+                "smtpPort": 0,
+                "username": "",
+                "password": "",
+                "recipientEmail": "",
+                "suggestedSettings": None,
+            }
+
+        suggested = self.settings_payload | {"backendBaseURL": backend_base_url}
+        return {
+            "enabled": True,
+            "running": True,
+            "message": "Developer fake mail server is running on localhost.",
+            "imapHost": "127.0.0.1",
+            "imapPort": self.imap_server.server_address[1],
+            "smtpHost": "127.0.0.1",
+            "smtpPort": self.smtp_server.server_address[1],
+            "username": self.username,
+            "password": self.password,
+            "recipientEmail": self.recipient_email,
+            "suggestedSettings": suggested,
+        }
+
     def flags_for(self, uid: str) -> set[str]:
         return self.state.message_flags(uid)
 
     @property
     def sent_messages(self) -> list[dict[str, Any]]:
         return list(self.state.sent_messages)
+
+
+class FakeMailServerManager:
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._environment: FakeMailEnvironment | None = None
+
+    def status(self, enabled: bool, backend_base_url: str = "http://127.0.0.1:8766") -> dict[str, Any]:
+        with self._lock:
+            environment = self._environment
+        if not enabled:
+            return {
+                "enabled": False,
+                "running": False,
+                "message": "Developer fake mail server is disabled.",
+                "imapHost": "127.0.0.1",
+                "imapPort": 0,
+                "smtpHost": "127.0.0.1",
+                "smtpPort": 0,
+                "username": "",
+                "password": "",
+                "recipientEmail": "",
+                "suggestedSettings": None,
+            }
+        if environment is None:
+            return {
+                "enabled": True,
+                "running": False,
+                "message": "Developer fake mail server is available but not running.",
+                "imapHost": "127.0.0.1",
+                "imapPort": 0,
+                "smtpHost": "127.0.0.1",
+                "smtpPort": 0,
+                "username": "",
+                "password": "",
+                "recipientEmail": "",
+                "suggestedSettings": None,
+            }
+        return environment.status_payload(backend_base_url)
+
+    def start(self, enabled: bool, backend_base_url: str = "http://127.0.0.1:8766") -> dict[str, Any]:
+        if not enabled:
+            raise RuntimeError("Developer fake mail server is disabled.")
+        with self._lock:
+            if self._environment is None:
+                self._environment = FakeMailEnvironment().start()
+            return self._environment.status_payload(backend_base_url)
+
+    def stop(self, enabled: bool, backend_base_url: str = "http://127.0.0.1:8766") -> dict[str, Any]:
+        if not enabled:
+            raise RuntimeError("Developer fake mail server is disabled.")
+        with self._lock:
+            environment = self._environment
+            if environment is None:
+                return {
+                    "enabled": True,
+                    "running": False,
+                    "message": "Developer fake mail server is already stopped.",
+                    "imapHost": "127.0.0.1",
+                    "imapPort": 0,
+                    "smtpHost": "127.0.0.1",
+                    "smtpPort": 0,
+                    "username": "",
+                    "password": "",
+                    "recipientEmail": "",
+                    "suggestedSettings": None,
+                }
+            environment.stop()
+            self._environment = None
+        return {
+            "enabled": True,
+            "running": False,
+            "message": "Developer fake mail server stopped.",
+            "imapHost": "127.0.0.1",
+            "imapPort": 0,
+            "smtpHost": "127.0.0.1",
+            "smtpPort": 0,
+            "username": "",
+            "password": "",
+            "recipientEmail": "",
+            "suggestedSettings": None,
+        }
+
+    def shutdown(self) -> None:
+        with self._lock:
+            environment = self._environment
+            self._environment = None
+        if environment is not None:
+            environment.stop()

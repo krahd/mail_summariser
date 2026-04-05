@@ -2,7 +2,13 @@ import Foundation
 
 @MainActor
 final class BackendBridge: ObservableObject {
-    @Published var baseURLString: String = "http://127.0.0.1:8766"
+    @Published var baseURLString: String
+    private let session: URLSession
+
+    init(baseURLString: String = "http://127.0.0.1:8766", session: URLSession = .shared) {
+        self.baseURLString = baseURLString
+        self.session = session
+    }
 
     private var baseURL: URL {
         URL(string: baseURLString)!
@@ -19,7 +25,7 @@ final class BackendBridge: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)
         }
@@ -32,7 +38,7 @@ final class BackendBridge: ObservableObject {
 
     func get<R: Decodable>(path: String) async throws -> R {
         let url = baseURL.appendingPathComponent(path)
-        let (data, response) = try await URLSession.shared.data(from: url)
+        let (data, response) = try await session.data(from: url)
         guard let http = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)
         }

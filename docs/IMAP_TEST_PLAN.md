@@ -35,7 +35,7 @@ For SMTP we only need:
 - `NOOP`
 - `QUIT`
 
-That is the approach implemented in [`tests/support/fake_mail_server.py`](/Users/tom/devel/ml-llm/llm/Mail-Summariser/tests/support/fake_mail_server.py).
+That is the approach implemented in [`backend/fake_mail_server.py`](/Users/tom/devel/ml-llm/llm/Mail-Summariser/backend/fake_mail_server.py).
 
 ## Plan
 
@@ -51,8 +51,11 @@ That is the approach implemented in [`tests/support/fake_mail_server.py`](/Users
 The automated plan verifies:
 
 - settings persistence, including masked passwords
+- full database reset back to defaults
 - dummy mode toggling
+- dummy-mode sandbox isolation from persistent SQLite rows
 - connection testing in dummy mode and real IMAP mode
+- embedded fake IMAP/SMTP server start, stop, and suggested-settings flow
 - summary creation from dummy data and IMAP data
 - `mark_read` mutating `\Seen`
 - `tag_summarised` mutating IMAP keywords

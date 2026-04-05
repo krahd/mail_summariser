@@ -1,6 +1,6 @@
 # Mail Summariser
 
-Mail Summariser is a local-first mail workflow with a FastAPI backend, a browser client, and a SwiftUI macOS client. It can run entirely against a built-in dummy mailbox for safe validation, or switch to a real IMAP inbox and SMTP server while keeping settings, jobs, logs, and undo state in SQLite.
+Mail Summariser is a local-first mail workflow with a FastAPI backend, a browser client, and a SwiftUI macOS client. It can run entirely against a built-in dummy mailbox for safe validation, or switch to a real IMAP inbox and SMTP server while keeping persistent settings and live-mail history in SQLite.
 
 User-facing docs, screenshots, and release downloads live on the GitHub Pages project site: [krahd.github.io/Mail-Summariser](https://krahd.github.io/Mail-Summariser/).
 
@@ -19,10 +19,11 @@ User-facing docs, screenshots, and release downloads live on the GitHub Pages pr
 - macOS client: `Main` and `Log` tabs, plus a separate Settings window
 - Mail modes: built-in dummy mailbox by default, real IMAP/SMTP when configured
 - Summary providers: `ollama`, `openai`, or `anthropic`
+- Ollama lifecycle controls: install/start prompts on startup, optional startup launch, optional stop-on-exit
 - Follow-up actions: mark messages read, add the summarised tag, email the digest
-- Persistence: SQLite for settings, summary jobs, action logs, and undo payloads
+- Persistence: SQLite for settings and live-mail jobs/logs/undo, plus an ephemeral dummy-mode sandbox
 - Fallback behaviour: if provider output is unavailable or invalid, the backend falls back to a deterministic summary
-- Model utilities: Ollama status checks, installed-model listing, downloadable catalogue browsing, and model download requests
+- Model utilities: Ollama runtime checks, installed-model listing, downloadable catalogue browsing, and model download requests
 
 ## Repository layout
 
@@ -31,7 +32,7 @@ User-facing docs, screenshots, and release downloads live on the GitHub Pages pr
 - `macos-app/`: SwiftUI macOS client source
 - `docs/`: GitHub Pages project site and screenshot assets
 - `scripts/`: backend smoke tests, IMAP plan runner, and build scripts
-- `tests/`: backend integration tests, fake IMAP/SMTP server, and web contract checks
+- `tests/`: backend integration tests and web contract checks
 
 ## Quick start
 
@@ -46,11 +47,18 @@ Then open:
 - `http://127.0.0.1:8766/web` for the browser client
 - `http://127.0.0.1:8766/docs` for FastAPI docs
 
-The default path is dummy mode. You can create summaries, exercise follow-up actions, and inspect logs without touching a real mailbox.
+The default path is dummy mode. You can create summaries, exercise follow-up actions, and inspect logs without touching a real mailbox. Dummy-mode jobs, logs, undo state, mailbox flags, and outbox are intentionally non-persistent and reset on backend restart or mode changes.
 
 ### macOS app
 
 Open `MailSummariser.xcodeproj` in Xcode and run the `MailSummariser` scheme. The app talks to the backend service, so start the backend first unless you are pointing it at another running instance.
+
+When the saved provider is `ollama`, both clients now check local Ollama status at startup:
+
+- If Ollama is not installed, they offer to open the Ollama download page.
+- If Ollama is installed but not running, they offer to start it using the saved `modelName`.
+- If `ollamaStartOnStartup` is enabled, the backend starts Ollama automatically on boot and warms the saved model.
+- If `ollamaStopOnExit` is enabled, the backend stops only the Ollama instance that Mail Summariser itself started.
 
 ## Configuration
 
@@ -60,6 +68,7 @@ Open `MailSummariser.xcodeproj` in Xcode and run the `MailSummariser` scheme. Th
 - `API_KEY`: optional backend API key; when set, non-public API routes require it
 - `API_KEY_HEADER`: auth header name, defaults to `X-API-Key`
 - `MAIL_SUMMARISER_DATA_DIR`: override where SQLite data and logs are stored
+- `MAIL_SUMMARISER_ENABLE_DEV_TOOLS`: enable the embedded fake IMAP/SMTP server controls
 
 ### Mail defaults
 
@@ -77,10 +86,14 @@ Open `MailSummariser.xcodeproj` in Xcode and run the `MailSummariser` scheme. Th
 - `MODEL_NAME`
 - `OLLAMA_HOST`
 - `OLLAMA_AUTO_START`
+- `OLLAMA_START_ON_STARTUP`
+- `OLLAMA_STOP_ON_EXIT`
 - `OPENAI_API_KEY`
 - `ANTHROPIC_API_KEY`
 
 Provider-specific environment variables take precedence over keys stored in SQLite settings.
+
+`OLLAMA_AUTO_START` remains the request-time fallback for summaries and downloads. `OLLAMA_START_ON_STARTUP` controls proactive startup when the backend boots.
 
 ### Client defaults
 
@@ -92,6 +105,11 @@ Provider-specific environment variables take precedence over keys stored in SQLi
 - Packaged runs default to `~/.mail-summariser/mail_summariser.sqlite3`
 - `MAIL_SUMMARISER_DATA_DIR` overrides both
 
+The Settings surfaces in both clients now also expose:
+
+- `Reset Local Database`: clears all persisted settings, logs, jobs, and undo rows, then restores defaults
+- `Fake Mail Server` when `MAIL_SUMMARISER_ENABLE_DEV_TOOLS=true`: starts a localhost IMAP/SMTP test account and can preload matching live-mail settings into the form
+
 ## Testing
 
 Run the current automated test layers from the repo root:
@@ -100,7 +118,10 @@ Run the current automated test layers from the repo root:
 python3 -m unittest discover -s tests -v
 ./scripts/smoke_test_backend.sh
 ./scripts/run_imap_test_plan.sh
+xcodebuild -project MailSummariser.xcodeproj -scheme MailSummariser -configuration Debug CODE_SIGNING_ALLOWED=NO -derivedDataPath /tmp/mail-summariser-deriveddata test
 ```
+
+`./scripts/smoke_test_backend.sh` now also verifies the runtime status endpoint, the fake-mail status endpoint, the expanded settings payload, and the database reset endpoint.
 
 `./scripts/run_imap_test_plan.sh` runs the backend and web contract tests, a backend compile check, the HTTP smoke test, and the macOS Swift typecheck in one pass.
 
@@ -136,6 +157,6 @@ The release workflow publishes:
 
 ## Known limitations
 
-- The browser client currently exposes a broader settings and help surface than the macOS client.
 - Windows and Linux releases currently ship the backend and browser UI, not native desktop apps.
+- Installing Ollama still opens the official download page; Mail Summariser does not perform unattended package installation.
 - Provider-backed summaries can fall back to the built-in deterministic digest when a model is unavailable or returns invalid output.

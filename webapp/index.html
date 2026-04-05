@@ -19,6 +19,16 @@
     <p id="status-line" class="status-line">Ready</p>
   </header>
 
+  <section id="runtime-startup-banner" class="runtime-banner is-hidden" aria-live="polite">
+    <div class="runtime-banner-copy">
+      <strong>Local Ollama setup</strong>
+      <p id="runtime-startup-message">Checking Ollama startup status.</p>
+    </div>
+    <div class="inline-actions">
+      <button id="runtime-startup-action" type="button" class="secondary">Start Ollama</button>
+    </div>
+  </section>
+
   <nav class="tabs" aria-label="Main views">
     <button class="tab active" data-tab="search">Main</button>
     <button class="tab" data-tab="logs">Log</button>
@@ -153,7 +163,14 @@
           <small class="field-note">Stored locally in SQLite. For stronger security, set <code>ANTHROPIC_API_KEY</code> in the backend environment.</small>
         </label>
         <label>Ollama Host <input name="ollamaHost" type="url" placeholder="http://127.0.0.1:11434" required /></label>
-        <label class="checkbox"><input name="ollamaAutoStart" type="checkbox" /> Auto-start Ollama when needed</label>
+        <label class="checkbox"><input name="ollamaAutoStart" type="checkbox" /> Auto-start Ollama when needed for summaries and downloads</label>
+        <label class="checkbox"><input name="ollamaStartOnStartup" type="checkbox" /> Start Ollama automatically on startup</label>
+        <label class="checkbox"><input name="ollamaStopOnExit" type="checkbox" /> Stop Ollama automatically on exit</label>
+        <p id="ollama-runtime-status" class="status-line">Runtime status not loaded yet.</p>
+        <div class="inline-actions">
+          <button id="runtime-ollama-action" type="button" class="secondary is-hidden">Start Ollama</button>
+          <button id="refresh-runtime-status" type="button" class="secondary">Refresh Ollama Status</button>
+        </div>
         <label>Model Name <input name="modelName" required /></label>
         <div class="inline-actions">
           <button id="refresh-models" type="button" class="secondary">Refresh Available Models</button>
@@ -180,6 +197,23 @@
           </div>
           <small class="field-note">Use this only if backend auth is enabled via <code>API_KEY</code>. Stored in browser localStorage for this machine.</small>
         </label>
+        <section id="fake-mail-card" class="mode-summary is-hidden">
+          <strong>Fake Mail Server</strong>
+          <p id="fake-mail-status" class="status-line">Developer fake mail server is disabled.</p>
+          <p id="fake-mail-credentials" class="field-note">Start the local fake IMAP/SMTP server to generate disposable test credentials.</p>
+          <div class="inline-actions">
+            <button id="start-fake-mail" type="button" class="secondary">Start Fake Mail Server</button>
+            <button id="stop-fake-mail" type="button" class="secondary">Stop Fake Mail Server</button>
+            <button id="use-fake-mail-settings" type="button" class="secondary">Use Fake Mail Settings</button>
+          </div>
+        </section>
+        <div class="inline-actions inline-actions-danger">
+          <button id="reset-local-database" type="button" class="danger">Reset Local Database</button>
+        </div>
+        <p class="field-note">This removes every stored setting, job, log, and undo entry from the backend database and restores defaults.</p>
+        <div class="inline-actions inline-actions-danger">
+          <button id="stop-mail-summariser" type="button" class="danger">Stop Mail Summariser</button>
+        </div>
         <button type="submit">Save settings</button>
       </form>
     </section>
@@ -247,6 +281,8 @@
             <li><strong>Dummy Mode</strong>: Toggle between the built-in test mailbox and a real IMAP/SMTP account.</li>
             <li><strong>Test Connection</strong>: Validate the current settings against dummy mode or the configured IMAP/SMTP servers before saving.</li>
             <li><strong>LLM Provider</strong>: Choose between Ollama (local), OpenAI (remote), or Anthropic (remote).</li>
+            <li><strong>Ollama lifecycle</strong>: Choose whether Ollama starts with Mail Summariser, starts only when needed, or is stopped automatically on exit.</li>
+            <li><strong>Stop Mail Summariser</strong>: Shut down the connected backend from the Settings tab.</li>
             <li><strong>Backend URL</strong>: Point to a different backend service if needed.</li>
             <li><strong>Backend API Key</strong>: Optional authentication for the backend (if enabled).</li>
           </ul>

@@ -6,6 +6,7 @@ This strategy covers both the built-in dummy mailbox and the controlled IMAP/SMT
 
 - Verify summary generation and action workflows are stable.
 - Verify API contracts and persistence behaviour are deterministic.
+- Verify dummy-mode activity remains isolated from persistent SQLite state.
 - Verify provider fallback behaviour is safe when dependencies are unavailable.
 - Verify build artefacts start correctly on each release platform.
 
@@ -17,8 +18,8 @@ This strategy covers both the built-in dummy mailbox and the controlled IMAP/SMT
 - Requirement: no network calls.
 
 2. Integration tests
-- Focus: FastAPI endpoint behaviour with an isolated SQLite database.
-- Scope: `/health`, `/summaries`, `/settings`, `/logs`, `/actions/*`, model endpoints.
+- Focus: FastAPI endpoint behaviour with an isolated SQLite database and the in-memory dummy sandbox.
+- Scope: `/health`, `/runtime/*`, `/summaries`, `/settings`, `/logs`, `/actions/*`, `/admin/database/reset`, `/dev/fake-mail/*`, model endpoints.
 - Requirement: run with deterministic fixtures and stubbed provider calls.
 
 3. Contract and compatibility checks
@@ -28,7 +29,7 @@ This strategy covers both the built-in dummy mailbox and the controlled IMAP/SMT
 
 4. Smoke tests
 - Focus: startup and critical path behaviour from built artefacts.
-- Scope: start binary, call `/health`, create summary, verify fallback resilience.
+- Scope: start binary, call `/health`, verify `/runtime/status`, `/dev/fake-mail/status`, create summary, verify reset flow, verify fallback resilience.
 - Requirement: same smoke flow in local validation and release CI.
 
 ## Readiness Gates Before External IMAP
@@ -56,6 +57,7 @@ All gates must pass before introducing an external IMAP account.
 - Use fixture message sets with stable IDs and timestamps.
 - Use mocked provider responses for Ollama, OpenAI, and Anthropic paths.
 - Use temporary SQLite files or in-memory DB for test runs.
+- Use the shared fake IMAP/SMTP server for controlled live-mail integration tests.
 - Avoid reliance on external APIs, local Ollama daemon, or real mailbox state.
 
 ## IMAP Onboarding Checklist

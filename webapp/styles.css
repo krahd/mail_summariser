@@ -99,6 +99,30 @@ h1 {
   color: var(--muted);
 }
 
+.runtime-banner {
+  max-width: 1200px;
+  margin: 0 auto 16px;
+  padding: 14px 16px;
+  border: 1px solid #e6c995;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #fff8eb, #fffef8);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 8px 24px rgba(122, 90, 31, 0.08);
+}
+
+.runtime-banner-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.runtime-banner-copy p {
+  margin: 0;
+  color: #7a5a1f;
+}
+
 .status-line {
   min-height: 1.2rem;
   font-weight: 400;
@@ -292,6 +316,12 @@ button.secondary {
   color: #3d4541;
 }
 
+button.danger {
+  background: #fff1ef;
+  border-color: #e0aca5;
+  color: #8d2c20;
+}
+
 button:disabled {
   opacity: 0.5;
   cursor: default;
@@ -374,6 +404,11 @@ td {
   align-items: center;
 }
 
+.inline-actions-danger {
+  justify-content: flex-start;
+  margin-top: 4px;
+}
+
 .help-article {
   grid-column: span 12;
 }
@@ -451,6 +486,11 @@ td {
 
   .tabs {
     flex-wrap: wrap;
+  }
+
+  .runtime-banner {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .mode-toggle {

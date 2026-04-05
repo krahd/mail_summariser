@@ -1,0 +1,67 @@
+import XCTest
+@testable import MailSummariser
+
+@MainActor
+final class BackendBridgeTests: XCTestCase {
+    private func makeBridge(baseURLString: String = "http://127.0.0.1:8766") -> BackendBridge {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        return BackendBridge(baseURLString: baseURLString, session: session)
+    }
+
+    override func tearDown() {
+        MockURLProtocol.requestHandler = nil
+        super.tearDown()
+    }
+
+    func testGetRuntimeStatusDecodesPayloadFromConfiguredBaseURL() async throws {
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.url?.absoluteString, "http://127.0.0.1:8766/runtime/status")
+            XCTAssertEqual(request.httpMethod, "GET")
+            let payload = """
+            {
+              "backend": { "running": true, "canShutdown": true },
+              "ollama": {
+                "installed": true,
+                "running": false,
+                "startedByApp": false,
+                "host": "http://127.0.0.1:11434",
+                "modelName": "llama3.2:latest",
+                "startupAction": "start",
+                "message": "Ollama is installed but not running.",
+                "installUrl": "https://ollama.com/download"
+              }
+            }
+            """.data(using: .utf8)!
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!
+            return (response, payload)
+        }
+
+        let bridge = makeBridge()
+        let runtime: RuntimeStatusResponse = try await bridge.get(path: "runtime/status")
+
+        XCTAssertTrue(runtime.backend.running)
+        XCTAssertEqual(runtime.ollama.startupAction, "start")
+        XCTAssertEqual(runtime.ollama.modelName, "llama3.2:latest")
+    }
+
+    func testPostJSONIncludesBodyAndSurfacesBackendErrors() async {
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.url?.absoluteString, "http://127.0.0.1:8766/runtime/shutdown")
+            XCTAssertEqual(request.httpMethod, "POST")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
+            let response = HTTPURLResponse(url: request.url!, statusCode: 400, httpVersion: nil, headerFields: ["Content-Type": "text/plain"])!
+            return (response, Data("Shutdown not allowed".utf8))
+        }
+
+        let bridge = makeBridge()
+
+        do {
+            let _: EmptyResponse = try await bridge.postJSON(path: "runtime/shutdown", body: EmptyPayload())
+            XCTFail("Expected request to throw")
+        } catch {
+            XCTAssertTrue(error.localizedDescription.contains("Shutdown not allowed"))
+        }
+    }
+}
