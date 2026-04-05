@@ -16,72 +16,78 @@ struct SettingsView: View {
     @State private var resetConfirmationText = ""
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    Toggle("Dummy Mode", isOn: $localSettings.dummyMode)
-                    Text(localSettings.dummyMode ? "Using the built-in test mailbox and outbox." : "Using the configured IMAP and SMTP servers.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+        ZStack {
+            BrandBackdrop()
 
-                Section("Mail") {
-                    TextField("IMAP Host", text: $localSettings.imapHost)
-                    TextField("IMAP Port", value: $localSettings.imapPort, format: .number)
-                    Toggle("Use SSL for IMAP", isOn: $localSettings.imapUseSSL)
-                    if imapPasswordVisible {
-                        TextField("IMAP Password", text: $localSettings.imapPassword)
-                    } else {
-                        SecureField("IMAP Password", text: $localSettings.imapPassword)
-                    }
-                    Button(imapPasswordVisible ? "Hide IMAP Password" : "Show IMAP Password") {
-                        imapPasswordVisible.toggle()
+            NavigationStack {
+                Form {
+                    Section {
+                        Toggle("Dummy Mode", isOn: $localSettings.dummyMode)
+                        Text(localSettings.dummyMode ? "Using the built-in test mailbox and outbox." : "Using the configured IMAP and SMTP servers.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
 
-                    TextField("SMTP Host", text: $localSettings.smtpHost)
-                    TextField("SMTP Port", value: $localSettings.smtpPort, format: .number)
-                    Toggle("Use SSL for SMTP", isOn: $localSettings.smtpUseSSL)
-                    if smtpPasswordVisible {
-                        TextField("SMTP Password", text: $localSettings.smtpPassword)
-                    } else {
-                        SecureField("SMTP Password", text: $localSettings.smtpPassword)
-                    }
-                    Button(smtpPasswordVisible ? "Hide SMTP Password" : "Show SMTP Password") {
-                        smtpPasswordVisible.toggle()
-                    }
-
-                    TextField("Username", text: $localSettings.username)
-                    TextField("Digest recipient", text: $localSettings.recipientEmail)
-                    TextField("Summarised tag", text: $localSettings.summarisedTag)
-                }
-
-                Section("Connection Check") {
-                    Button("Test Connection") {
-                        Task { await testConnection() }
-                    }
-                    Text(saveStatus)
-                        .foregroundStyle(.secondary)
-                }
-
-                Section {
-                    NavigationLink("Advanced Settings") {
-                        advancedSettingsView
-                    }
-                }
-
-                Section {
-                    HStack {
-                        Button("Load") {
-                            Task { await loadSettings() }
+                    Section("Mail") {
+                        TextField("IMAP Host", text: $localSettings.imapHost)
+                        TextField("IMAP Port", value: $localSettings.imapPort, format: .number)
+                        Toggle("Use SSL for IMAP", isOn: $localSettings.imapUseSSL)
+                        if imapPasswordVisible {
+                            TextField("IMAP Password", text: $localSettings.imapPassword)
+                        } else {
+                            SecureField("IMAP Password", text: $localSettings.imapPassword)
                         }
-                        Button("Save") {
-                            Task { await saveSettings() }
+                        Button(imapPasswordVisible ? "Hide IMAP Password" : "Show IMAP Password") {
+                            imapPasswordVisible.toggle()
+                        }
+
+                        TextField("SMTP Host", text: $localSettings.smtpHost)
+                        TextField("SMTP Port", value: $localSettings.smtpPort, format: .number)
+                        Toggle("Use SSL for SMTP", isOn: $localSettings.smtpUseSSL)
+                        if smtpPasswordVisible {
+                            TextField("SMTP Password", text: $localSettings.smtpPassword)
+                        } else {
+                            SecureField("SMTP Password", text: $localSettings.smtpPassword)
+                        }
+                        Button(smtpPasswordVisible ? "Hide SMTP Password" : "Show SMTP Password") {
+                            smtpPasswordVisible.toggle()
+                        }
+
+                        TextField("Username", text: $localSettings.username)
+                        TextField("Digest recipient", text: $localSettings.recipientEmail)
+                        TextField("Summarised tag", text: $localSettings.summarisedTag)
+                    }
+
+                    Section("Connection Check") {
+                        Button("Test Connection") {
+                            Task { await testConnection() }
+                        }
+                        Text(saveStatus)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Section {
+                        NavigationLink("Advanced Settings") {
+                            advancedSettingsView
                         }
                     }
+
+                    Section {
+                        HStack {
+                            Button("Load") {
+                                Task { await loadSettings() }
+                            }
+                            Button("Save") {
+                                Task { await saveSettings() }
+                            }
+                        }
+                    }
                 }
+                .navigationTitle("Settings")
+                .formStyle(.grouped)
+                .scrollContentBackground(.hidden)
+                .background(Color.clear)
             }
-            .navigationTitle("Settings")
-            .formStyle(.grouped)
         }
         .padding()
         .frame(width: 620, height: 760)
@@ -289,6 +295,8 @@ struct SettingsView: View {
         }
         .navigationTitle("Advanced Settings")
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+        .background(Color.clear)
     }
 
     private var providerBinding: Binding<String> {
