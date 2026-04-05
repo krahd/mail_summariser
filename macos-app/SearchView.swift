@@ -4,26 +4,33 @@ struct SearchView: View {
     @EnvironmentObject private var appState: AppState
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                HStack(alignment: .top, spacing: 20) {
-                    criteriaPanel
-                        .frame(maxWidth: 360, alignment: .top)
-                    summaryPanel
-                }
-
-                messagesPanel
+        HSplitView {
+            ScrollView {
+                criteriaPanel
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .padding(.vertical, 4)
+                    .padding(.trailing, 10)
             }
-            .padding(12)
+            .frame(minWidth: 300, idealWidth: 320, maxWidth: 360)
+            .scrollContentBackground(.hidden)
+
+            VStack(alignment: .leading, spacing: 16) {
+                summaryPanel
+                messagesPanel
+                    .frame(maxHeight: .infinity)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .scrollContentBackground(.hidden)
+        .padding(4)
     }
 
     private var criteriaPanel: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Search Criteria")
-                .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundStyle(BrandPalette.ink)
+        VStack(alignment: .leading, spacing: 18) {
+            BrandSectionTitle(
+                eyebrow: "Search",
+                title: "Search Criteria",
+                subtitle: "Define the message slice before you create a digest."
+            )
 
             VStack(spacing: 12) {
                 TextField("Keyword", text: $appState.criteria.keyword)
@@ -31,14 +38,25 @@ struct SearchView: View {
                 TextField("Sender", text: $appState.criteria.sender)
                 TextField("Recipient", text: $appState.criteria.recipient)
                 TextField("Tag", text: $appState.criteria.tag)
+            }
+            .textFieldStyle(.roundedBorder)
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 10) {
                 Toggle("Unread only", isOn: $appState.criteria.unreadOnly)
                 Toggle("Read only", isOn: $appState.criteria.readOnly)
                 Toggle("Combine conditions with AND", isOn: $appState.criteria.useAnd)
+            }
 
-                HStack {
-                    Text("Summary length")
-                        .foregroundStyle(BrandPalette.muted)
-                    Spacer()
+            Divider()
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Summary length")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(BrandPalette.ink)
+
+                HStack(spacing: 10) {
                     TextField(
                         "Length",
                         value: Binding(
@@ -47,19 +65,20 @@ struct SearchView: View {
                         ),
                         format: .number
                     )
-                    .frame(width: 90)
+                    .frame(width: 88)
                     .textFieldStyle(.roundedBorder)
-                    Button("-") {
-                        appState.summaryLength = max(1, appState.summaryLength - 1)
-                    }
-                    .buttonStyle(.bordered)
-                    Button("+") {
-                        appState.summaryLength += 1
-                    }
-                    .buttonStyle(.borderedProminent)
+
+                    Stepper("", value: Binding(
+                        get: { appState.summaryLength },
+                        set: { appState.summaryLength = max(1, $0) }
+                    ), in: 1...Int.max)
+                    .labelsHidden()
+
+                    Spacer()
+
                     Text("\(appState.summaryLength)")
-                        .font(.body.monospacedDigit())
-                        .frame(minWidth: 32, alignment: .trailing)
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundStyle(BrandPalette.muted)
                 }
             }
 
@@ -67,41 +86,41 @@ struct SearchView: View {
                 Task { await getSummary() }
             }
             .buttonStyle(.borderedProminent)
-            .tint(BrandPalette.accent)
+            .controlSize(.large)
             .keyboardShortcut(.return)
         }
-        .brandPanel()
+        .brandPanel(fill: BrandPalette.panelStrong)
     }
 
     private var summaryPanel: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Summary")
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .foregroundStyle(BrandPalette.ink)
-                    Text(appState.selectedJobId.isEmpty ? "No job yet" : "Current job: \(appState.selectedJobId)")
-                        .font(.caption)
-                        .foregroundStyle(BrandPalette.muted)
-                }
+            HStack(alignment: .top, spacing: 16) {
+                BrandSectionTitle(
+                    eyebrow: "Digest",
+                    title: "Summary",
+                    subtitle: appState.selectedJobId.isEmpty
+                        ? "Run a summary to populate the digest and action toolbar."
+                        : "Current job: \(appState.selectedJobId)"
+                )
+
                 Spacer()
                 BrandStatusPill(text: appState.statusText)
             }
 
             TextEditor(text: $appState.currentSummary)
                 .font(.system(.body, design: .monospaced))
-                .frame(minHeight: 260)
-                .padding(12)
+                .frame(minHeight: 290)
+                .padding(10)
                 .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(Color.white.opacity(0.82))
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(BrandPalette.panelMuted)
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .stroke(BrandPalette.line, lineWidth: 1)
                 )
 
-            HStack {
+            HStack(spacing: 10) {
                 Button("Mark Read") {
                     Task { await performJobAction(path: "actions/mark-read") }
                 }
@@ -129,14 +148,21 @@ struct SearchView: View {
                 .tint(BrandPalette.accentWarm)
             }
         }
-        .brandPanel()
+        .brandPanel(fill: BrandPalette.panelStrong)
     }
 
     private var messagesPanel: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Messages")
-                .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundStyle(BrandPalette.ink)
+            HStack(alignment: .top) {
+                BrandSectionTitle(
+                    eyebrow: "Review",
+                    title: "Messages",
+                    subtitle: appState.currentMessages.isEmpty
+                        ? "The current result set appears here after each summary run."
+                        : "\(appState.currentMessages.count) messages in the current job."
+                )
+                Spacer()
+            }
 
             if appState.currentMessages.isEmpty {
                 ContentUnavailableView(
@@ -144,16 +170,17 @@ struct SearchView: View {
                     systemImage: "tray",
                     description: Text("Create a summary to populate the message list.")
                 )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 Table(appState.currentMessages) {
                     TableColumn("Date", value: \.date)
                     TableColumn("Sender", value: \.sender)
                     TableColumn("Subject", value: \.subject)
                 }
-                .frame(minHeight: 240)
+                .frame(minHeight: 250, maxHeight: .infinity)
             }
         }
-        .brandPanel()
+        .brandPanel(fill: BrandPalette.panelStrong)
     }
 
     private func getSummary() async {

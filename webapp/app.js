@@ -93,7 +93,7 @@ function getBaseUrl() {
 
 function setStatus(message, isError = false) {
   statusLine.textContent = message;
-  statusLine.style.color = isError ? "#b5312e" : "#245f58";
+  statusLine.style.color = isError ? "var(--danger-ink)" : "var(--success-ink)";
 }
 
 function setConnectionTestStatus(message, isError = false) {
@@ -101,7 +101,7 @@ function setConnectionTestStatus(message, isError = false) {
     return;
   }
   connectionTestStatusLine.textContent = message;
-  connectionTestStatusLine.style.color = isError ? "#b5312e" : "#245f58";
+  connectionTestStatusLine.style.color = isError ? "var(--danger-ink)" : "var(--success-ink)";
 }
 
 function setActionButtons(enabled) {
@@ -214,7 +214,7 @@ function setOllamaStatus(message, isError = false) {
     return;
   }
   ollamaStatusLine.textContent = message;
-  ollamaStatusLine.style.color = isError ? "#b5312e" : "#245f58";
+  ollamaStatusLine.style.color = isError ? "var(--danger-ink)" : "var(--success-ink)";
 }
 
 function setOllamaRuntimeStatus(message, isError = false) {
@@ -222,7 +222,7 @@ function setOllamaRuntimeStatus(message, isError = false) {
     return;
   }
   ollamaRuntimeStatusLine.textContent = message;
-  ollamaRuntimeStatusLine.style.color = isError ? "#b5312e" : "#245f58";
+  ollamaRuntimeStatusLine.style.color = isError ? "var(--danger-ink)" : "var(--success-ink)";
 }
 
 function setCatalogStatus(message, isError = false) {
@@ -230,7 +230,7 @@ function setCatalogStatus(message, isError = false) {
     return;
   }
   catalogStatusLine.textContent = message;
-  catalogStatusLine.style.color = isError ? "#b5312e" : "#245f58";
+  catalogStatusLine.style.color = isError ? "var(--danger-ink)" : "var(--success-ink)";
 }
 
 function selectedProvider() {
@@ -752,8 +752,9 @@ function bindTabs() {
 
 function updateHelpButton(isHelpActive) {
   const helpButton = document.getElementById("help-button");
-  if (helpButton) {
-    helpButton.textContent = isHelpActive ? "×" : "?";
+  const helpGlyph = helpButton?.querySelector(".help-btn-glyph");
+  if (helpButton && helpGlyph) {
+    helpGlyph.textContent = isHelpActive ? "×" : "?";
     helpButton.setAttribute("aria-label", isHelpActive ? "Close help" : "Open help");
   }
 }
@@ -940,14 +941,14 @@ function wireEvents() {
   refreshCatalogBtn.addEventListener("click", refreshDownloadCatalog);
   downloadModelBtn.addEventListener("click", downloadSelectedModel);
   stopMailSummariserBtn?.addEventListener("click", async () => {
-    const confirmed = window.confirm("Stop the connected Mail Summariser backend now?");
+    const confirmed = window.confirm("Stop the connected mail_summariser backend now?");
     if (!confirmed) {
       return;
     }
 
     try {
       const response = await api.shutdownRuntime();
-      setBackendStoppedState(response.message || "Mail Summariser is shutting down.");
+      setBackendStoppedState(response.message || "mail_summariser is shutting down.");
     } catch (error) {
       setStatus(`Shutdown failed: ${error.message}`, true);
     }

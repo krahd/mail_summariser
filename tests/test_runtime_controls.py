@@ -162,7 +162,7 @@ class RuntimeControlTests(unittest.TestCase):
     def test_stop_managed_ollama_only_targets_owned_processes(self) -> None:
         stopped, message = model_provider_service.stop_managed_ollama(True)
         self.assertFalse(stopped)
-        self.assertIn("No Ollama process started by Mail Summariser", message)
+        self.assertIn("No Ollama process started by mail_summariser", message)
 
         fake_process = _FakeProcess()
         model_provider_service._mark_managed_process(fake_process, "http://127.0.0.1:11434")

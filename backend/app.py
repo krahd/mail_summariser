@@ -111,7 +111,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(
-    title="Mail Summariser Backend",
+    title="mail_summariser backend",
     version="0.0.3",
     lifespan=lifespan,
 )
@@ -597,11 +597,11 @@ def runtime_start_ollama() -> RuntimeActionResponse:
 @app.post("/runtime/shutdown")
 def runtime_shutdown() -> dict[str, str]:
     if _backend_shutdown_requested:
-        return {"status": "warning", "message": "Mail Summariser shutdown is already in progress"}
+        return {"status": "warning", "message": "mail_summariser shutdown is already in progress"}
 
     _schedule_backend_shutdown()
     _record_log("runtime_shutdown", "ok", "Shutdown requested", persistent=True)
-    return {"status": "ok", "message": "Mail Summariser is shutting down"}
+    return {"status": "ok", "message": "mail_summariser is shutting down"}
 
 
 @app.get("/dev/fake-mail/status", response_model=FakeMailStatusResponse)

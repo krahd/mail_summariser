@@ -1,5 +1,5 @@
 import XCTest
-@testable import MailSummariser
+@testable import mail_summariser
 
 @MainActor
 final class BackendBridgeTests: XCTestCase {

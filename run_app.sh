@@ -1,14 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 
-SCHEME="MailSummariser"
+SCHEME="mail_summariser"
+PROJECT="mail_summariser.xcodeproj"
 CONFIGURATION="Debug"
 
 echo "Building $SCHEME..."
-xcodebuild -scheme "$SCHEME" -configuration "$CONFIGURATION" build >/dev/null
+xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration "$CONFIGURATION" build >/dev/null
 
 APP_PATH="$(
-  xcodebuild -scheme "$SCHEME" -configuration "$CONFIGURATION" -showBuildSettings 2>/dev/null \
+  xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration "$CONFIGURATION" -showBuildSettings 2>/dev/null \
     | awk -F ' = ' '
         /TARGET_BUILD_DIR/ { build_dir=$2 }
         /FULL_PRODUCT_NAME/ { product_name=$2 }

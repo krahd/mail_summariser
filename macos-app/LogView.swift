@@ -5,56 +5,58 @@ struct LogView: View {
     @State private var logs: [ActionLogItem] = []
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Action Log")
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
-                            .foregroundStyle(BrandPalette.ink)
-                        Text("Review action history and unwind reversible steps without leaving the workspace.")
-                            .foregroundStyle(BrandPalette.muted)
-                    }
-                    Spacer()
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 16) {
+                BrandSectionTitle(
+                    eyebrow: "History",
+                    title: "Action Log",
+                    subtitle: "Review action history and unwind reversible steps without leaving the workspace."
+                )
+
+                Spacer()
+
+                HStack(spacing: 10) {
+                    BrandStatusPill(text: logs.isEmpty ? "No entries" : "\(logs.count) entries")
+
                     Button("Refresh") {
                         Task { await loadLogs() }
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(BrandPalette.accent)
                 }
+            }
 
-                VStack(alignment: .leading, spacing: 14) {
-                    if logs.isEmpty {
-                        ContentUnavailableView("No log entries", systemImage: "list.bullet.rectangle")
-                    } else {
-                        Table(logs) {
-                            TableColumn("Time", value: \.timestamp)
-                            TableColumn("Action", value: \.action)
-                            TableColumn("Status", value: \.status)
-                            TableColumn("Details") { item in
-                                Text(item.details)
-                            }
-                            TableColumn("Undo") { item in
-                                if item.undoable == true {
-                                    Button("Undo") {
-                                        Task { await undoLog(item) }
-                                    }
-                                    .buttonStyle(.bordered)
-                                    .controlSize(.small)
-                                } else {
-                                    Text("Final")
-                                        .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 14) {
+                if logs.isEmpty {
+                    ContentUnavailableView("No log entries", systemImage: "list.bullet.rectangle")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    Table(logs) {
+                        TableColumn("Time", value: \.timestamp)
+                        TableColumn("Action", value: \.action)
+                        TableColumn("Status", value: \.status)
+                        TableColumn("Details") { item in
+                            Text(item.details)
+                        }
+                        TableColumn("Undo") { item in
+                            if item.undoable == true {
+                                Button("Undo") {
+                                    Task { await undoLog(item) }
                                 }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                            } else {
+                                Text("Final")
+                                    .foregroundStyle(.secondary)
                             }
                         }
-                        .frame(minHeight: 420)
                     }
+                    .frame(minHeight: 420, maxHeight: .infinity)
                 }
-                .brandPanel()
             }
-            .padding(12)
+            .brandPanel(fill: BrandPalette.panelStrong)
         }
-        .scrollContentBackground(.hidden)
+        .padding(4)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .task {
             await loadLogs()
         }

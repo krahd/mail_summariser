@@ -12,11 +12,14 @@ class WebContractTests(unittest.TestCase):
         html = (REPO_ROOT / "webapp" / "index.html").read_text(encoding="utf-8")
         self.assertIn(">Main<", html)
         self.assertIn(">Log<", html)
+        self.assertIn('id="status-line"', html)
+        self.assertIn('id="help-button"', html)
+        self.assertIn('class="help-btn-glyph"', html)
         self.assertIn('id="dummy-mode-toggle"', html)
         self.assertIn('id="test-connection"', html)
         self.assertIn("Start Ollama automatically on startup", html)
         self.assertIn("Stop Ollama automatically on exit", html)
-        self.assertIn("Stop Mail Summariser", html)
+        self.assertIn("Stop mail_summariser", html)
         self.assertIn("Reset Local Database", html)
         self.assertIn("Fake Mail Server", html)
         self.assertIn("Advanced Settings", html)
@@ -31,6 +34,7 @@ class WebContractTests(unittest.TestCase):
         self.assertIn('id="back-to-basic-settings"', html)
         self.assertIn('id="provider-system-message"', html)
         self.assertIn('id="reset-system-message"', html)
+        self.assertNotIn("Narrow the mailbox slice before you create a digest.", html)
 
     def test_log_ui_uses_final_and_not_no_undo(self) -> None:
         app_js = (REPO_ROOT / "webapp" / "app.js").read_text(encoding="utf-8")

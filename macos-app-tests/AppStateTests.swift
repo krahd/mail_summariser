@@ -1,5 +1,5 @@
 import XCTest
-@testable import MailSummariser
+@testable import mail_summariser
 
 @MainActor
 final class AppStateTests: XCTestCase {
@@ -270,7 +270,7 @@ final class AppStateTests: XCTestCase {
             XCTAssertEqual(request.url?.absoluteString, "http://127.0.0.1:8766/runtime/shutdown")
             XCTAssertEqual(request.httpMethod, "POST")
             let payload = """
-            { "status": "ok", "message": "Mail Summariser is shutting down" }
+            { "status": "ok", "message": "mail_summariser is shutting down" }
             """.data(using: .utf8)!
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!
             return (response, payload)

@@ -1,59 +1,61 @@
 import SwiftUI
 
 enum BrandPalette {
-    static let backgroundTop = Color(red: 0.94, green: 0.91, blue: 0.85)
-    static let backgroundBottom = Color(red: 0.99, green: 0.98, blue: 0.95)
-    static let ink = Color(red: 0.07, green: 0.21, blue: 0.18)
-    static let muted = Color(red: 0.36, green: 0.43, blue: 0.40)
-    static let accent = Color(red: 0.05, green: 0.54, blue: 0.46)
-    static let accentWarm = Color(red: 0.84, green: 0.42, blue: 0.19)
-    static let panel = Color.white.opacity(0.72)
-    static let panelStrong = Color.white.opacity(0.86)
-    static let line = Color(red: 0.07, green: 0.21, blue: 0.18).opacity(0.12)
+    static let backgroundTop = Color(red: 0.93, green: 0.96, blue: 0.95)
+    static let backgroundBottom = Color(red: 0.98, green: 0.99, blue: 0.99)
+    static let backgroundAccent = Color(red: 0.05, green: 0.46, blue: 0.40).opacity(0.08)
+    static let ink = Color(red: 0.12, green: 0.22, blue: 0.20)
+    static let muted = Color(red: 0.40, green: 0.47, blue: 0.45)
+    static let accent = Color(red: 0.05, green: 0.46, blue: 0.40)
+    static let accentWarm = Color(red: 0.72, green: 0.40, blue: 0.25)
+    static let panel = Color.white.opacity(0.9)
+    static let panelStrong = Color.white.opacity(0.96)
+    static let panelMuted = Color(red: 0.96, green: 0.97, blue: 0.97)
+    static let line = Color(red: 0.12, green: 0.22, blue: 0.20).opacity(0.1)
 }
 
 struct BrandBackdrop: View {
     var body: some View {
-        ZStack {
+        ZStack(alignment: .top) {
             LinearGradient(
                 colors: [BrandPalette.backgroundTop, BrandPalette.backgroundBottom],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+            LinearGradient(
+                colors: [BrandPalette.backgroundAccent, .clear],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            Circle()
-                .fill(BrandPalette.accentWarm.opacity(0.22))
-                .frame(width: 360, height: 360)
-                .blur(radius: 80)
-                .offset(x: -280, y: 240)
-            Circle()
-                .fill(BrandPalette.accent.opacity(0.18))
-                .frame(width: 320, height: 320)
-                .blur(radius: 90)
-                .offset(x: 300, y: -220)
+            .frame(height: 220)
         }
         .ignoresSafeArea()
     }
 }
 
 struct BrandPanelModifier: ViewModifier {
+    let padding: CGFloat
+    let fill: Color
+
     func body(content: Content) -> some View {
         content
-            .padding(20)
+            .padding(padding)
             .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(BrandPalette.panel)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(fill)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(BrandPalette.line, lineWidth: 1)
             )
-            .shadow(color: Color.black.opacity(0.08), radius: 22, x: 0, y: 16)
+            .shadow(color: Color.black.opacity(0.05), radius: 14, x: 0, y: 6)
     }
 }
 
 extension View {
-    func brandPanel() -> some View {
-        modifier(BrandPanelModifier())
+    func brandPanel(padding: CGFloat = 18, fill: Color = BrandPalette.panel) -> some View {
+        modifier(BrandPanelModifier(padding: padding, fill: fill))
     }
 }
 
@@ -68,12 +70,37 @@ struct BrandStatusPill: View {
             .padding(.vertical, 8)
             .background(
                 Capsule(style: .continuous)
-                    .fill(BrandPalette.panelStrong)
+                    .fill(BrandPalette.panelMuted)
             )
             .overlay(
                 Capsule(style: .continuous)
                     .stroke(BrandPalette.line, lineWidth: 1)
             )
+    }
+}
+
+struct BrandSectionTitle: View {
+    let eyebrow: String
+    let title: String
+    let subtitle: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(eyebrow.uppercased())
+                .font(.caption.weight(.bold))
+                .kerning(1.1)
+                .foregroundStyle(BrandPalette.accent)
+
+            Text(title)
+                .font(.system(size: 23, weight: .bold))
+                .foregroundStyle(BrandPalette.ink)
+
+            if let subtitle, !subtitle.isEmpty {
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(BrandPalette.muted)
+            }
+        }
     }
 }
 
@@ -86,25 +113,21 @@ struct ContentView: View {
         ZStack {
             BrandBackdrop()
 
-            VStack(alignment: .leading, spacing: 18) {
-                HStack(alignment: .top, spacing: 14) {
-                    VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .top, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 10) {
                             Circle()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [BrandPalette.accent, BrandPalette.accentWarm],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: 14, height: 14)
-                            Text("Mail Summariser")
-                                .font(.system(size: 30, weight: .bold, design: .rounded))
+                                .fill(BrandPalette.accent)
+                                .frame(width: 10, height: 10)
+
+                            Text("mail_summariser")
+                                .font(.system(size: 27, weight: .bold))
                                 .foregroundStyle(BrandPalette.ink)
                         }
-                        Text("Local-first mail workflow with a calmer, more intentional workspace.")
-                            .font(.headline)
+
+                        Text("Summaries, actions, and logs in one local workspace.")
+                            .font(.subheadline)
                             .foregroundStyle(BrandPalette.muted)
                     }
 
@@ -115,23 +138,25 @@ struct ContentView: View {
                 TabView {
                     SearchView()
                         .tabItem { Text("Main") }
+
                     LogView()
                         .tabItem { Text("Log") }
                 }
-                .padding(12)
+                .padding(10)
                 .background(
-                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
                         .fill(BrandPalette.panelStrong)
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
                         .stroke(BrandPalette.line, lineWidth: 1)
                 )
-                .shadow(color: Color.black.opacity(0.08), radius: 28, x: 0, y: 16)
+                .shadow(color: Color.black.opacity(0.05), radius: 16, x: 0, y: 8)
             }
-            .padding(26)
+            .padding(22)
         }
-        .frame(minWidth: 980, minHeight: 700)
+        .frame(minWidth: 1000, minHeight: 720)
+        .tint(BrandPalette.accent)
         .task {
             await bootstrap()
         }

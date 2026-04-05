@@ -313,7 +313,7 @@ def get_ollama_runtime_status(provider: str, ollama_host: str, model_name: str) 
         if cached_message:
             message = cached_message
         elif started_by_app:
-            message = f"Ollama is running at {host} (started by Mail Summariser)."
+            message = f"Ollama is running at {host} (started by mail_summariser)."
         else:
             message = f"Ollama is running at {host}."
 
@@ -340,7 +340,7 @@ def stop_managed_ollama(stop_on_exit: bool) -> tuple[bool, str]:
         started_by_app = _runtime_state.started_by_app
 
     if process is None or not started_by_app:
-        return False, "No Ollama process started by Mail Summariser is running"
+        return False, "No Ollama process started by mail_summariser is running"
 
     _signal_process(process, signal.SIGTERM)
     for _ in range(20):
