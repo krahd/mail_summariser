@@ -91,21 +91,49 @@
         </div>
       </section>
 
-      <section class="card workspace-table">
+      <section class="card workspace-table workspace-review">
         <div class="panel-heading panel-heading-spread">
           <div>
             <h2>Messages</h2>
+            <p id="messages-summary" class="panel-copy">The current result set appears here after each summary run.</p>
           </div>
         </div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr><th>ID</th><th>Subject</th><th>Sender</th><th>Date</th></tr>
-            </thead>
-            <tbody id="messages-body">
-              <tr><td colspan="4">No messages yet.</td></tr>
-            </tbody>
-          </table>
+        <div class="review-split">
+          <div class="message-list-pane">
+            <div class="table-wrapper message-table-wrapper">
+              <table>
+                <thead>
+                  <tr><th>Date</th><th>Sender</th><th>Subject</th></tr>
+                </thead>
+                <tbody id="messages-body">
+                  <tr><td colspan="3">No messages yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <article id="message-detail-shell" class="message-detail-shell" data-state="empty" aria-live="polite">
+            <div class="message-detail-header">
+              <div>
+                <p class="message-detail-eyebrow">Selected Mail</p>
+                <h3 id="message-detail-subject">No mail selected</h3>
+              </div>
+              <p id="message-detail-date" class="message-detail-date"></p>
+            </div>
+            <div class="message-detail-meta">
+              <div class="message-party-card">
+                <p class="message-party-label">From</p>
+                <p id="message-detail-sender-name" class="message-party-name">Select a message</p>
+                <p id="message-detail-sender-address" class="message-party-address">Select a message from the list.</p>
+              </div>
+              <div class="message-party-card">
+                <p class="message-party-label">To</p>
+                <p id="message-detail-recipient-name" class="message-party-name">Mail preview</p>
+                <p id="message-detail-recipient-address" class="message-party-address">The selected mail body appears here.</p>
+              </div>
+            </div>
+            <pre id="message-detail-body" class="message-detail-body">Select a message from the list to load its contents.</pre>
+          </article>
         </div>
       </section>
     </section>

@@ -26,6 +26,16 @@
  */
 
 /**
+ * @typedef {Object} MessageDetail
+ * @property {string} id
+ * @property {string} subject
+ * @property {string} sender
+ * @property {string} recipient
+ * @property {string} date
+ * @property {string} body
+ */
+
+/**
  * @typedef {Object} SummaryResponse
  * @property {string} jobId
  * @property {MessageItem[]} messages
@@ -316,6 +326,10 @@ export function createApiClient(context) {
         method: "POST",
         body: JSON.stringify(payload),
       });
+    },
+    /** @param {string} jobId @param {string} messageId @returns {Promise<MessageDetail>} */
+    getMessageDetail(jobId, messageId) {
+      return request(`/jobs/${encodeURIComponent(jobId)}/messages/${encodeURIComponent(messageId)}`);
     },
     /** @param {string} jobId */
     markRead(jobId) {

@@ -6,6 +6,10 @@ const storageKeys = {
 };
 
 let currentJobId = null;
+let currentMessages = [];
+let selectedMessageId = null;
+let currentMessageDetail = null;
+let latestMessageDetailRequest = 0;
 let currentRuntimeStatus = null;
 let currentFakeMailStatus = null;
 let currentSystemMessageDefaults = null;
@@ -25,7 +29,16 @@ const dummyModeDescription = document.getElementById("dummy-mode-description");
 const searchForm = document.getElementById("search-form");
 const summaryText = document.getElementById("summary-text");
 const jobIdLabel = document.getElementById("job-id");
+const messagesSummary = document.getElementById("messages-summary");
 const messagesBody = document.getElementById("messages-body");
+const messageDetailShell = document.getElementById("message-detail-shell");
+const messageDetailSubject = document.getElementById("message-detail-subject");
+const messageDetailDate = document.getElementById("message-detail-date");
+const messageDetailSenderName = document.getElementById("message-detail-sender-name");
+const messageDetailSenderAddress = document.getElementById("message-detail-sender-address");
+const messageDetailRecipientName = document.getElementById("message-detail-recipient-name");
+const messageDetailRecipientAddress = document.getElementById("message-detail-recipient-address");
+const messageDetailBody = document.getElementById("message-detail-body");
 
 const markReadBtn = document.getElementById("mark-read");
 const tagSummaryBtn = document.getElementById("tag-summary");
@@ -112,26 +125,184 @@ function setActionButtons(enabled) {
 
 function clearCurrentWorkspaceState() {
   currentJobId = null;
+  currentMessages = [];
+  selectedMessageId = null;
+  currentMessageDetail = null;
+  latestMessageDetailRequest += 1;
   jobIdLabel.textContent = "No job yet";
   summaryText.textContent = "Run a summary to see output here.";
   renderMessages([]);
+  renderMessageDetail(null, {
+    state: "empty",
+    subject: "No mail selected",
+    senderName: "",
+    senderAddress: "",
+    recipientName: "",
+    recipientAddress: "",
+    body: "",
+  });
   setActionButtons(false);
 }
 
 function renderMessages(messages) {
+  currentMessages = Array.isArray(messages) ? messages : [];
+
+  if (messagesSummary) {
+    messagesSummary.textContent = currentMessages.length === 0
+      ? "The current result set appears here after each summary run."
+      : `${currentMessages.length} messages in the current job.`;
+  }
+
   if (!Array.isArray(messages) || messages.length === 0) {
-    messagesBody.innerHTML = "<tr><td colspan='4'>No messages returned.</td></tr>";
+    messagesBody.innerHTML = "<tr><td colspan='3'>No messages returned.</td></tr>";
     return;
   }
 
   messagesBody.innerHTML = messages
     .map(
-      (m) =>
-        `<tr><td>${escapeHtml(m.id)}</td><td>${escapeHtml(m.subject)}</td><td>${escapeHtml(
+      (m) => {
+        const isSelected = m.id === selectedMessageId;
+        return `<tr class="message-row${isSelected ? " is-selected" : ""}" data-message-id="${escapeHtml(
+          m.id
+        )}" tabindex="0" aria-selected="${isSelected}"><td>${escapeHtml(m.date)}</td><td>${escapeHtml(
           m.sender
-        )}</td><td>${escapeHtml(m.date)}</td></tr>`
+        )}</td><td>${escapeHtml(m.subject)}</td></tr>`;
+      }
     )
     .join("");
+}
+
+function getMessageListItem(messageId) {
+  return currentMessages.find((message) => message.id === messageId) || null;
+}
+
+function titleCaseWords(value) {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function fallbackMailboxName(address) {
+  const localPart = String(address || "").split("@")[0] || String(address || "");
+  const normalized = localPart.replace(/[._+-]+/g, " ").trim();
+  return normalized ? titleCaseWords(normalized) : String(address || "");
+}
+
+function parseMailbox(value, fallbackName, fallbackAddress) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return {
+      name: fallbackName,
+      address: fallbackAddress,
+    };
+  }
+
+  const namedMailboxMatch = raw.match(/^\s*"?([^"<]+?)"?\s*<([^>]+)>\s*$/);
+  if (namedMailboxMatch) {
+    const name = namedMailboxMatch[1].trim();
+    const address = namedMailboxMatch[2].trim();
+    return {
+      name: name || fallbackMailboxName(address),
+      address,
+    };
+  }
+
+  if (raw.includes("@")) {
+    return {
+      name: fallbackMailboxName(raw),
+      address: raw,
+    };
+  }
+
+  return {
+    name: raw,
+    address: fallbackAddress || raw,
+  };
+}
+
+function renderMessageDetail(detail, options = {}) {
+  if (!messageDetailShell) {
+    return;
+  }
+
+  const state = options.state || (detail ? "ready" : "empty");
+  messageDetailShell.dataset.state = state;
+  const isEmptyState = state === "empty";
+
+  const subject = detail?.subject || options.subject || "No mail selected";
+  const date = detail?.date || options.date || "";
+  const body = isEmptyState ? "" : detail?.body || options.body || "";
+  const senderMailbox = parseMailbox(
+    detail?.sender,
+    isEmptyState ? "" : options.senderName || "",
+    isEmptyState ? "" : options.senderAddress || options.sender || ""
+  );
+  const recipientMailbox = parseMailbox(
+    detail?.recipient,
+    isEmptyState ? "" : options.recipientName || "",
+    isEmptyState ? "" : options.recipientAddress || options.recipient || ""
+  );
+
+  messageDetailSubject.textContent = subject;
+  messageDetailDate.textContent = date;
+  messageDetailSenderName.textContent = senderMailbox.name;
+  messageDetailSenderAddress.textContent = senderMailbox.address;
+  messageDetailRecipientName.textContent = recipientMailbox.name;
+  messageDetailRecipientAddress.textContent = recipientMailbox.address;
+  messageDetailBody.textContent = body;
+}
+
+async function selectMessage(messageId) {
+  if (!currentJobId || !messageId) {
+    return;
+  }
+
+  selectedMessageId = messageId;
+  currentMessageDetail = null;
+  renderMessages(currentMessages);
+
+  const listItem = getMessageListItem(messageId);
+  renderMessageDetail(null, {
+    state: "loading",
+    subject: listItem?.subject || "Loading message",
+    senderName: parseMailbox(listItem?.sender, "Loading sender", "Loading sender").name,
+    senderAddress: parseMailbox(listItem?.sender, "Loading sender", "Loading sender").address,
+    date: listItem?.date || "",
+    recipientName: "Loading recipient",
+    recipientAddress: "Loading recipient",
+    body: "Loading message body...",
+  });
+
+  const requestId = ++latestMessageDetailRequest;
+
+  try {
+    const detail = await api.getMessageDetail(currentJobId, messageId);
+    if (requestId !== latestMessageDetailRequest || selectedMessageId !== messageId) {
+      return;
+    }
+
+    currentMessageDetail = detail;
+    renderMessageDetail(detail);
+  } catch (error) {
+    if (requestId !== latestMessageDetailRequest || selectedMessageId !== messageId) {
+      return;
+    }
+
+    currentMessageDetail = null;
+    renderMessageDetail(null, {
+      state: "error",
+      subject: listItem?.subject || "Message unavailable",
+      senderName: parseMailbox(listItem?.sender, "Message unavailable", "Could not load sender").name,
+      senderAddress: parseMailbox(listItem?.sender, "Message unavailable", "Could not load sender").address,
+      date: listItem?.date || "",
+      recipientName: "Message unavailable",
+      recipientAddress: "Could not load recipient",
+      body: `Could not load this message: ${error.message}`,
+    });
+    setStatus(`Message load failed: ${error.message}`, true);
+  }
 }
 
 function renderLogs(logs) {
@@ -830,15 +1001,74 @@ function wireEvents() {
       const result = await api.createSummary(payload);
 
       currentJobId = result.jobId;
+      selectedMessageId = null;
+      currentMessageDetail = null;
+      latestMessageDetailRequest += 1;
       jobIdLabel.textContent = `Current Job: ${result.jobId}`;
       summaryText.textContent = result.summary;
       renderMessages(result.messages || []);
       setActionButtons(true);
       setStatus(`Summary created for ${result.messages.length} messages.`);
+      if (result.messages?.length) {
+        await selectMessage(result.messages[0].id);
+      } else {
+        renderMessageDetail(null, {
+          state: "empty",
+          subject: "No mail selected",
+          senderName: "",
+          senderAddress: "",
+          recipientName: "",
+          recipientAddress: "",
+          body: "",
+        });
+      }
       renderLogs(await api.getLogs());
     } catch (error) {
       setStatus(`Summary request failed: ${error.message}`, true);
     }
+  });
+
+  messagesBody.addEventListener("click", async (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    const row = target.closest("tr[data-message-id]");
+    if (!row) {
+      return;
+    }
+
+    const messageId = row.getAttribute("data-message-id");
+    if (!messageId || messageId === selectedMessageId) {
+      return;
+    }
+
+    await selectMessage(messageId);
+  });
+
+  messagesBody.addEventListener("keydown", async (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    const row = target.closest("tr[data-message-id]");
+    if (!row) {
+      return;
+    }
+
+    const messageId = row.getAttribute("data-message-id");
+    if (!messageId || messageId === selectedMessageId) {
+      return;
+    }
+
+    event.preventDefault();
+    await selectMessage(messageId);
   });
 
   markReadBtn.addEventListener("click", () => runJobAction(api.markRead));

@@ -27,6 +27,11 @@ class MessageItem(BaseModel):
     date: str
 
 
+class MessageDetail(MessageItem):
+    recipient: str = ""
+    body: str = ""
+
+
 class SummaryResponse(BaseModel):
     jobId: str
     messages: list[MessageItem]

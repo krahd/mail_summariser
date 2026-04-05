@@ -64,6 +64,7 @@ from schemas import (
     DummyModeUpdate,
     FakeMailStatusResponse,
     JobAction,
+    MessageDetail,
     MessageItem,
     ModelDownloadRequest,
     RuntimeActionResponse,
@@ -112,7 +113,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="mail_summariser backend",
-    version="0.0.3",
+    version="0.0.4",
     lifespan=lifespan,
 )
 
@@ -379,6 +380,29 @@ def _job_effective_mail_settings(job: dict | None = None, payload: dict | None =
     return settings
 
 
+def _job_message_detail(job: dict[str, object], message_id: str) -> MessageDetail | None:
+    raw_messages = job.get("messages_json", [])
+    if not isinstance(raw_messages, list):
+        return None
+
+    for message in raw_messages:
+        if not isinstance(message, dict):
+            continue
+        if str(message.get("id", "")) != message_id:
+            continue
+
+        return MessageDetail(
+            id=str(message.get("id", "")),
+            subject=str(message.get("subject", "")),
+            sender=str(message.get("sender", "")),
+            recipient=str(message.get("recipient", "")),
+            date=str(message.get("date", "")),
+            body=str(message.get("body", "")),
+        )
+
+    return None
+
+
 @app.post("/summaries", response_model=SummaryResponse)
 def create_summary(request: SummaryRequest) -> SummaryResponse:
     settings = _merged_settings()
@@ -423,6 +447,19 @@ def create_summary(request: SummaryRequest) -> SummaryResponse:
         ],
         summary=summary,
     )
+
+
+@app.get("/jobs/{job_id}/messages/{message_id}", response_model=MessageDetail)
+def get_job_message(job_id: str, message_id: str) -> MessageDetail:
+    job = _get_job_for_active_mode(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    detail = _job_message_detail(job, message_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    return detail
 
 
 @app.post("/actions/mark-read")
@@ -706,7 +743,8 @@ def save_settings(settings: AppSettings) -> dict[str, str]:
         set_setting(key, value)
 
     if settings.llmProvider.strip().lower() == "ollama":
-        runtime_status = get_ollama_runtime_status(settings.llmProvider, settings.ollamaHost, settings.modelName)
+        runtime_status = get_ollama_runtime_status(
+            settings.llmProvider, settings.ollamaHost, settings.modelName)
         status_label = "ok" if runtime_status["running"] else "warning"
         _record_log("ollama_status", status_label, str(runtime_status["message"]), settings=data)
 
@@ -736,7 +774,8 @@ def settings_test_connection(settings: AppSettings) -> dict[str, object]:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     mode = "dummy" if is_dummy_mode(payload) else "imap"
-    _record_log("test_connection", "ok", f"Connection test succeeded in {mode} mode", settings=payload)
+    _record_log("test_connection", "ok",
+                f"Connection test succeeded in {mode} mode", settings=payload)
     return result
 
 

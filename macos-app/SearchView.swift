@@ -3,6 +3,11 @@ import SwiftUI
 struct SearchView: View {
     @EnvironmentObject private var appState: AppState
 
+    private struct MailboxDisplay {
+        let name: String
+        let address: String
+    }
+
     var body: some View {
         HSplitView {
             ScrollView {
@@ -14,7 +19,7 @@ struct SearchView: View {
             .frame(minWidth: 300, idealWidth: 320, maxWidth: 360)
             .scrollContentBackground(.hidden)
 
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 14) {
                 summaryPanel
                 messagesPanel
                     .frame(maxHeight: .infinity)
@@ -22,6 +27,118 @@ struct SearchView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
         .padding(4)
+    }
+
+    private var selectedMessageBinding: Binding<String?> {
+        Binding(
+            get: { appState.selectedMessageId },
+            set: { newValue in
+                Task { await appState.selectMessage(newValue) }
+            }
+        )
+    }
+
+    private var selectedMessageListItem: MessageItem? {
+        guard let selectedMessageId = appState.selectedMessageId else {
+            return nil
+        }
+        return appState.currentMessages.first(where: { $0.id == selectedMessageId })
+    }
+
+    private var hasSelectedMessage: Bool {
+        appState.selectedMessageId != nil
+    }
+
+    private var senderMailboxDisplay: MailboxDisplay {
+        guard hasSelectedMessage else {
+            return MailboxDisplay(name: "", address: "")
+        }
+
+        return mailboxDisplay(
+            from: appState.selectedMessageDetail?.sender ?? selectedMessageListItem?.sender,
+            fallbackName: appState.isLoadingSelectedMessage ? "Loading sender" : "",
+            fallbackAddress: appState.isLoadingSelectedMessage ? "Loading sender" : ""
+        )
+    }
+
+    private var recipientMailboxDisplay: MailboxDisplay {
+        guard hasSelectedMessage else {
+            return MailboxDisplay(name: "", address: "")
+        }
+
+        return mailboxDisplay(
+            from: appState.selectedMessageDetail?.recipient,
+            fallbackName: appState.isLoadingSelectedMessage ? "Loading recipient" : "",
+            fallbackAddress: appState.isLoadingSelectedMessage ? "Loading recipient" : ""
+        )
+    }
+
+    private var messageDetailSubject: String {
+        appState.selectedMessageDetail?.subject ?? selectedMessageListItem?.subject ?? "No mail selected"
+    }
+
+    private var messageDetailDate: String {
+        appState.selectedMessageDetail?.date ?? selectedMessageListItem?.date ?? ""
+    }
+
+    private var messageDetailBody: String {
+        guard hasSelectedMessage else {
+            return ""
+        }
+
+        if let detail = appState.selectedMessageDetail {
+            return detail.body.isEmpty ? "This message has no plain-text body." : detail.body
+        }
+        if appState.isLoadingSelectedMessage {
+            return "Loading message body..."
+        }
+        if !appState.selectedMessageErrorText.isEmpty {
+            return "Could not load this message: \(appState.selectedMessageErrorText)"
+        }
+        return ""
+    }
+
+    private var messageDetailBodyColor: Color {
+        appState.selectedMessageErrorText.isEmpty ? BrandPalette.ink : BrandPalette.accentWarm
+    }
+
+    private func mailboxDisplay(from rawValue: String?, fallbackName: String, fallbackAddress: String) -> MailboxDisplay {
+        let trimmed = rawValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if trimmed.isEmpty {
+            return MailboxDisplay(name: fallbackName, address: fallbackAddress)
+        }
+
+        if let start = trimmed.lastIndex(of: "<"), let end = trimmed.lastIndex(of: ">"), start < end {
+            let name = trimmed[..<start]
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+            let address = trimmed[trimmed.index(after: start)..<end].trimmingCharacters(in: .whitespacesAndNewlines)
+            if !address.isEmpty {
+                return MailboxDisplay(
+                    name: name.isEmpty ? fallbackMailboxName(from: address) : name,
+                    address: address
+                )
+            }
+        }
+
+        if trimmed.contains("@") {
+            return MailboxDisplay(name: fallbackMailboxName(from: trimmed), address: trimmed)
+        }
+
+        return MailboxDisplay(name: trimmed, address: trimmed)
+    }
+
+    private func fallbackMailboxName(from address: String) -> String {
+        let localPart = address.split(separator: "@", maxSplits: 1).first.map(String.init) ?? address
+        let separators = CharacterSet(charactersIn: "._+- ")
+        let words = localPart
+            .components(separatedBy: separators)
+            .filter { !$0.isEmpty }
+            .map { word in
+                word.prefix(1).uppercased() + word.dropFirst().lowercased()
+            }
+        let candidate = words.joined(separator: " ")
+        return candidate.isEmpty ? address : candidate
     }
 
     private var criteriaPanel: some View {
@@ -93,8 +210,8 @@ struct SearchView: View {
     }
 
     private var summaryPanel: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top, spacing: 16) {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
                 BrandSectionTitle(
                     eyebrow: "Digest",
                     title: "Summary",
@@ -108,9 +225,9 @@ struct SearchView: View {
             }
 
             TextEditor(text: $appState.currentSummary)
-                .font(.system(.body, design: .monospaced))
+                .font(.subheadline)
                 .frame(minHeight: 290)
-                .padding(10)
+                .padding(8)
                 .background(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(BrandPalette.panelMuted)
@@ -120,7 +237,7 @@ struct SearchView: View {
                         .stroke(BrandPalette.line, lineWidth: 1)
                 )
 
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 Button("Mark Read") {
                     Task { await performJobAction(path: "actions/mark-read") }
                 }
@@ -148,11 +265,11 @@ struct SearchView: View {
                 .tint(BrandPalette.accentWarm)
             }
         }
-        .brandPanel(fill: BrandPalette.panelStrong)
+        .brandPanel(padding: 14, fill: BrandPalette.panelStrong)
     }
 
     private var messagesPanel: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 BrandSectionTitle(
                     eyebrow: "Review",
@@ -172,15 +289,115 @@ struct SearchView: View {
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                Table(appState.currentMessages) {
-                    TableColumn("Date", value: \.date)
-                    TableColumn("Sender", value: \.sender)
-                    TableColumn("Subject", value: \.subject)
+                HSplitView {
+                    Table(appState.currentMessages, selection: selectedMessageBinding) {
+                        TableColumn("Date", value: \.date)
+                        TableColumn("Sender", value: \.sender)
+                        TableColumn("Subject", value: \.subject)
+                    }
+                    .frame(minWidth: 340, idealWidth: 400, maxWidth: .infinity, maxHeight: .infinity)
+
+                    messageDetailPanel
+                        .frame(minWidth: 320, maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 }
                 .frame(minHeight: 250, maxHeight: .infinity)
             }
         }
         .brandPanel(fill: BrandPalette.panelStrong)
+    }
+
+    private var messageDetailPanel: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Selected Mail")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(BrandPalette.muted)
+                        .textCase(.uppercase)
+
+                    Text(messageDetailSubject)
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(BrandPalette.ink)
+                        .lineLimit(3)
+                }
+
+                Spacer()
+
+                if !messageDetailDate.isEmpty {
+                    Text(messageDetailDate)
+                        .font(.footnote)
+                        .foregroundStyle(BrandPalette.muted)
+                        .multilineTextAlignment(.trailing)
+                }
+            }
+
+            if hasSelectedMessage {
+                HStack(spacing: 6) {
+                    messageMetaCard(title: "From", mailbox: senderMailboxDisplay)
+                    messageMetaCard(title: "To", mailbox: recipientMailboxDisplay)
+                }
+
+                ScrollView {
+                    Text(messageDetailBody)
+                        .font(.subheadline)
+                        .foregroundStyle(messageDetailBodyColor)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .textSelection(.enabled)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .padding(8)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(BrandPalette.panelMuted)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(BrandPalette.line, lineWidth: 1)
+                )
+            } else {
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(BrandPalette.panelMuted)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(BrandPalette.line, lineWidth: 1)
+        )
+    }
+
+    private func messageMetaCard(title: String, mailbox: MailboxDisplay) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(BrandPalette.muted)
+                .textCase(.uppercase)
+
+            Text(mailbox.name)
+                .font(.subheadline)
+                .foregroundStyle(BrandPalette.ink)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text(mailbox.address)
+                .font(.subheadline)
+                .foregroundStyle(BrandPalette.ink)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(.white.opacity(0.7))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(BrandPalette.line, lineWidth: 1)
+        )
     }
 
     private func getSummary() async {
@@ -191,6 +408,7 @@ struct SearchView: View {
             appState.currentMessages = response.messages
             appState.selectedJobId = response.jobId
             appState.statusText = "Created summary for \(response.messages.count) messages"
+            await appState.selectMessage(response.messages.first?.id)
         } catch {
             appState.statusText = "Summary failed: \(error.localizedDescription)"
         }

@@ -2,6 +2,8 @@
 
 mail_summariser is a local-first mail workflow with a FastAPI backend, a browser client, and a SwiftUI macOS client. It can run entirely against a built-in dummy mailbox for safe validation, or switch to a real IMAP inbox and SMTP server while keeping persistent settings and live-mail history in SQLite.
 
+The main workflow in both clients now keeps the returned messages in a list while opening the selected mail's sender, recipient, and body in a side-by-side detail pane.
+
 User-facing docs, screenshots, and release downloads live on the GitHub Pages project site: [krahd.github.io/Mail-Summariser](https://krahd.github.io/Mail-Summariser/).
 
 <p align="center">
@@ -17,6 +19,7 @@ User-facing docs, screenshots, and release downloads live on the GitHub Pages pr
 
 - Browser client: `Main`, `Log`, `Settings`, and `Help`
 - macOS client: `Main` and `Log` tabs, plus a separate Settings window
+- Review flow: split message list plus selected-mail detail pane in both Main surfaces
 - Mail modes: built-in dummy mailbox by default, real IMAP/SMTP when configured
 - Summary providers: `ollama`, `openai`, or `anthropic`
 - Ollama lifecycle controls: install/start prompts on startup, optional startup launch, optional stop-on-exit
@@ -48,6 +51,8 @@ Then open:
 - `http://127.0.0.1:8766/docs` for FastAPI docs
 
 The default path is dummy mode. You can create summaries, exercise follow-up actions, and inspect logs without touching a real mailbox. Dummy-mode jobs, logs, undo state, mailbox flags, and outbox are intentionally non-persistent and reset on backend restart or mode changes.
+
+After each summary run, the first returned message is auto-selected so you can review the full mail body inline without leaving the summary view.
 
 ### macOS app
 

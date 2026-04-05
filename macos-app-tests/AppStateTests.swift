@@ -332,6 +332,17 @@ final class AppStateTests: XCTestCase {
         appState.currentSummary = "Old summary"
         appState.currentMessages = [MessageItem(id: "1", subject: "Subject", sender: "sender@example.com", date: "2026-04-04T12:00:00")]
         appState.selectedJobId = "job-123"
+        appState.selectedMessageId = "1"
+        appState.selectedMessageDetail = MessageDetail(
+          id: "1",
+          subject: "Subject",
+          sender: "sender@example.com",
+          recipient: "recipient@example.com",
+          date: "2026-04-04T12:00:00",
+          body: "Body"
+        )
+        appState.isLoadingSelectedMessage = true
+        appState.selectedMessageErrorText = "Previous error"
 
         let response = try await appState.resetDatabase()
 
@@ -339,8 +350,41 @@ final class AppStateTests: XCTestCase {
         XCTAssertTrue(appState.currentSummary.isEmpty)
         XCTAssertTrue(appState.currentMessages.isEmpty)
         XCTAssertTrue(appState.selectedJobId.isEmpty)
+        XCTAssertNil(appState.selectedMessageId)
+        XCTAssertNil(appState.selectedMessageDetail)
+        XCTAssertFalse(appState.isLoadingSelectedMessage)
+        XCTAssertTrue(appState.selectedMessageErrorText.isEmpty)
         XCTAssertTrue(appState.settings.dummyMode)
     }
+
+      func testSelectMessageLoadsDetailIntoPublishedState() async throws {
+        MockURLProtocol.requestHandler = { request in
+          XCTAssertEqual(request.url?.absoluteString, "http://127.0.0.1:8766/jobs/job-123/messages/1")
+          let payload = """
+          {
+            "id": "1",
+            "subject": "Project update",
+            "sender": "sender@example.com",
+            "recipient": "recipient@example.com",
+            "date": "2026-04-05T11:00:00",
+            "body": "The full body is available."
+          }
+          """.data(using: .utf8)!
+          let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!
+          return (response, payload)
+        }
+
+        let appState = makeState()
+        appState.selectedJobId = "job-123"
+
+        await appState.selectMessage("1")
+
+        XCTAssertEqual(appState.selectedMessageId, "1")
+        XCTAssertEqual(appState.selectedMessageDetail?.subject, "Project update")
+        XCTAssertEqual(appState.selectedMessageDetail?.body, "The full body is available.")
+        XCTAssertFalse(appState.isLoadingSelectedMessage)
+        XCTAssertTrue(appState.selectedMessageErrorText.isEmpty)
+      }
 
     func testLoadSystemMessageDefaultsUpdatesPublishedState() async throws {
         MockURLProtocol.requestHandler = { request in

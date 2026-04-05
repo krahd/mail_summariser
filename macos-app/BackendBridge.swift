@@ -60,4 +60,27 @@ final class BackendBridge: ObservableObject {
         }
         return try JSONDecoder().decode(R.self, from: data)
     }
+
+    func getMessageDetail(jobId: String, messageId: String) async throws -> MessageDetail {
+        let url = baseURL
+            .appendingPathComponent("jobs")
+            .appendingPathComponent(jobId)
+            .appendingPathComponent("messages")
+            .appendingPathComponent(messageId)
+
+        var request = URLRequest(url: url)
+        if !apiKey.isEmpty {
+            request.setValue(apiKey, forHTTPHeaderField: "X-API-Key")
+        }
+
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+        guard (200..<300).contains(http.statusCode) else {
+            let message = String(data: data, encoding: .utf8) ?? "Unknown error"
+            throw NSError(domain: "BackendError", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: message])
+        }
+        return try JSONDecoder().decode(MessageDetail.self, from: data)
+    }
 }

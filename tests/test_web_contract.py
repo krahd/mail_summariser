@@ -34,6 +34,10 @@ class WebContractTests(unittest.TestCase):
         self.assertIn('id="back-to-basic-settings"', html)
         self.assertIn('id="provider-system-message"', html)
         self.assertIn('id="reset-system-message"', html)
+        self.assertIn('class="review-split"', html)
+        self.assertIn('id="message-detail-shell"', html)
+        self.assertIn('id="message-detail-body"', html)
+        self.assertIn('id="messages-summary"', html)
         self.assertNotIn("Narrow the mailbox slice before you create a digest.", html)
 
     def test_log_ui_uses_final_and_not_no_undo(self) -> None:
@@ -47,7 +51,13 @@ class WebContractTests(unittest.TestCase):
         self.assertIn("getSystemMessageDefaults", app_js)
         self.assertIn("showSettingsScreen", app_js)
         self.assertIn("providerSystemMessageFieldName", app_js)
-        self.assertIn("runtime-startup-banner", (REPO_ROOT / "webapp" / "index.html").read_text(encoding="utf-8"))
+        self.assertIn("getMessageDetail", (REPO_ROOT / "webapp" /
+                      "api.js").read_text(encoding="utf-8"))
+        self.assertIn("Loading message body...", app_js)
+        self.assertIn("message-detail-shell", (REPO_ROOT / "webapp" /
+                      "index.html").read_text(encoding="utf-8"))
+        self.assertIn("runtime-startup-banner", (REPO_ROOT / "webapp" /
+                      "index.html").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
