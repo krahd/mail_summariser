@@ -1,16 +1,17 @@
 :root {
-  --bg: #f4efe5;
-  --paper: rgba(255, 251, 245, 0.8);
-  --panel: rgba(255, 255, 255, 0.7);
-  --ink: #12352f;
-  --muted: #5b6d67;
-  --line: rgba(18, 53, 47, 0.14);
-  --line-strong: rgba(18, 53, 47, 0.22);
-  --accent: #0d8a75;
-  --accent-strong: #0a6d5f;
-  --accent-warm: #d76b31;
-  --shadow-soft: 0 20px 60px rgba(22, 34, 29, 0.08);
-  --shadow-frame: 0 28px 90px rgba(14, 30, 25, 0.16);
+  --bg: #f3f6f6;
+  --bg-soft: #fafcfc;
+  --paper: rgba(255, 255, 255, 0.92);
+  --panel: rgba(255, 255, 255, 0.96);
+  --ink: #18352f;
+  --muted: #65746f;
+  --line: rgba(24, 53, 47, 0.08);
+  --line-strong: rgba(24, 53, 47, 0.16);
+  --accent: #12685d;
+  --accent-strong: #0e564d;
+  --accent-warm: #b66742;
+  --shadow-soft: 0 10px 28px rgba(16, 31, 27, 0.05);
+  --shadow-frame: 0 8px 22px rgba(16, 31, 27, 0.045);
   --hero-shift: 0px;
   --content-width: min(1180px, calc(100vw - 40px));
 }
@@ -28,10 +29,7 @@ body {
   min-height: 100vh;
   color: var(--ink);
   font-family: "Source Sans 3", sans-serif;
-  background:
-    radial-gradient(circle at 14% 14%, rgba(215, 107, 49, 0.18), transparent 28%),
-    radial-gradient(circle at 82% 10%, rgba(13, 138, 117, 0.18), transparent 26%),
-    linear-gradient(180deg, #efe7d9 0%, #f9f5ee 38%, #fffdf8 100%);
+  background: linear-gradient(180deg, #f1f5f4 0%, #f8fbfb 30%, #fcfdfd 100%);
 }
 
 body::before {
@@ -39,11 +37,12 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background-image:
-    linear-gradient(rgba(18, 53, 47, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(18, 53, 47, 0.03) 1px, transparent 1px);
-  background-size: 32px 32px;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.2), transparent 78%);
+  background:
+    linear-gradient(180deg, rgba(18, 104, 93, 0.03), transparent 16%),
+    linear-gradient(90deg, rgba(25, 54, 48, 0.025) 1px, transparent 1px),
+    linear-gradient(rgba(25, 54, 48, 0.025) 1px, transparent 1px);
+  background-size: auto, 28px 28px, 28px 28px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.3), transparent 72%);
 }
 
 a {
@@ -63,37 +62,7 @@ code {
 
 .page-noise,
 .page-aura {
-  position: fixed;
-  pointer-events: none;
-  z-index: -1;
-}
-
-.page-noise {
-  inset: 0;
-  opacity: 0.14;
-  background-image: radial-gradient(rgba(18, 53, 47, 0.18) 0.5px, transparent 0.5px);
-  background-size: 10px 10px;
-  mix-blend-mode: multiply;
-}
-
-.page-aura {
-  width: 34rem;
-  aspect-ratio: 1;
-  border-radius: 999px;
-  filter: blur(90px);
-  opacity: 0.26;
-}
-
-.aura-left {
-  left: -8rem;
-  top: 22rem;
-  background: rgba(215, 107, 49, 0.42);
-}
-
-.aura-right {
-  right: -10rem;
-  top: 8rem;
-  background: rgba(13, 138, 117, 0.34);
+  display: none;
 }
 
 .site-header {
@@ -115,10 +84,10 @@ code {
   inset: 0 -1rem auto;
   height: calc(100% + 0.5rem);
   border-radius: 999px;
-  background: rgba(249, 245, 238, 0.65);
-  border: 1px solid rgba(18, 53, 47, 0.08);
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--line);
   backdrop-filter: blur(18px);
-  box-shadow: 0 16px 40px rgba(17, 26, 22, 0.04);
+  box-shadow: var(--shadow-frame);
   z-index: -1;
 }
 
@@ -131,18 +100,20 @@ code {
 }
 
 .brand-mark {
-  width: 0.95rem;
-  height: 0.95rem;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  align-self: center;
   border-radius: 999px;
-  background:
-    radial-gradient(circle at 30% 30%, #fff8ef, transparent 38%),
-    linear-gradient(135deg, var(--accent), var(--accent-warm));
-  box-shadow: 0 0 0 0.38rem rgba(13, 138, 117, 0.08);
+  background: linear-gradient(135deg, var(--accent), #20a08d);
+  box-shadow: 0 0 0 6px rgba(13, 117, 103, 0.08);
 }
 
 .brand-copy {
-  display: grid;
-  line-height: 1.05;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  line-height: 1;
 }
 
 .brand-copy strong,
@@ -150,16 +121,13 @@ code {
 h1,
 h2,
 h3 {
-  font-family: "Syne", sans-serif;
+  font-family: "Manrope", "Source Sans 3", sans-serif;
 }
 
 .brand-copy strong {
-  font-size: 1rem;
-}
-
-.brand-copy span {
-  color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 1.55rem;
+  letter-spacing: -0.035em;
+  line-height: 1.02;
 }
 
 .site-nav {
@@ -276,13 +244,13 @@ h1 {
 }
 
 .button-primary {
-  background: var(--ink);
-  color: #fef8ef;
-  box-shadow: 0 14px 35px rgba(18, 53, 47, 0.16);
+  background: var(--accent);
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(18, 104, 93, 0.14);
 }
 
 .button-secondary {
-  background: rgba(255, 255, 255, 0.68);
+  background: rgba(255, 255, 255, 0.92);
   color: var(--ink);
 }
 
@@ -318,9 +286,9 @@ h1 {
   padding: 1rem;
   border-radius: 2rem;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.65), rgba(255, 248, 240, 0.4)),
-    rgba(255, 255, 255, 0.32);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+    linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(245, 248, 247, 0.72)),
+    rgba(255, 255, 255, 0.4);
+  border: 1px solid var(--line);
   backdrop-filter: blur(18px);
   box-shadow: var(--shadow-frame);
   transform: translateY(var(--hero-shift));
@@ -471,9 +439,9 @@ h2 {
   min-width: 3rem;
   padding: 0.45rem 0.7rem;
   border-radius: 999px;
-  background: rgba(13, 138, 117, 0.12);
+  background: rgba(18, 104, 93, 0.08);
   color: var(--accent-strong);
-  font-family: "Syne", sans-serif;
+  font-family: "Manrope", "Source Sans 3", sans-serif;
   font-weight: 700;
 }
 
@@ -504,7 +472,7 @@ h2 {
 .shot figcaption strong {
   display: block;
   margin-bottom: 0.2rem;
-  font-family: "Syne", sans-serif;
+  font-family: "Manrope", "Source Sans 3", sans-serif;
   font-size: 1rem;
   color: var(--ink);
 }
@@ -548,7 +516,7 @@ h2 {
   justify-self: start;
   padding: 0.5rem 0.8rem;
   border-radius: 999px;
-  background: rgba(13, 138, 117, 0.08);
+  background: rgba(18, 104, 93, 0.08);
   color: var(--accent-strong);
   font-size: 0.92rem;
   font-weight: 700;
@@ -574,7 +542,7 @@ pre {
 }
 
 .doc-link strong {
-  font-family: "Syne", sans-serif;
+  font-family: "Manrope", "Source Sans 3", sans-serif;
   font-size: 1.05rem;
 }
 

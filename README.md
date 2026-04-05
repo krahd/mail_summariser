@@ -165,3 +165,15 @@ The release workflow publishes:
 - Windows and Linux releases currently ship the backend and browser UI, not native desktop apps.
 - Installing Ollama still opens the official download page; mail_summariser does not perform unattended package installation.
 - Provider-backed summaries can fall back to the built-in deterministic digest when a model is unavailable or returns invalid output.
+
+## Contributing
+
+Pull requests are welcome.
+
+For larger changes, open an issue first so the scope and direction can be aligned before implementation.
+
+## License
+
+This project is released under the MIT License. See [LICENSE](LICENSE).
+
+The software is provided "AS IS", without warranty of any kind, express or implied.
