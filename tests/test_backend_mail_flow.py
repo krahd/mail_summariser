@@ -1,4 +1,9 @@
 from __future__ import annotations
+from fake_mail_server import FakeMailEnvironment
+import mail_service
+import dummy_state
+import db
+import app as backend_app
 
 import sys
 import sqlite3
@@ -14,11 +19,6 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 
-import app as backend_app
-import db
-import dummy_state
-import mail_service
-from fake_mail_server import FakeMailEnvironment
 
 
 
