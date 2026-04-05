@@ -64,4 +64,25 @@ final class BackendBridgeTests: XCTestCase {
             XCTAssertTrue(error.localizedDescription.contains("Shutdown not allowed"))
         }
     }
+
+    func testRequestsIncludeBackendAPIKeyWhenConfigured() async throws {
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.value(forHTTPHeaderField: "X-API-Key"), "secret-key")
+            let payload = """
+            {
+              "ollamaSystemMessage": "Local prompt",
+              "openaiSystemMessage": "OpenAI prompt",
+              "anthropicSystemMessage": "Anthropic prompt"
+            }
+            """.data(using: .utf8)!
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!
+            return (response, payload)
+        }
+
+        let bridge = makeBridge()
+        bridge.configure(baseURLString: "http://127.0.0.1:8766", apiKey: "secret-key")
+        let defaults: SystemMessageDefaultsResponse = try await bridge.get(path: "settings/system-message-defaults")
+
+        XCTAssertEqual(defaults.openaiSystemMessage, "OpenAI prompt")
+    }
 }

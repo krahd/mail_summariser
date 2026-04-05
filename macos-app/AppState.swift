@@ -2,24 +2,37 @@ import Foundation
 
 @MainActor
 final class AppState: ObservableObject {
+    private static let backendAPIKeyDefaultsKey = "mail-summariser-backend-api-key"
+
     let bridge: BackendBridge
 
     @Published var criteria = SearchCriteria()
-    @Published var summaryLength: Double = 5
+    @Published var summaryLength: Int = 5
     @Published var currentSummary: String = ""
     @Published var currentMessages: [MessageItem] = []
     @Published var selectedJobId: String = ""
     @Published var statusText: String = "Ready"
     @Published var settings = AppSettings()
+    @Published var backendAPIKey: String
     @Published var runtimeStatus = RuntimeStatusResponse()
     @Published var fakeMailStatus = FakeMailStatusResponse()
+    @Published var systemMessageDefaults = SystemMessageDefaultsResponse()
 
     init(bridge: BackendBridge? = nil) {
-        self.bridge = bridge ?? BackendBridge()
+        let storedAPIKey = UserDefaults.standard.string(forKey: Self.backendAPIKeyDefaultsKey) ?? ""
+        self.backendAPIKey = storedAPIKey
+        self.bridge = bridge ?? BackendBridge(apiKey: storedAPIKey)
+        self.bridge.configure(baseURLString: self.bridge.baseURLString, apiKey: storedAPIKey)
     }
 
     func applySettingsToBridge() {
-        bridge.configure(baseURLString: settings.backendBaseURL)
+        bridge.configure(baseURLString: settings.backendBaseURL, apiKey: backendAPIKey)
+    }
+
+    func updateBackendAPIKey(_ apiKey: String) {
+        backendAPIKey = apiKey
+        UserDefaults.standard.set(apiKey, forKey: Self.backendAPIKeyDefaultsKey)
+        bridge.configure(baseURLString: settings.backendBaseURL, apiKey: apiKey)
     }
 
     func loadSettings() async throws {
@@ -34,6 +47,10 @@ final class AppState: ObservableObject {
 
     func loadFakeMailStatus() async throws {
         fakeMailStatus = try await bridge.get(path: "dev/fake-mail/status")
+    }
+
+    func loadSystemMessageDefaults() async throws {
+        systemMessageDefaults = try await bridge.get(path: "settings/system-message-defaults")
     }
 
     func startManagedOllama() async throws -> RuntimeActionResponse {

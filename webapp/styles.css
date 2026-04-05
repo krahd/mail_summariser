@@ -273,6 +273,15 @@ main {
   gap: 10px;
 }
 
+.settings-shell {
+  gap: 0;
+}
+
+.settings-screen {
+  display: grid;
+  gap: 10px;
+}
+
 .grid-form label {
   display: grid;
   gap: 4px;
@@ -299,6 +308,16 @@ select {
   border-radius: 10px;
   padding: 8px 10px;
   background: #fff;
+}
+
+textarea {
+  width: 100%;
+  min-height: 180px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  resize: vertical;
 }
 
 button {

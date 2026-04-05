@@ -8,17 +8,178 @@ struct SettingsView: View {
     @State private var saveStatus = ""
     @State private var imapPasswordVisible = false
     @State private var smtpPasswordVisible = false
+    @State private var openAIKeyVisible = false
+    @State private var anthropicKeyVisible = false
+    @State private var backendAPIKeyVisible = false
     @State private var showStopConfirmation = false
     @State private var showResetSheet = false
     @State private var resetConfirmationText = ""
 
     var body: some View {
-        Form {
-            Section {
-                Toggle("Dummy Mode", isOn: $localSettings.dummyMode)
-                Text(localSettings.dummyMode ? "Using the built-in test mailbox and outbox." : "Using the configured IMAP and SMTP servers.")
-                    .font(.caption)
+        NavigationStack {
+            Form {
+                Section {
+                    Toggle("Dummy Mode", isOn: $localSettings.dummyMode)
+                    Text(localSettings.dummyMode ? "Using the built-in test mailbox and outbox." : "Using the configured IMAP and SMTP servers.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Section("Mail") {
+                    TextField("IMAP Host", text: $localSettings.imapHost)
+                    TextField("IMAP Port", value: $localSettings.imapPort, format: .number)
+                    Toggle("Use SSL for IMAP", isOn: $localSettings.imapUseSSL)
+                    if imapPasswordVisible {
+                        TextField("IMAP Password", text: $localSettings.imapPassword)
+                    } else {
+                        SecureField("IMAP Password", text: $localSettings.imapPassword)
+                    }
+                    Button(imapPasswordVisible ? "Hide IMAP Password" : "Show IMAP Password") {
+                        imapPasswordVisible.toggle()
+                    }
+
+                    TextField("SMTP Host", text: $localSettings.smtpHost)
+                    TextField("SMTP Port", value: $localSettings.smtpPort, format: .number)
+                    Toggle("Use SSL for SMTP", isOn: $localSettings.smtpUseSSL)
+                    if smtpPasswordVisible {
+                        TextField("SMTP Password", text: $localSettings.smtpPassword)
+                    } else {
+                        SecureField("SMTP Password", text: $localSettings.smtpPassword)
+                    }
+                    Button(smtpPasswordVisible ? "Hide SMTP Password" : "Show SMTP Password") {
+                        smtpPasswordVisible.toggle()
+                    }
+
+                    TextField("Username", text: $localSettings.username)
+                    TextField("Digest recipient", text: $localSettings.recipientEmail)
+                    TextField("Summarised tag", text: $localSettings.summarisedTag)
+                }
+
+                Section("Connection Check") {
+                    Button("Test Connection") {
+                        Task { await testConnection() }
+                    }
+                    Text(saveStatus)
+                        .foregroundStyle(.secondary)
+                }
+
+                Section {
+                    NavigationLink("Advanced Settings") {
+                        advancedSettingsView
+                    }
+                }
+
+                Section {
+                    HStack {
+                        Button("Load") {
+                            Task { await loadSettings() }
+                        }
+                        Button("Save") {
+                            Task { await saveSettings() }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Settings")
+            .formStyle(.grouped)
+        }
+        .padding()
+        .frame(width: 620, height: 760)
+        .task {
+            localSettings = appState.settings
+            if appState.runtimeStatus.ollama.message == "Runtime status not loaded yet." {
+                await loadRuntimeStatus()
+            }
+            if !appState.fakeMailStatus.enabled {
+                await loadFakeMailStatus()
+            }
+            await loadSystemMessageDefaults()
+        }
+        .alert("Stop Mail Summariser?", isPresented: $showStopConfirmation) {
+            Button("Stop", role: .destructive) {
+                Task { await stopMailSummariser() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will stop the connected backend and close the macOS app.")
+        }
+        .sheet(isPresented: $showResetSheet) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Reset Local Database")
+                    .font(.headline)
+                Text("Type RESET DATABASE to delete all stored backend data and restore defaults.")
                     .foregroundStyle(.secondary)
+                TextField("RESET DATABASE", text: $resetConfirmationText)
+                    .textFieldStyle(.roundedBorder)
+                HStack {
+                    Spacer()
+                    Button("Cancel") {
+                        showResetSheet = false
+                    }
+                    Button("Reset", role: .destructive) {
+                        Task { await resetDatabase() }
+                    }
+                    .disabled(resetConfirmationText != "RESET DATABASE")
+                }
+            }
+            .padding(24)
+            .frame(width: 440)
+        }
+    }
+
+    private var advancedSettingsView: some View {
+        Form {
+            Section("Provider") {
+                Picker("LLM Provider", selection: providerBinding) {
+                    Text("Ollama").tag("ollama")
+                    Text("OpenAI").tag("openai")
+                    Text("Anthropic").tag("anthropic")
+                }
+                .pickerStyle(.menu)
+
+                Text(providerKeyStatus)
+                    .font(.caption)
+                    .foregroundStyle(providerKeyStatusIsWarning ? .orange : .secondary)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("System Message for \(providerDisplayName)")
+                        .font(.headline)
+                    TextEditor(text: systemMessageBinding)
+                        .font(.body)
+                        .frame(minHeight: 180)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.gray.opacity(0.25), lineWidth: 1)
+                        }
+                    Text("\(providerDisplayName) stores its own system message. Switching providers swaps the prompt shown here.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button("Reset to Default") {
+                        resetCurrentSystemMessage()
+                    }
+                }
+
+                if selectedProviderID == "openai" {
+                    if openAIKeyVisible {
+                        TextField("OpenAI API Key", text: $localSettings.openaiApiKey)
+                    } else {
+                        SecureField("OpenAI API Key", text: $localSettings.openaiApiKey)
+                    }
+                    Button(openAIKeyVisible ? "Hide OpenAI API Key" : "Show OpenAI API Key") {
+                        openAIKeyVisible.toggle()
+                    }
+                }
+
+                if selectedProviderID == "anthropic" {
+                    if anthropicKeyVisible {
+                        TextField("Anthropic API Key", text: $localSettings.anthropicApiKey)
+                    } else {
+                        SecureField("Anthropic API Key", text: $localSettings.anthropicApiKey)
+                    }
+                    Button(anthropicKeyVisible ? "Hide Anthropic API Key" : "Show Anthropic API Key") {
+                        anthropicKeyVisible.toggle()
+                    }
+                }
             }
 
             Section("Local Ollama") {
@@ -43,59 +204,26 @@ struct SettingsView: View {
                 }
             }
 
-            Section("Connection Check") {
-                Button("Test Connection") {
-                    Task { await testConnection() }
-                }
-                Text(saveStatus)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("Mail") {
-                TextField("IMAP Host", text: $localSettings.imapHost)
-                TextField("IMAP Port", value: $localSettings.imapPort, format: .number)
-                Toggle("Use SSL for IMAP", isOn: $localSettings.imapUseSSL)
-                if imapPasswordVisible {
-                    TextField("IMAP Password", text: $localSettings.imapPassword)
+            Section("Backend Client") {
+                TextField(
+                    "Backend URL",
+                    text: Binding(
+                        get: { localSettings.backendBaseURL },
+                        set: { newValue in
+                            localSettings.backendBaseURL = newValue
+                            appState.bridge.configure(baseURLString: newValue, apiKey: appState.backendAPIKey)
+                        }
+                    )
+                )
+                if backendAPIKeyVisible {
+                    TextField("Backend API Key", text: backendAPIKeyBinding)
                 } else {
-                    SecureField("IMAP Password", text: $localSettings.imapPassword)
+                    SecureField("Backend API Key", text: backendAPIKeyBinding)
                 }
-                Button(imapPasswordVisible ? "Hide IMAP Password" : "Show IMAP Password") {
-                    imapPasswordVisible.toggle()
+                Button(backendAPIKeyVisible ? "Hide Backend API Key" : "Show Backend API Key") {
+                    backendAPIKeyVisible.toggle()
                 }
-                TextField("SMTP Host", text: $localSettings.smtpHost)
-                TextField("SMTP Port", value: $localSettings.smtpPort, format: .number)
-                Toggle("Use SSL for SMTP", isOn: $localSettings.smtpUseSSL)
-                if smtpPasswordVisible {
-                    TextField("SMTP Password", text: $localSettings.smtpPassword)
-                } else {
-                    SecureField("SMTP Password", text: $localSettings.smtpPassword)
-                }
-                Button(smtpPasswordVisible ? "Hide SMTP Password" : "Show SMTP Password") {
-                    smtpPasswordVisible.toggle()
-                }
-                TextField("Username", text: $localSettings.username)
-                TextField("Digest recipient", text: $localSettings.recipientEmail)
-                TextField("Summarised tag", text: $localSettings.summarisedTag)
-            }
-
-            Section("Backend") {
-                TextField("Provider", text: $localSettings.llmProvider)
-                TextField("Backend URL", text: $localSettings.backendBaseURL)
-            }
-
-            Section("Application") {
-                Button("Reset Local Database", role: .destructive) {
-                    resetConfirmationText = ""
-                    showResetSheet = true
-                }
-                Text("This removes every stored setting, job, log, and undo entry from the backend database and restores defaults.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Button("Stop Mail Summariser", role: .destructive) {
-                    showStopConfirmation = true
-                }
-                Text("This shuts down the connected backend. If shutdown succeeds, the macOS app also closes.")
+                Text("Stored locally on this Mac and sent as X-API-Key with backend requests.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -132,92 +260,115 @@ struct SettingsView: View {
                 }
             }
 
-            HStack {
-                Button("Load") {
-                    Task { await loadSettings() }
+            Section("Application") {
+                Button("Reset Local Database", role: .destructive) {
+                    resetConfirmationText = ""
+                    showResetSheet = true
                 }
-                Button("Save") {
-                    Task { await saveSettings() }
-                }
-            }
-        }
-        .padding()
-        .frame(width: 560)
-        .task {
-            localSettings = appState.settings
-            if appState.runtimeStatus.ollama.message == "Runtime status not loaded yet." {
-                await loadRuntimeStatus()
-            }
-            if !appState.fakeMailStatus.enabled {
-                await loadFakeMailStatus()
-            }
-        }
-        .alert("Stop Mail Summariser?", isPresented: $showStopConfirmation) {
-            Button("Stop", role: .destructive) {
-                Task { await stopMailSummariser() }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This will stop the connected backend and close the macOS app.")
-        }
-        .sheet(isPresented: $showResetSheet) {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Reset Local Database")
-                    .font(.headline)
-                Text("Type RESET DATABASE to delete all stored backend data and restore defaults.")
+                Text("This removes every stored setting, job, log, and undo entry from the backend database and restores defaults.")
+                    .font(.caption)
                     .foregroundStyle(.secondary)
-                TextField("RESET DATABASE", text: $resetConfirmationText)
-                    .textFieldStyle(.roundedBorder)
+                Button("Stop Mail Summariser", role: .destructive) {
+                    showStopConfirmation = true
+                }
+                Text("This shuts down the connected backend. If shutdown succeeds, the macOS app also closes.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
                 HStack {
-                    Spacer()
-                    Button("Cancel") {
-                        showResetSheet = false
+                    Button("Load") {
+                        Task { await loadSettings() }
                     }
-                    Button("Reset", role: .destructive) {
-                        Task { await resetDatabase() }
+                    Button("Save") {
+                        Task { await saveSettings() }
                     }
-                    .disabled(resetConfirmationText != "RESET DATABASE")
                 }
             }
-            .padding(24)
-            .frame(width: 440)
         }
+        .navigationTitle("Advanced Settings")
+        .formStyle(.grouped)
     }
 
-    private func loadSettings() async {
-        do {
-            try await appState.loadSettings()
-            localSettings = appState.settings
-            try await appState.loadRuntimeStatus()
-            try await appState.loadFakeMailStatus()
-            saveStatus = "Loaded"
-        } catch {
-            saveStatus = "Load failed: \(error.localizedDescription)"
-        }
+    private var providerBinding: Binding<String> {
+        Binding(
+            get: { selectedProviderID },
+            set: { localSettings.llmProvider = $0 }
+        )
     }
 
-    private func saveSettings() async {
-        do {
-            let previousDummyMode = appState.settings.dummyMode
-            try await appState.saveSettings(localSettings)
-            try await appState.loadRuntimeStatus()
-            try await appState.loadFakeMailStatus()
-            if previousDummyMode != localSettings.dummyMode {
-                appState.resetWorkspaceState()
+    private var backendAPIKeyBinding: Binding<String> {
+        Binding(
+            get: { appState.backendAPIKey },
+            set: { appState.updateBackendAPIKey($0) }
+        )
+    }
+
+    private var systemMessageBinding: Binding<String> {
+        Binding(
+            get: {
+                switch selectedProviderID {
+                case "openai":
+                    return localSettings.openaiSystemMessage
+                case "anthropic":
+                    return localSettings.anthropicSystemMessage
+                default:
+                    return localSettings.ollamaSystemMessage
+                }
+            },
+            set: { newValue in
+                switch selectedProviderID {
+                case "openai":
+                    localSettings.openaiSystemMessage = newValue
+                case "anthropic":
+                    localSettings.anthropicSystemMessage = newValue
+                default:
+                    localSettings.ollamaSystemMessage = newValue
+                }
             }
-            saveStatus = "Saved"
-        } catch {
-            saveStatus = "Save failed: \(error.localizedDescription)"
+        )
+    }
+
+    private var selectedProviderID: String {
+        let provider = localSettings.llmProvider.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        switch provider {
+        case "openai", "anthropic":
+            return provider
+        default:
+            return "ollama"
         }
     }
 
-    private func testConnection() async {
-        do {
-            let response: ConnectionTestResponse = try await appState.bridge.postJSON(path: "settings/test-connection", body: localSettings)
-            saveStatus = "\(response.imap.message) | \(response.smtp.message)"
-        } catch {
-            saveStatus = "Test failed: \(error.localizedDescription)"
+    private var providerDisplayName: String {
+        switch selectedProviderID {
+        case "openai":
+            return "OpenAI"
+        case "anthropic":
+            return "Anthropic"
+        default:
+            return "Ollama"
         }
+    }
+
+    private var providerKeyStatus: String {
+        switch selectedProviderID {
+        case "openai":
+            return hasConfiguredKey(localSettings.openaiApiKey)
+                ? "OpenAI selected. Key is configured."
+                : "OpenAI selected but no OpenAI key is configured. Summaries may fall back."
+        case "anthropic":
+            return hasConfiguredKey(localSettings.anthropicApiKey)
+                ? "Anthropic selected. Key is configured."
+                : "Anthropic selected but no Anthropic key is configured. Summaries may fall back."
+        default:
+            return "Ollama selected. Remote provider keys are not required."
+        }
+    }
+
+    private var providerKeyStatusIsWarning: Bool {
+        (selectedProviderID == "openai" && !hasConfiguredKey(localSettings.openaiApiKey))
+            || (selectedProviderID == "anthropic" && !hasConfiguredKey(localSettings.anthropicApiKey))
     }
 
     private var runtimeActionTitle: String? {
@@ -240,6 +391,61 @@ struct SettingsView: View {
             || appState.runtimeStatus.ollama.message.localizedCaseInsensitiveContains("failed")
     }
 
+    private func hasConfiguredKey(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !trimmed.isEmpty
+    }
+
+    private func resetCurrentSystemMessage() {
+        switch selectedProviderID {
+        case "openai":
+            localSettings.openaiSystemMessage = appState.systemMessageDefaults.openaiSystemMessage
+        case "anthropic":
+            localSettings.anthropicSystemMessage = appState.systemMessageDefaults.anthropicSystemMessage
+        default:
+            localSettings.ollamaSystemMessage = appState.systemMessageDefaults.ollamaSystemMessage
+        }
+        saveStatus = "\(providerDisplayName) system message reset in the form. Save to keep it."
+    }
+
+    private func loadSettings() async {
+        do {
+            try await appState.loadSettings()
+            localSettings = appState.settings
+            try await appState.loadRuntimeStatus()
+            try await appState.loadFakeMailStatus()
+            try await appState.loadSystemMessageDefaults()
+            saveStatus = "Loaded"
+        } catch {
+            saveStatus = "Load failed: \(error.localizedDescription)"
+        }
+    }
+
+    private func saveSettings() async {
+        do {
+            let previousDummyMode = appState.settings.dummyMode
+            try await appState.saveSettings(localSettings)
+            try await appState.loadRuntimeStatus()
+            try await appState.loadFakeMailStatus()
+            try await appState.loadSystemMessageDefaults()
+            if previousDummyMode != localSettings.dummyMode {
+                appState.resetWorkspaceState()
+            }
+            saveStatus = "Saved"
+        } catch {
+            saveStatus = "Save failed: \(error.localizedDescription)"
+        }
+    }
+
+    private func testConnection() async {
+        do {
+            let response: ConnectionTestResponse = try await appState.bridge.postJSON(path: "settings/test-connection", body: localSettings)
+            saveStatus = "\(response.imap.message) | \(response.smtp.message)"
+        } catch {
+            saveStatus = "Test failed: \(error.localizedDescription)"
+        }
+    }
+
     private func loadRuntimeStatus() async {
         do {
             try await appState.loadRuntimeStatus()
@@ -253,6 +459,14 @@ struct SettingsView: View {
             try await appState.loadFakeMailStatus()
         } catch {
             saveStatus = "Fake mail status failed: \(error.localizedDescription)"
+        }
+    }
+
+    private func loadSystemMessageDefaults() async {
+        do {
+            try await appState.loadSystemMessageDefaults()
+        } catch {
+            saveStatus = "System message defaults failed: \(error.localizedDescription)"
         }
     }
 
@@ -307,6 +521,7 @@ struct SettingsView: View {
             return
         }
         localSettings = suggested
+        appState.bridge.configure(baseURLString: suggested.backendBaseURL, apiKey: appState.backendAPIKey)
         saveStatus = "Fake mail settings loaded. Save to use them."
     }
 
@@ -316,6 +531,7 @@ struct SettingsView: View {
             localSettings = response.settings
             try await appState.loadRuntimeStatus()
             try await appState.loadFakeMailStatus()
+            try await appState.loadSystemMessageDefaults()
             saveStatus = response.message
             showResetSheet = false
         } catch {

@@ -65,8 +65,18 @@
  * @property {boolean} ollamaAutoStart
  * @property {boolean} ollamaStartOnStartup
  * @property {boolean} ollamaStopOnExit
+ * @property {string} ollamaSystemMessage
+ * @property {string} openaiSystemMessage
+ * @property {string} anthropicSystemMessage
  * @property {string} modelName
  * @property {string} backendBaseURL
+ */
+
+/**
+ * @typedef {Object} SystemMessageDefaultsResponse
+ * @property {string} ollamaSystemMessage
+ * @property {string} openaiSystemMessage
+ * @property {string} anthropicSystemMessage
  */
 
 /**
@@ -210,6 +220,10 @@ export function createApiClient(context) {
     /** @returns {Promise<AppSettings>} */
     getSettings() {
       return request("/settings");
+    },
+    /** @returns {Promise<SystemMessageDefaultsResponse>} */
+    getSystemMessageDefaults() {
+      return request("/settings/system-message-defaults");
     },
     /** @returns {Promise<RuntimeStatusResponse>} */
     getRuntimeStatus() {

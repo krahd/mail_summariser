@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from config import ALLOWED_ORIGINS, API_KEY, API_KEY_HEADER, DEFAULT_SETTINGS, ENABLE_DEV_TOOLS
+from config import ALLOWED_ORIGINS, API_KEY, API_KEY_HEADER, DEFAULT_SETTINGS, DEFAULT_SYSTEM_MESSAGES, ENABLE_DEV_TOOLS
 from db import (
     get_job,
     get_setting,
@@ -68,6 +68,7 @@ from schemas import (
     ModelDownloadRequest,
     RuntimeActionResponse,
     RuntimeStatusResponse,
+    SystemMessageDefaultsResponse,
     SummaryRequest,
     SummaryResponse,
 )
@@ -547,6 +548,11 @@ def get_logs() -> list[dict]:
 @app.get("/settings", response_model=AppSettings)
 def get_settings() -> AppSettings:
     return AppSettings(**_masked_settings_payload())
+
+
+@app.get("/settings/system-message-defaults", response_model=SystemMessageDefaultsResponse)
+def get_system_message_defaults() -> SystemMessageDefaultsResponse:
+    return SystemMessageDefaultsResponse(**DEFAULT_SYSTEM_MESSAGES)
 
 
 @app.post("/admin/database/reset", response_model=DatabaseResetResponse)

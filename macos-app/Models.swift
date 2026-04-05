@@ -61,8 +61,17 @@ struct AppSettings: Codable {
     var ollamaAutoStart: Bool = true
     var ollamaStartOnStartup: Bool = false
     var ollamaStopOnExit: Bool = false
+    var ollamaSystemMessage: String = "You create compact, practical email digests that focus on priorities, deadlines, and follow-up actions."
+    var openaiSystemMessage: String = "You are an assistant that creates compact, practical email digests."
+    var anthropicSystemMessage: String = "You create practical, concise email summaries with action cues."
     var modelName: String = "llama3.2:latest"
     var backendBaseURL: String = "http://127.0.0.1:8766"
+}
+
+struct SystemMessageDefaultsResponse: Codable {
+    var ollamaSystemMessage: String = "You create compact, practical email digests that focus on priorities, deadlines, and follow-up actions."
+    var openaiSystemMessage: String = "You are an assistant that creates compact, practical email digests."
+    var anthropicSystemMessage: String = "You create practical, concise email summaries with action cues."
 }
 
 struct EmptyResponse: Codable {

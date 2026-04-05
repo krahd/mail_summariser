@@ -3,6 +3,7 @@ import os
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
+from config import DEFAULT_SYSTEM_MESSAGES
 from model_provider_service import ensure_ollama_running
 
 
@@ -43,46 +44,57 @@ def _extract_valid_summary_text(text: str) -> str:
 
 
 def _demo_summarize_messages(messages: list[dict], summary_length: int) -> str:
-    level = max(1, min(summary_length, 10))
-
-    intro = {
-        1: "Very terse digest",
-        2: "Brief digest",
-        3: "Compact digest",
-        4: "Short digest",
-        5: "Balanced digest",
-        6: "Expanded digest",
-        7: "Detailed digest",
-        8: "Rich digest",
-        9: "Very detailed digest",
-        10: "Comprehensive digest",
-    }[level]
+    level = _effective_detail_level(summary_length)
+    intro = _detail_label(level)
 
     lines = [intro, "", f"Messages summarized: {len(messages)}", ""]
 
     for idx, message in enumerate(messages, start=1):
         body = message.get("body", "").strip().replace("\n", " ")
-        excerpt_length = 60 + level * 18
+        excerpt_length = min(520, 60 + level * 20)
         excerpt = body[:excerpt_length]
         lines.append(f"{idx}. {message['sender']} — {message['subject']}")
         lines.append(f"   {excerpt}")
         if level >= 5:
             lines.append("   Action: review and decide whether a reply is needed.")
+        if level >= 11 and message.get("date"):
+            lines.append(f"   Timing: message date {message.get('date')}.")
+        if level >= 15:
+            lines.append("   Priority: consider whether this belongs in today’s response queue.")
         lines.append("")
 
     if level >= 7:
         lines.append("Overall themes:")
         lines.append("- Follow-ups and planning")
         lines.append("- Items that may need a response")
+    if level >= 12:
+        lines.extend(
+            [
+                "",
+                "Suggested next steps:",
+                "- Reply to any time-sensitive senders first.",
+                "- Group non-urgent items into one later batch.",
+            ]
+        )
+    if level >= 18:
+        lines.extend(
+            [
+                "",
+                "Risk watch:",
+                "- Flag anything that could become overdue if ignored.",
+                "- Check for missing context before replying to complex threads.",
+            ]
+        )
 
     return "\n".join(lines).strip()
 
 
 def _build_prompt(messages: list[dict], summary_length: int) -> str:
-    target_lines = max(3, min(18, summary_length * 2))
+    level = _effective_detail_level(summary_length)
+    target_lines = max(3, min(48, 4 + level * 2))
     chunks = [
         "Summarize the email list into concise actionable points.",
-        f"Target detail level: {summary_length}/10. Keep around {target_lines} bullet lines.",
+        f"Requested detail level: {summary_length}. Keep around {target_lines} bullet lines.",
         "Focus on priority items, deadlines, and likely responses needed.",
         f"First line must be exactly: {RESPONSE_SENTINEL}",
         "On following lines, provide only the summary.",
@@ -99,6 +111,28 @@ def _build_prompt(messages: list[dict], summary_length: int) -> str:
     return "\n".join(chunks)
 
 
+def _effective_detail_level(summary_length: int) -> int:
+    return max(1, min(int(summary_length), 24))
+
+
+def _detail_label(level: int) -> str:
+    if level <= 2:
+        return "Very terse digest"
+    if level <= 4:
+        return "Compact digest"
+    if level <= 6:
+        return "Balanced digest"
+    if level <= 9:
+        return "Detailed digest"
+    if level <= 12:
+        return "Comprehensive digest"
+    if level <= 16:
+        return "Expanded digest"
+    if level <= 20:
+        return "In-depth digest"
+    return "Extended digest"
+
+
 def _post_json(url: str, payload: dict, headers: dict[str, str], timeout: float = 25.0) -> dict:
     req = Request(
         url=url,
@@ -113,7 +147,7 @@ def _post_json(url: str, payload: dict, headers: dict[str, str], timeout: float 
         raise ProviderError(str(exc)) from exc
 
 
-def _summarize_with_openai(model_name: str, api_key: str, prompt: str) -> str:
+def _summarize_with_openai(model_name: str, api_key: str, prompt: str, system_message: str) -> str:
     if not api_key.strip():
         raise ProviderError("OpenAI API key is missing")
 
@@ -122,7 +156,7 @@ def _summarize_with_openai(model_name: str, api_key: str, prompt: str) -> str:
         "messages": [
             {
                 "role": "system",
-                "content": "You are an assistant that creates compact, practical email digests.",
+                "content": system_message,
             },
             {"role": "user", "content": prompt},
         ],
@@ -142,14 +176,14 @@ def _summarize_with_openai(model_name: str, api_key: str, prompt: str) -> str:
         raise ProviderError(f"Unexpected OpenAI response: {response}") from exc
 
 
-def _summarize_with_anthropic(model_name: str, api_key: str, prompt: str) -> str:
+def _summarize_with_anthropic(model_name: str, api_key: str, prompt: str, system_message: str) -> str:
     if not api_key.strip():
         raise ProviderError("Anthropic API key is missing")
 
     payload = {
         "model": model_name,
         "max_tokens": 900,
-        "system": "You create practical, concise email summaries with action cues.",
+        "system": system_message,
         "messages": [{"role": "user", "content": prompt}],
     }
     response = _post_json(
@@ -169,7 +203,7 @@ def _summarize_with_anthropic(model_name: str, api_key: str, prompt: str) -> str
         raise ProviderError(f"Unexpected Anthropic response: {response}") from exc
 
 
-def _summarize_with_ollama(model_name: str, ollama_host: str, auto_start: bool, prompt: str) -> str:
+def _summarize_with_ollama(model_name: str, ollama_host: str, auto_start: bool, prompt: str, system_message: str) -> str:
     running, message = ensure_ollama_running(ollama_host, auto_start)
     if not running:
         raise ProviderError(message)
@@ -178,6 +212,7 @@ def _summarize_with_ollama(model_name: str, ollama_host: str, auto_start: bool, 
         f"{ollama_host.rstrip('/')}/api/generate",
         {
             "model": model_name,
+            "system": system_message,
             "prompt": prompt,
             "stream": False,
         },
@@ -196,6 +231,15 @@ def summarize_messages(messages: list[dict], summary_length: int, settings: dict
     model_name = str(cfg.get("modelName", "llama3.2:latest")).strip() or "llama3.2:latest"
     ollama_host = str(cfg.get("ollamaHost", "http://127.0.0.1:11434"))
     auto_start = bool(cfg.get("ollamaAutoStart", True))
+    openai_system_message = str(
+        cfg.get("openaiSystemMessage", DEFAULT_SYSTEM_MESSAGES["openaiSystemMessage"])
+    ).strip() or DEFAULT_SYSTEM_MESSAGES["openaiSystemMessage"]
+    anthropic_system_message = str(
+        cfg.get("anthropicSystemMessage", DEFAULT_SYSTEM_MESSAGES["anthropicSystemMessage"])
+    ).strip() or DEFAULT_SYSTEM_MESSAGES["anthropicSystemMessage"]
+    ollama_system_message = str(
+        cfg.get("ollamaSystemMessage", DEFAULT_SYSTEM_MESSAGES["ollamaSystemMessage"])
+    ).strip() or DEFAULT_SYSTEM_MESSAGES["ollamaSystemMessage"]
 
     # API key resolution: provider-specific key, then env var, then legacy shared key.
     legacy_key = str(cfg.get("llmApiKey", ""))
@@ -220,11 +264,11 @@ def summarize_messages(messages: list[dict], summary_length: int, settings: dict
 
     try:
         if provider == "openai":
-            text = _summarize_with_openai(model_name, api_key, prompt)
+            text = _summarize_with_openai(model_name, api_key, prompt, openai_system_message)
         elif provider == "anthropic":
-            text = _summarize_with_anthropic(model_name, api_key, prompt)
+            text = _summarize_with_anthropic(model_name, api_key, prompt, anthropic_system_message)
         else:
-            text = _summarize_with_ollama(model_name, ollama_host, auto_start, prompt)
+            text = _summarize_with_ollama(model_name, ollama_host, auto_start, prompt, ollama_system_message)
 
         # Some models occasionally return a generic "please provide emails" placeholder.
         if _looks_like_placeholder_response(text):

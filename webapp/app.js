@@ -8,6 +8,7 @@ const storageKeys = {
 let currentJobId = null;
 let currentRuntimeStatus = null;
 let currentFakeMailStatus = null;
+let currentSystemMessageDefaults = null;
 let backendStopping = false;
 let activeDummyMode = true;
 
@@ -35,7 +36,18 @@ const logsBody = document.getElementById("logs-body");
 const refreshLogsBtn = document.getElementById("refresh-logs");
 
 const settingsForm = document.getElementById("settings-form");
+const settingsBasicScreen = document.getElementById("settings-basic-screen");
+const settingsAdvancedScreen = document.getElementById("settings-advanced-screen");
+const openAdvancedSettingsBtn = document.getElementById("open-advanced-settings");
+const backToBasicSettingsBtn = document.getElementById("back-to-basic-settings");
+const loadBasicSettingsBtn = document.getElementById("load-basic-settings");
+const loadAdvancedSettingsBtn = document.getElementById("load-advanced-settings");
 const providerSelect = document.getElementById("llm-provider");
+const providerSystemMessageGroup = document.getElementById("provider-system-message-group");
+const providerSystemMessageTitle = document.getElementById("provider-system-message-title");
+const providerSystemMessageEditor = document.getElementById("provider-system-message");
+const providerSystemMessageNote = document.getElementById("provider-system-message-note");
+const resetSystemMessageBtn = document.getElementById("reset-system-message");
 const refreshModelsBtn = document.getElementById("refresh-models");
 const ollamaStatusLine = document.getElementById("ollama-status");
 const ollamaRuntimeStatusLine = document.getElementById("ollama-runtime-status");
@@ -179,6 +191,7 @@ function fillSettings(settings, options = {}) {
   syncDummyModeUI(activeDummyMode);
   refreshProviderKeyWarning();
   refreshProviderKeyFieldVisibility();
+  refreshProviderSystemMessageEditor();
 }
 
 function syncDummyModeUI(enabled) {
@@ -417,6 +430,65 @@ function refreshProviderKeyFieldVisibility() {
   anthropicKeyGroup?.classList.toggle("is-hidden", provider !== "anthropic");
 }
 
+function providerSystemMessageFieldName(provider) {
+  switch ((provider || "").trim().toLowerCase()) {
+    case "openai":
+      return "openaiSystemMessage";
+    case "anthropic":
+      return "anthropicSystemMessage";
+    default:
+      return "ollamaSystemMessage";
+  }
+}
+
+function providerDisplayName(provider) {
+  switch ((provider || "").trim().toLowerCase()) {
+    case "openai":
+      return "OpenAI";
+    case "anthropic":
+      return "Anthropic";
+    default:
+      return "Ollama";
+  }
+}
+
+function saveVisibleProviderSystemMessage() {
+  if (!providerSystemMessageEditor) {
+    return;
+  }
+  const field = settingsForm?.elements.namedItem(providerSystemMessageFieldName(selectedProvider()));
+  if (field) {
+    field.value = providerSystemMessageEditor.value;
+  }
+}
+
+function refreshProviderSystemMessageEditor() {
+  if (!providerSystemMessageEditor || !providerSystemMessageGroup) {
+    return;
+  }
+  const provider = selectedProvider();
+  const displayName = providerDisplayName(provider);
+  const field = settingsForm?.elements.namedItem(providerSystemMessageFieldName(provider));
+  if (providerSystemMessageTitle) {
+    providerSystemMessageTitle.textContent = `System Message for ${displayName}`;
+  }
+  providerSystemMessageEditor.value = field?.value || "";
+  if (providerSystemMessageNote) {
+    providerSystemMessageNote.textContent =
+      `${displayName} uses its own saved system message. Switching providers swaps the text shown here.`;
+  }
+}
+
+async function refreshSystemMessageDefaults() {
+  currentSystemMessageDefaults = await api.getSystemMessageDefaults();
+  return currentSystemMessageDefaults;
+}
+
+function showSettingsScreen(screen) {
+  settingsBasicScreen?.classList.toggle("is-hidden", screen !== "basic");
+  settingsAdvancedScreen?.classList.toggle("is-hidden", screen !== "advanced");
+}
+
 function toggleSecretField(input, button) {
   if (!input || !button) {
     return;
@@ -560,11 +632,12 @@ function collectSearchCriteria() {
       tag: (form.get("tag") || "").toString(),
       useAnd: form.get("useAnd") === "on",
     },
-    summaryLength: Number(form.get("summaryLength") || 5),
+    summaryLength: Math.max(1, Number(form.get("summaryLength") || 5)),
   };
 }
 
 function collectSettings() {
+  saveVisibleProviderSystemMessage();
   const payload = {};
   [
     "dummyMode",
@@ -586,6 +659,9 @@ function collectSettings() {
     "ollamaAutoStart",
     "ollamaStartOnStartup",
     "ollamaStopOnExit",
+    "ollamaSystemMessage",
+    "openaiSystemMessage",
+    "anthropicSystemMessage",
     "modelName",
     "backendBaseURL",
   ].forEach((key) => {
@@ -684,9 +760,14 @@ function updateHelpButton(isHelpActive) {
 
 async function loadInitialData() {
   try {
-    const [logs, settings] = await Promise.all([api.getLogs(), api.getSettings()]);
+    const [logs, settings, defaults] = await Promise.all([
+      api.getLogs(),
+      api.getSettings(),
+      api.getSystemMessageDefaults(),
+    ]);
     renderLogs(logs);
     fillSettings(settings);
+    currentSystemMessageDefaults = defaults;
     await refreshRuntimeStatus();
     await refreshModelOptions();
     await refreshDownloadCatalog();
@@ -713,6 +794,22 @@ async function runJobAction(action) {
 }
 
 function wireEvents() {
+  const loadSettings = async () => {
+    try {
+      const settings = await api.getSettings();
+      fillSettings(settings);
+      await refreshRuntimeStatus();
+      await refreshModelOptions();
+      await refreshDownloadCatalog();
+      await refreshFakeMailStatus();
+      await refreshSystemMessageDefaults();
+      setConnectionTestStatus("Connection not tested yet.");
+      setStatus("Settings loaded.");
+    } catch (error) {
+      setStatus(`Settings load failed: ${error.message}`, true);
+    }
+  };
+
   testConnectionBtn.addEventListener("click", async () => {
     try {
       const result = await api.testConnection(collectSettings());
@@ -809,6 +906,27 @@ function wireEvents() {
     });
     refreshProviderKeyWarning();
     refreshProviderKeyFieldVisibility();
+    refreshProviderSystemMessageEditor();
+  });
+  providerSystemMessageEditor?.addEventListener("input", saveVisibleProviderSystemMessage);
+  resetSystemMessageBtn?.addEventListener("click", async () => {
+    try {
+      if (!currentSystemMessageDefaults) {
+        await refreshSystemMessageDefaults();
+      }
+      const fieldName = providerSystemMessageFieldName(selectedProvider());
+      const nextValue = currentSystemMessageDefaults?.[fieldName] || "";
+      const field = settingsForm?.elements.namedItem(fieldName);
+      if (field) {
+        field.value = nextValue;
+      }
+      if (providerSystemMessageEditor) {
+        providerSystemMessageEditor.value = nextValue;
+      }
+      setStatus(`${providerDisplayName(selectedProvider())} system message reset in the form. Save settings to keep it.`);
+    } catch (error) {
+      setStatus(`System message reset failed: ${error.message}`, true);
+    }
   });
   runtimeStartupActionBtn?.addEventListener("click", handleRuntimeAction);
   runtimeOllamaActionBtn?.addEventListener("click", handleRuntimeAction);
@@ -850,6 +968,7 @@ function wireEvents() {
       await refreshModelOptions();
       await refreshDownloadCatalog();
       await refreshFakeMailStatus();
+      await refreshSystemMessageDefaults();
       setConnectionTestStatus("Connection not tested yet.");
       setStatus(response.message || "Local database reset to defaults.");
     } catch (error) {
@@ -883,6 +1002,10 @@ function wireEvents() {
     fillSettings(suggested, { updateActiveMode: false });
     setStatus("Fake mail settings loaded into the form. Save settings to use them.");
   });
+  openAdvancedSettingsBtn?.addEventListener("click", () => showSettingsScreen("advanced"));
+  backToBasicSettingsBtn?.addEventListener("click", () => showSettingsScreen("basic"));
+  loadBasicSettingsBtn?.addEventListener("click", loadSettings);
+  loadAdvancedSettingsBtn?.addEventListener("click", loadSettings);
   dummyModeToggleBtn?.addEventListener("click", async () => {
     const nextMode = !activeDummyMode;
     try {
@@ -917,7 +1040,9 @@ function wireEvents() {
       }
       await refreshRuntimeStatus();
       await refreshModelOptions();
+      await refreshDownloadCatalog();
       await refreshFakeMailStatus();
+      await refreshSystemMessageDefaults();
       if (previousBaseUrl && previousBaseUrl !== nextBaseUrl) {
         setStatus("Settings saved. Backend target updated; no backend restart was performed.");
       } else {
@@ -969,6 +1094,7 @@ function resetSearchFormOnLoad() {
 function init() {
   bootstrapConnectionFromStorage();
   resetSearchFormOnLoad();
+  showSettingsScreen("basic");
   bindTabs();
   wireEvents();
   refreshProviderKeyWarning();

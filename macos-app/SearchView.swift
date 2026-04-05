@@ -25,10 +25,27 @@ struct SearchView: View {
 
                 HStack {
                     Text("Summary length")
-                    Slider(value: $appState.summaryLength, in: 1...10, step: 1)
-                    Text("\(Int(appState.summaryLength))")
+                    TextField(
+                        "Length",
+                        value: Binding(
+                            get: { appState.summaryLength },
+                            set: { appState.summaryLength = max(1, $0) }
+                        ),
+                        format: .number
+                    )
+                    .frame(width: 84)
+                    .textFieldStyle(.roundedBorder)
+                    Button("-") {
+                        appState.summaryLength = max(1, appState.summaryLength - 1)
+                    }
+                    .buttonStyle(.bordered)
+                    Button("+") {
+                        appState.summaryLength += 1
+                    }
+                    .buttonStyle(.bordered)
+                    Text("\(appState.summaryLength)")
                         .monospacedDigit()
-                        .frame(width: 28)
+                        .frame(minWidth: 32, alignment: .trailing)
                 }
             }
             .formStyle(.grouped)
@@ -75,7 +92,7 @@ struct SearchView: View {
 
     private func getSummary() async {
         do {
-            let request = SummaryRequest(criteria: appState.criteria, summaryLength: Int(appState.summaryLength))
+            let request = SummaryRequest(criteria: appState.criteria, summaryLength: max(1, appState.summaryLength))
             let response: SummaryResponse = try await appState.bridge.postJSON(path: "summaries", body: request)
             appState.currentSummary = response.summary
             appState.currentMessages = response.messages

@@ -13,6 +13,7 @@ final class AppStateTests: XCTestCase {
 
     override func tearDown() {
         MockURLProtocol.requestHandler = nil
+        UserDefaults.standard.removeObject(forKey: "mail-summariser-backend-api-key")
         super.tearDown()
     }
 
@@ -40,6 +41,9 @@ final class AppStateTests: XCTestCase {
               "ollamaAutoStart": true,
               "ollamaStartOnStartup": true,
               "ollamaStopOnExit": false,
+              "ollamaSystemMessage": "Local prompt",
+              "openaiSystemMessage": "OpenAI prompt",
+              "anthropicSystemMessage": "Anthropic prompt",
               "modelName": "llama3.2:latest",
               "backendBaseURL": "http://127.0.0.1:9999"
             }
@@ -53,6 +57,7 @@ final class AppStateTests: XCTestCase {
 
         XCTAssertEqual(appState.settings.backendBaseURL, "http://127.0.0.1:9999")
         XCTAssertTrue(appState.settings.ollamaStartOnStartup)
+        XCTAssertEqual(appState.settings.openaiSystemMessage, "OpenAI prompt")
         XCTAssertEqual(appState.bridge.baseURLString, "http://127.0.0.1:9999")
     }
 
@@ -155,6 +160,9 @@ final class AppStateTests: XCTestCase {
                 "ollamaAutoStart": false,
                 "ollamaStartOnStartup": false,
                 "ollamaStopOnExit": false,
+                "ollamaSystemMessage": "Local prompt",
+                "openaiSystemMessage": "OpenAI prompt",
+                "anthropicSystemMessage": "Anthropic prompt",
                 "modelName": "llama3.2:latest",
                 "backendBaseURL": "http://127.0.0.1:8766"
               }
@@ -211,6 +219,9 @@ final class AppStateTests: XCTestCase {
                     "ollamaAutoStart": false,
                     "ollamaStartOnStartup": false,
                     "ollamaStopOnExit": false,
+                    "ollamaSystemMessage": "Local prompt",
+                    "openaiSystemMessage": "OpenAI prompt",
+                    "anthropicSystemMessage": "Anthropic prompt",
                     "modelName": "llama3.2:latest",
                     "backendBaseURL": "http://127.0.0.1:8766"
                   }
@@ -305,6 +316,9 @@ final class AppStateTests: XCTestCase {
                 "ollamaAutoStart": true,
                 "ollamaStartOnStartup": false,
                 "ollamaStopOnExit": false,
+                "ollamaSystemMessage": "Local prompt",
+                "openaiSystemMessage": "OpenAI prompt",
+                "anthropicSystemMessage": "Anthropic prompt",
                 "modelName": "llama3.2:latest",
                 "backendBaseURL": "http://127.0.0.1:8766"
               }
@@ -326,5 +340,27 @@ final class AppStateTests: XCTestCase {
         XCTAssertTrue(appState.currentMessages.isEmpty)
         XCTAssertTrue(appState.selectedJobId.isEmpty)
         XCTAssertTrue(appState.settings.dummyMode)
+    }
+
+    func testLoadSystemMessageDefaultsUpdatesPublishedState() async throws {
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.url?.absoluteString, "http://127.0.0.1:8766/settings/system-message-defaults")
+            let payload = """
+            {
+              "ollamaSystemMessage": "Local prompt",
+              "openaiSystemMessage": "OpenAI prompt",
+              "anthropicSystemMessage": "Anthropic prompt"
+            }
+            """.data(using: .utf8)!
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!
+            return (response, payload)
+        }
+
+        let appState = makeState()
+        try await appState.loadSystemMessageDefaults()
+
+        XCTAssertEqual(appState.systemMessageDefaults.ollamaSystemMessage, "Local prompt")
+        XCTAssertEqual(appState.systemMessageDefaults.openaiSystemMessage, "OpenAI prompt")
+        XCTAssertEqual(appState.systemMessageDefaults.anthropicSystemMessage, "Anthropic prompt")
     }
 }

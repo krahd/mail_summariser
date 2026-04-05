@@ -46,7 +46,7 @@
         <label>Recipient <input name="recipient" /></label>
         <label>Tag <input name="tag" /></label>
         <label>Summary Length
-          <input name="summaryLength" type="number" min="1" max="10" value="5" />
+          <input name="summaryLength" type="number" min="1" value="5" />
         </label>
         <label class="checkbox"><input name="unreadOnly" type="checkbox" checked /> Unread Only</label>
         <label class="checkbox"><input name="readOnly" type="checkbox" /> Read Only</label>
@@ -108,113 +108,141 @@
     </section>
 
     <section id="tab-settings" class="tab-panel">
-      <form id="settings-form" class="card grid-form">
-        <div class="section-header settings-top-row">
-          <h2>Settings</h2>
-          <button id="test-connection" type="button" class="secondary">Test Connection</button>
-        </div>
-        <p id="connection-test-status" class="status-line connection-status">Connection not tested yet.</p>
-        <div class="mode-summary">
-          <strong>Current Mail Mode</strong>
-          <p id="dummy-mode-description">Dummy mode is on. Searches and actions use the built-in test mailbox.</p>
-          <input name="dummyMode" id="dummy-mode-field" type="checkbox" class="is-hidden" />
-        </div>
-        <label>IMAP Host <input name="imapHost" /></label>
-        <label>IMAP Port <input name="imapPort" type="number" /></label>
-        <label class="checkbox"><input name="imapUseSSL" type="checkbox" /> Use SSL for IMAP</label>
-        <label>IMAP Password
-          <div class="secret-row">
-            <input name="imapPassword" id="imap-password" type="password" placeholder="Used when dummy mode is off" autocomplete="off" />
-            <button id="toggle-imap-password" type="button" class="secondary tiny-btn">Show</button>
+      <form id="settings-form" class="card grid-form settings-shell">
+        <div id="settings-basic-screen" class="settings-screen">
+          <div class="section-header settings-top-row">
+            <h2>Settings</h2>
+            <button id="test-connection" type="button" class="secondary">Test Connection</button>
           </div>
-        </label>
-        <label>SMTP Host <input name="smtpHost" /></label>
-        <label>SMTP Port <input name="smtpPort" type="number" /></label>
-        <label class="checkbox"><input name="smtpUseSSL" type="checkbox" /> Use SSL for SMTP</label>
-        <label>SMTP Password
-          <div class="secret-row">
-            <input name="smtpPassword" id="smtp-password" type="password" placeholder="Defaults to IMAP password when blank" autocomplete="off" />
-            <button id="toggle-smtp-password" type="button" class="secondary tiny-btn">Show</button>
+          <p id="connection-test-status" class="status-line connection-status">Connection not tested yet.</p>
+          <div class="mode-summary">
+            <strong>Current Mail Mode</strong>
+            <p id="dummy-mode-description">Dummy mode is on. Searches and actions use the built-in test mailbox.</p>
+            <input name="dummyMode" id="dummy-mode-field" type="checkbox" class="is-hidden" />
           </div>
-        </label>
-        <label>Username <input name="username" /></label>
-        <label>Recipient Email <input name="recipientEmail" type="email" /></label>
-        <label>Summarised Tag <input name="summarisedTag" /></label>
-        <label>LLM Provider
-          <select name="llmProvider" id="llm-provider" required>
-            <option value="ollama">Ollama (local)</option>
-            <option value="openai">OpenAI (remote)</option>
-            <option value="anthropic">Anthropic (remote)</option>
-          </select>
-        </label>
-        <p id="provider-key-warning" class="status-line">Provider key check pending.</p>
-        <label id="openai-key-group">OpenAI API Key
-          <div class="secret-row">
-            <input name="openaiApiKey" id="openai-api-key" type="password" placeholder="Used when provider is OpenAI" autocomplete="off" />
-            <button id="toggle-openai-key" type="button" class="secondary tiny-btn">Show</button>
-          </div>
-          <small class="field-note">Stored locally in SQLite. For stronger security, set <code>OPENAI_API_KEY</code> in the backend environment.</small>
-        </label>
-        <label id="anthropic-key-group">Anthropic API Key
-          <div class="secret-row">
-            <input name="anthropicApiKey" id="anthropic-api-key" type="password" placeholder="Used when provider is Anthropic" autocomplete="off" />
-            <button id="toggle-anthropic-key" type="button" class="secondary tiny-btn">Show</button>
-          </div>
-          <small class="field-note">Stored locally in SQLite. For stronger security, set <code>ANTHROPIC_API_KEY</code> in the backend environment.</small>
-        </label>
-        <label>Ollama Host <input name="ollamaHost" type="url" placeholder="http://127.0.0.1:11434" required /></label>
-        <label class="checkbox"><input name="ollamaAutoStart" type="checkbox" /> Auto-start Ollama when needed for summaries and downloads</label>
-        <label class="checkbox"><input name="ollamaStartOnStartup" type="checkbox" /> Start Ollama automatically on startup</label>
-        <label class="checkbox"><input name="ollamaStopOnExit" type="checkbox" /> Stop Ollama automatically on exit</label>
-        <p id="ollama-runtime-status" class="status-line">Runtime status not loaded yet.</p>
-        <div class="inline-actions">
-          <button id="runtime-ollama-action" type="button" class="secondary is-hidden">Start Ollama</button>
-          <button id="refresh-runtime-status" type="button" class="secondary">Refresh Ollama Status</button>
-        </div>
-        <label>Model Name <input name="modelName" required /></label>
-        <div class="inline-actions">
-          <button id="refresh-models" type="button" class="secondary">Refresh Available Models</button>
-        </div>
-        <p id="ollama-status" class="status-line">Model list not loaded yet.</p>
-        <label>Discover Downloadable Ollama Models
-          <select id="downloadable-model" name="downloadableModel">
-            <option value="">Select a model to download...</option>
-          </select>
-        </label>
-        <div class="inline-actions">
-          <button id="refresh-catalog" type="button" class="secondary">Discover Models</button>
-          <button id="download-model" type="button">Download Selected Model</button>
-        </div>
-        <p id="catalog-status" class="status-line">Catalogue not loaded yet.</p>
-        <label>Backend Base URL
-          <input name="backendBaseURL" type="url" required />
-          <small class="field-note">Changes which backend this web app talks to. It does not restart any backend service.</small>
-        </label>
-        <label>Backend API Key (for backend auth, not OpenAI/Anthropic)
-          <div class="secret-row">
-            <input id="backend-api-key" type="password" placeholder="Sends X-API-Key with every request" autocomplete="off" />
-            <button id="toggle-backend-key" type="button" class="secondary tiny-btn">Show</button>
-          </div>
-          <small class="field-note">Use this only if backend auth is enabled via <code>API_KEY</code>. Stored in browser localStorage for this machine.</small>
-        </label>
-        <section id="fake-mail-card" class="mode-summary is-hidden">
-          <strong>Fake Mail Server</strong>
-          <p id="fake-mail-status" class="status-line">Developer fake mail server is disabled.</p>
-          <p id="fake-mail-credentials" class="field-note">Start the local fake IMAP/SMTP server to generate disposable test credentials.</p>
+          <label>IMAP Host <input name="imapHost" /></label>
+          <label>IMAP Port <input name="imapPort" type="number" /></label>
+          <label class="checkbox"><input name="imapUseSSL" type="checkbox" /> Use SSL for IMAP</label>
+          <label>IMAP Password
+            <div class="secret-row">
+              <input name="imapPassword" id="imap-password" type="password" placeholder="Used when dummy mode is off" autocomplete="off" />
+              <button id="toggle-imap-password" type="button" class="secondary tiny-btn">Show</button>
+            </div>
+          </label>
+          <label>SMTP Host <input name="smtpHost" /></label>
+          <label>SMTP Port <input name="smtpPort" type="number" /></label>
+          <label class="checkbox"><input name="smtpUseSSL" type="checkbox" /> Use SSL for SMTP</label>
+          <label>SMTP Password
+            <div class="secret-row">
+              <input name="smtpPassword" id="smtp-password" type="password" placeholder="Defaults to IMAP password when blank" autocomplete="off" />
+              <button id="toggle-smtp-password" type="button" class="secondary tiny-btn">Show</button>
+            </div>
+          </label>
+          <label>Username <input name="username" /></label>
+          <label>Recipient Email <input name="recipientEmail" type="email" /></label>
+          <label>Summarised Tag <input name="summarisedTag" /></label>
           <div class="inline-actions">
-            <button id="start-fake-mail" type="button" class="secondary">Start Fake Mail Server</button>
-            <button id="stop-fake-mail" type="button" class="secondary">Stop Fake Mail Server</button>
-            <button id="use-fake-mail-settings" type="button" class="secondary">Use Fake Mail Settings</button>
+            <button id="open-advanced-settings" type="button" class="secondary">Advanced Settings</button>
+            <button id="load-basic-settings" type="button" class="secondary">Load</button>
+            <button type="submit">Save Settings</button>
           </div>
-        </section>
-        <div class="inline-actions inline-actions-danger">
-          <button id="reset-local-database" type="button" class="danger">Reset Local Database</button>
         </div>
-        <p class="field-note">This removes every stored setting, job, log, and undo entry from the backend database and restores defaults.</p>
-        <div class="inline-actions inline-actions-danger">
-          <button id="stop-mail-summariser" type="button" class="danger">Stop Mail Summariser</button>
+
+        <div id="settings-advanced-screen" class="settings-screen is-hidden">
+          <div class="section-header settings-top-row">
+            <h2>Advanced Settings</h2>
+            <button id="back-to-basic-settings" type="button" class="secondary">Back</button>
+          </div>
+          <p class="field-note">Provider prompts, model tools, backend targeting, and operator controls live here.</p>
+          <label>LLM Provider
+            <select name="llmProvider" id="llm-provider" required>
+              <option value="ollama">Ollama (local)</option>
+              <option value="openai">OpenAI (remote)</option>
+              <option value="anthropic">Anthropic (remote)</option>
+            </select>
+          </label>
+          <p id="provider-key-warning" class="status-line">Provider key check pending.</p>
+          <label id="provider-system-message-group"><span id="provider-system-message-title">System Message</span>
+            <textarea id="provider-system-message" rows="8" placeholder="Instruction sent as the provider system message."></textarea>
+          </label>
+          <p id="provider-system-message-note" class="field-note">This prompt is stored separately for each provider. Switching providers swaps the text shown here.</p>
+          <textarea name="ollamaSystemMessage" class="is-hidden"></textarea>
+          <textarea name="openaiSystemMessage" class="is-hidden"></textarea>
+          <textarea name="anthropicSystemMessage" class="is-hidden"></textarea>
+          <div class="inline-actions">
+            <button id="reset-system-message" type="button" class="secondary">Reset to Default</button>
+          </div>
+          <label id="openai-key-group">OpenAI API Key
+            <div class="secret-row">
+              <input name="openaiApiKey" id="openai-api-key" type="password" placeholder="Used when provider is OpenAI" autocomplete="off" />
+              <button id="toggle-openai-key" type="button" class="secondary tiny-btn">Show</button>
+            </div>
+            <small class="field-note">Stored locally in SQLite. For stronger security, set <code>OPENAI_API_KEY</code> in the backend environment.</small>
+          </label>
+          <label id="anthropic-key-group">Anthropic API Key
+            <div class="secret-row">
+              <input name="anthropicApiKey" id="anthropic-api-key" type="password" placeholder="Used when provider is Anthropic" autocomplete="off" />
+              <button id="toggle-anthropic-key" type="button" class="secondary tiny-btn">Show</button>
+            </div>
+            <small class="field-note">Stored locally in SQLite. For stronger security, set <code>ANTHROPIC_API_KEY</code> in the backend environment.</small>
+          </label>
+          <label>Ollama Host <input name="ollamaHost" type="url" placeholder="http://127.0.0.1:11434" required /></label>
+          <label class="checkbox"><input name="ollamaAutoStart" type="checkbox" /> Auto-start Ollama when needed for summaries and downloads</label>
+          <label class="checkbox"><input name="ollamaStartOnStartup" type="checkbox" /> Start Ollama automatically on startup</label>
+          <label class="checkbox"><input name="ollamaStopOnExit" type="checkbox" /> Stop Ollama automatically on exit</label>
+          <p id="ollama-runtime-status" class="status-line">Runtime status not loaded yet.</p>
+          <div class="inline-actions">
+            <button id="runtime-ollama-action" type="button" class="secondary is-hidden">Start Ollama</button>
+            <button id="refresh-runtime-status" type="button" class="secondary">Refresh Ollama Status</button>
+          </div>
+          <label>Model Name <input name="modelName" required /></label>
+          <div class="inline-actions">
+            <button id="refresh-models" type="button" class="secondary">Refresh Available Models</button>
+          </div>
+          <p id="ollama-status" class="status-line">Model list not loaded yet.</p>
+          <label>Discover Downloadable Ollama Models
+            <select id="downloadable-model" name="downloadableModel">
+              <option value="">Select a model to download...</option>
+            </select>
+          </label>
+          <div class="inline-actions">
+            <button id="refresh-catalog" type="button" class="secondary">Discover Models</button>
+            <button id="download-model" type="button">Download Selected Model</button>
+          </div>
+          <p id="catalog-status" class="status-line">Catalogue not loaded yet.</p>
+          <label>Backend Base URL
+            <input name="backendBaseURL" type="url" required />
+            <small class="field-note">Changes which backend this web app talks to. It does not restart any backend service.</small>
+          </label>
+          <label>Backend API Key (for backend auth, not OpenAI/Anthropic)
+            <div class="secret-row">
+              <input id="backend-api-key" type="password" placeholder="Sends X-API-Key with every request" autocomplete="off" />
+              <button id="toggle-backend-key" type="button" class="secondary tiny-btn">Show</button>
+            </div>
+            <small class="field-note">Use this only if backend auth is enabled via <code>API_KEY</code>. Stored in browser localStorage for this machine.</small>
+          </label>
+          <section id="fake-mail-card" class="mode-summary is-hidden">
+            <strong>Fake Mail Server</strong>
+            <p id="fake-mail-status" class="status-line">Developer fake mail server is disabled.</p>
+            <p id="fake-mail-credentials" class="field-note">Start the local fake IMAP/SMTP server to generate disposable test credentials.</p>
+            <div class="inline-actions">
+              <button id="start-fake-mail" type="button" class="secondary">Start Fake Mail Server</button>
+              <button id="stop-fake-mail" type="button" class="secondary">Stop Fake Mail Server</button>
+              <button id="use-fake-mail-settings" type="button" class="secondary">Use Fake Mail Settings</button>
+            </div>
+          </section>
+          <div class="inline-actions inline-actions-danger">
+            <button id="reset-local-database" type="button" class="danger">Reset Local Database</button>
+          </div>
+          <p class="field-note">This removes every stored setting, job, log, and undo entry from the backend database and restores defaults.</p>
+          <div class="inline-actions inline-actions-danger">
+            <button id="stop-mail-summariser" type="button" class="danger">Stop Mail Summariser</button>
+          </div>
+          <div class="inline-actions">
+            <button id="load-advanced-settings" type="button" class="secondary">Load</button>
+            <button type="submit">Save Settings</button>
+          </div>
         </div>
-        <button type="submit">Save settings</button>
       </form>
     </section>
 
@@ -254,7 +282,7 @@
             <dt>Tag</dt>
             <dd>Filter messages that have a specific tag.</dd>
             <dt>Summary Length</dt>
-            <dd>Control how detailed the summary should be (1–10).</dd>
+            <dd>Control how detailed the summary should be with any positive integer.</dd>
             <dt>Unread Only / Read Only</dt>
             <dd>Limit results to unread or read messages.</dd>
             <dt>Use AND</dt>
@@ -276,7 +304,7 @@
 
         <section>
           <h3>Settings</h3>
-          <p>Configure IMAP/SMTP connection details, choose an LLM provider, and set up Ollama if using local inference.</p>
+          <p>Configure mail basics on the main settings screen, then open Advanced Settings for provider prompts, model tools, backend controls, and operator actions.</p>
           <ul>
             <li><strong>Dummy Mode</strong>: Toggle between the built-in test mailbox and a real IMAP/SMTP account.</li>
             <li><strong>Test Connection</strong>: Validate the current settings against dummy mode or the configured IMAP/SMTP servers before saving.</li>

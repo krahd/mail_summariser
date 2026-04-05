@@ -39,6 +39,25 @@ ENABLE_DEV_TOOLS = os.getenv("MAIL_SUMMARISER_ENABLE_DEV_TOOLS", "false").lower(
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()
 
+DEFAULT_OPENAI_SYSTEM_MESSAGE = os.getenv(
+    "OPENAI_SYSTEM_MESSAGE",
+    "You are an assistant that creates compact, practical email digests.",
+).strip()
+DEFAULT_ANTHROPIC_SYSTEM_MESSAGE = os.getenv(
+    "ANTHROPIC_SYSTEM_MESSAGE",
+    "You create practical, concise email summaries with action cues.",
+).strip()
+DEFAULT_OLLAMA_SYSTEM_MESSAGE = os.getenv(
+    "OLLAMA_SYSTEM_MESSAGE",
+    "You create compact, practical email digests that focus on priorities, deadlines, and follow-up actions.",
+).strip()
+
+DEFAULT_SYSTEM_MESSAGES = {
+    "ollamaSystemMessage": DEFAULT_OLLAMA_SYSTEM_MESSAGE,
+    "openaiSystemMessage": DEFAULT_OPENAI_SYSTEM_MESSAGE,
+    "anthropicSystemMessage": DEFAULT_ANTHROPIC_SYSTEM_MESSAGE,
+}
+
 # Default application settings
 DEFAULT_SETTINGS = {
     "dummyMode": os.getenv("DUMMY_MODE", "true").lower() in ("1", "true", "yes", "on"),
@@ -60,6 +79,9 @@ DEFAULT_SETTINGS = {
     "ollamaAutoStart": os.getenv("OLLAMA_AUTO_START", "true").lower() in ("1", "true", "yes", "on"),
     "ollamaStartOnStartup": os.getenv("OLLAMA_START_ON_STARTUP", "false").lower() in ("1", "true", "yes", "on"),
     "ollamaStopOnExit": os.getenv("OLLAMA_STOP_ON_EXIT", "false").lower() in ("1", "true", "yes", "on"),
+    "ollamaSystemMessage": DEFAULT_OLLAMA_SYSTEM_MESSAGE,
+    "openaiSystemMessage": DEFAULT_OPENAI_SYSTEM_MESSAGE,
+    "anthropicSystemMessage": DEFAULT_ANTHROPIC_SYSTEM_MESSAGE,
     "modelName": os.getenv("MODEL_NAME", "llama3.2:latest"),
     "backendBaseURL": os.getenv("BACKEND_BASE_URL", "http://127.0.0.1:8766"),
 }

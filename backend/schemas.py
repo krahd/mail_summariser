@@ -17,7 +17,7 @@ class SearchCriteria(BaseModel):
 
 class SummaryRequest(BaseModel):
     criteria: SearchCriteria
-    summaryLength: int = Field(default=5, ge=1, le=10)
+    summaryLength: int = Field(default=5, ge=1)
 
 
 class MessageItem(BaseModel):
@@ -72,8 +72,17 @@ class AppSettings(BaseModel):
     ollamaAutoStart: bool
     ollamaStartOnStartup: bool
     ollamaStopOnExit: bool
+    ollamaSystemMessage: str
+    openaiSystemMessage: str
+    anthropicSystemMessage: str
     modelName: str
     backendBaseURL: str
+
+
+class SystemMessageDefaultsResponse(BaseModel):
+    ollamaSystemMessage: str
+    openaiSystemMessage: str
+    anthropicSystemMessage: str
 
 
 class DummyModeUpdate(BaseModel):

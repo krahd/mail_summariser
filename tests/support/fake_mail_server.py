@@ -356,6 +356,9 @@ class FakeMailEnvironment:
             "ollamaAutoStart": False,
             "ollamaStartOnStartup": False,
             "ollamaStopOnExit": False,
+            "ollamaSystemMessage": "You create compact, practical email digests that focus on priorities, deadlines, and follow-up actions.",
+            "openaiSystemMessage": "You are an assistant that creates compact, practical email digests.",
+            "anthropicSystemMessage": "You create practical, concise email summaries with action cues.",
             "modelName": "llama3.2:latest",
             "backendBaseURL": "http://127.0.0.1:8766",
         }

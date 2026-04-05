@@ -10,6 +10,8 @@ from email.parser import BytesParser
 from email.policy import default
 from email.utils import format_datetime
 from typing import Any
+
+from config import DEFAULT_SYSTEM_MESSAGES
 from uuid import uuid4
 
 
@@ -385,6 +387,9 @@ class FakeMailEnvironment:
             "ollamaAutoStart": False,
             "ollamaStartOnStartup": False,
             "ollamaStopOnExit": False,
+            "ollamaSystemMessage": DEFAULT_SYSTEM_MESSAGES["ollamaSystemMessage"],
+            "openaiSystemMessage": DEFAULT_SYSTEM_MESSAGES["openaiSystemMessage"],
+            "anthropicSystemMessage": DEFAULT_SYSTEM_MESSAGES["anthropicSystemMessage"],
             "modelName": "llama3.2:latest",
             "backendBaseURL": "http://127.0.0.1:8766",
         }
