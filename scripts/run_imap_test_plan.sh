@@ -46,6 +46,6 @@ SERVER_PID=""
 
 echo "[4/4] macOS Swift typecheck"
 SDK_PATH="$(xcrun --show-sdk-path --sdk macosx)"
-xcrun swiftc -typecheck -module-cache-path /tmp/mail-summariser-swift-cache -sdk "$SDK_PATH" "$ROOT_DIR"/macos-app/*.swift
+xcrun swiftc -typecheck -module-cache-path /tmp/mail_summariser-swift-cache -sdk "$SDK_PATH" "$ROOT_DIR"/macos-app/*.swift
 
 echo "IMAP test plan passed"

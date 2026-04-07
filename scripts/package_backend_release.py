@@ -40,7 +40,7 @@ def main() -> int:
     output_dir = Path(args.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    base_name = f"mail-summariser-backend-{args.platform}-{args.arch}"
+    base_name = f"mail_summariser-backend-{args.platform}-{args.arch}"
     if args.platform == "windows":
         destination = output_dir / f"{base_name}.zip"
         package_zip(source, destination)

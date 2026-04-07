@@ -57,19 +57,19 @@ jobs:
           python scripts/package_backend_release.py \
             --platform "${{ matrix.platform }}" \
             --arch "${{ matrix.arch }}" \
-            --input "dist/mail-summariser-backend-${{ matrix.platform }}-${{ matrix.arch }}"
+            --input "dist/mail_summariser-backend-${{ matrix.platform }}-${{ matrix.arch }}"
 
       - name: Package backend artifact (windows)
         if: matrix.platform == 'windows'
         run: |
-          python scripts/package_backend_release.py --platform "${{ matrix.platform }}" --arch "${{ matrix.arch }}" --input "dist/mail-summariser-backend-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.binary_ext }}"
+          python scripts/package_backend_release.py --platform "${{ matrix.platform }}" --arch "${{ matrix.arch }}" --input "dist/mail_summariser-backend-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.binary_ext }}"
 
       - name: Smoke test backend binary (unix)
         if: matrix.platform != 'windows'
         shell: bash
         run: |
           set -euo pipefail
-          BIN="dist/mail-summariser-backend-${{ matrix.platform }}-${{ matrix.arch }}"
+          BIN="dist/mail_summariser-backend-${{ matrix.platform }}-${{ matrix.arch }}"
           "$BIN" --host 127.0.0.1 --port 8766 > /tmp/backend.log 2>&1 &
           PID=$!
           for i in {1..20}; do
@@ -85,7 +85,7 @@ jobs:
         if: matrix.platform == 'windows'
         shell: pwsh
         run: |
-          $bin = "dist/mail-summariser-backend-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.binary_ext }}"
+          $bin = "dist/mail_summariser-backend-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.binary_ext }}"
           $process = Start-Process -FilePath $bin -ArgumentList "--host", "127.0.0.1", "--port", "8766" -PassThru
           $ok = $false
           for ($i = 0; $i -lt 30; $i++) {
@@ -109,8 +109,8 @@ jobs:
         with:
           name: backend-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
-            dist/mail-summariser-backend-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.binary_ext }}
-            dist/packages/mail-summariser-backend-${{ matrix.platform }}-${{ matrix.arch }}*
+            dist/mail_summariser-backend-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.binary_ext }}
+            dist/packages/mail_summariser-backend-${{ matrix.platform }}-${{ matrix.arch }}*
 
   build-macos-app:
     name: Build macOS app
@@ -152,12 +152,12 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release-bundle
-          cp "$(find release-assets -type f -name 'mail-summariser-backend-macos-arm64' | head -n1)" release-bundle/
-          cp "$(find release-assets -type f -name 'mail-summariser-backend-macos-arm64.tar.gz' | head -n1)" release-bundle/
-          cp "$(find release-assets -type f -name 'mail-summariser-backend-linux-x64' | head -n1)" release-bundle/
-          cp "$(find release-assets -type f -name 'mail-summariser-backend-linux-x64.tar.gz' | head -n1)" release-bundle/
-          cp "$(find release-assets -type f -name 'mail-summariser-backend-windows-x64.exe' | head -n1)" release-bundle/
-          cp "$(find release-assets -type f -name 'mail-summariser-backend-windows-x64.zip' | head -n1)" release-bundle/
+          cp "$(find release-assets -type f -name 'mail_summariser-backend-macos-arm64' | head -n1)" release-bundle/
+          cp "$(find release-assets -type f -name 'mail_summariser-backend-macos-arm64.tar.gz' | head -n1)" release-bundle/
+          cp "$(find release-assets -type f -name 'mail_summariser-backend-linux-x64' | head -n1)" release-bundle/
+          cp "$(find release-assets -type f -name 'mail_summariser-backend-linux-x64.tar.gz' | head -n1)" release-bundle/
+          cp "$(find release-assets -type f -name 'mail_summariser-backend-windows-x64.exe' | head -n1)" release-bundle/
+          cp "$(find release-assets -type f -name 'mail_summariser-backend-windows-x64.zip' | head -n1)" release-bundle/
           cp "$(find release-assets -type f -name 'mail_summariser-macos-app.zip' | head -n1)" release-bundle/
 
       - name: Generate checksums
@@ -170,11 +170,11 @@ jobs:
         with:
           generate_release_notes: true
           files: |
-            release-bundle/mail-summariser-backend-macos-arm64
-            release-bundle/mail-summariser-backend-macos-arm64.tar.gz
-            release-bundle/mail-summariser-backend-linux-x64
-            release-bundle/mail-summariser-backend-linux-x64.tar.gz
-            release-bundle/mail-summariser-backend-windows-x64.exe
-            release-bundle/mail-summariser-backend-windows-x64.zip
+            release-bundle/mail_summariser-backend-macos-arm64
+            release-bundle/mail_summariser-backend-macos-arm64.tar.gz
+            release-bundle/mail_summariser-backend-linux-x64
+            release-bundle/mail_summariser-backend-linux-x64.tar.gz
+            release-bundle/mail_summariser-backend-windows-x64.exe
+            release-bundle/mail_summariser-backend-windows-x64.zip
             release-bundle/mail_summariser-macos-app.zip
             release-bundle/SHA256SUMS.txt

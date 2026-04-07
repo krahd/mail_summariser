@@ -107,7 +107,7 @@ Provider-specific environment variables take precedence over keys stored in SQLi
 ## Data locations
 
 - Source runs default to `backend/data/mail_summariser.sqlite3`
-- Packaged runs default to `~/.mail-summariser/mail_summariser.sqlite3`
+- Packaged runs default to `~/.mail_summariser/mail_summariser.sqlite3`
 - `MAIL_SUMMARISER_DATA_DIR` overrides both
 
 The Settings surfaces in both clients now also expose:
@@ -123,7 +123,7 @@ Run the current automated test layers from the repo root:
 python3 -m unittest discover -s tests -v
 ./scripts/smoke_test_backend.sh
 ./scripts/run_imap_test_plan.sh
-xcodebuild -project mail_summariser.xcodeproj -scheme mail_summariser -configuration Debug CODE_SIGNING_ALLOWED=NO -derivedDataPath /tmp/mail-summariser-deriveddata test
+xcodebuild -project mail_summariser.xcodeproj -scheme mail_summariser -configuration Debug CODE_SIGNING_ALLOWED=NO -derivedDataPath /tmp/mail_summariser-deriveddata test
 ```
 
 `./scripts/smoke_test_backend.sh` now also verifies the runtime status endpoint, the fake-mail status endpoint, the expanded settings payload, and the database reset endpoint.
@@ -154,7 +154,7 @@ Build the macOS app archive with:
 Install the packaged backend with Homebrew on Apple Silicon macOS or x86_64 Linux:
 
 ```bash
-brew tap krahd/tap && brew install krahd/tap/mail-summariser
+brew tap krahd/tap && brew install krahd/tap/mail_summariser
 ```
 
 This Homebrew formula installs the backend only. The native SwiftUI macOS app remains a separate asset on the GitHub Releases page.
@@ -163,9 +163,9 @@ The release workflow publishes:
 
 - backend binaries for macOS, Linux, and Windows
 - packaged backend archives:
-  - `mail-summariser-backend-macos-arm64.tar.gz`
-  - `mail-summariser-backend-linux-x64.tar.gz`
-  - `mail-summariser-backend-windows-x64.zip`
+  - `mail_summariser-backend-macos-arm64.tar.gz`
+  - `mail_summariser-backend-linux-x64.tar.gz`
+  - `mail_summariser-backend-windows-x64.zip`
 - `mail_summariser-macos-app.zip`
 
 ## Known limitations

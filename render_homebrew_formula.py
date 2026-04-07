@@ -73,30 +73,30 @@ def render_formula(*, version: str, macos_url: str, macos_sha256: str, linux_url
 
           def install
             binary_name = if OS.mac?
-              "mail-summariser-backend-macos-arm64"
+              "mail_summariser-backend-macos-arm64"
             else
-              "mail-summariser-backend-linux-x64"
+              "mail_summariser-backend-linux-x64"
             end
 
-            libexec.install binary_name => "mail-summariser-backend"
+            libexec.install binary_name => "mail_summariser-backend"
 
-            (bin/"mail-summariser").write <<~SH
+            (bin/"mail_summariser").write <<~SH
               #!/usr/bin/env bash
               set -euo pipefail
               if [[ -z "${{MAIL_SUMMARISER_DATA_DIR:-}}" ]]; then
                 if [[ "$(uname -s)" == "Darwin" ]]; then
                   export MAIL_SUMMARISER_DATA_DIR="$HOME/Library/Application Support/MailSummariser"
                 else
-                  export MAIL_SUMMARISER_DATA_DIR="${{XDG_DATA_HOME:-$HOME/.local/share}}/mail-summariser"
+                  export MAIL_SUMMARISER_DATA_DIR="${{XDG_DATA_HOME:-$HOME/.local/share}}/mail_summariser"
                 fi
               fi
-              exec "#{{libexec}}/mail-summariser-backend" "$@"
+              exec "#{{libexec}}/mail_summariser-backend" "$@"
             SH
-            chmod 0755, bin/"mail-summariser"
+            chmod 0755, bin/"mail_summariser"
           end
 
           test do
-            shell_output("#{{bin}}/mail-summariser --help")
+            shell_output("#{{bin}}/mail_summariser --help")
           end
         end
         '''

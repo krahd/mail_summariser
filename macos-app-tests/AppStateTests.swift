@@ -13,7 +13,7 @@ final class AppStateTests: XCTestCase {
 
     override func tearDown() {
         MockURLProtocol.requestHandler = nil
-        UserDefaults.standard.removeObject(forKey: "mail-summariser-backend-api-key")
+        UserDefaults.standard.removeObject(forKey: "mail_summariser-backend-api-key")
         super.tearDown()
     }
 

@@ -73,8 +73,8 @@ jobs:
           release = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
           assets = {asset["name"]: asset for asset in release.get("assets", [])}
           required = {
-              "mail-summariser-backend-macos-arm64.tar.gz": ("macos_url", "macos_sha256"),
-              "mail-summariser-backend-linux-x64.tar.gz": ("linux_url", "linux_sha256"),
+              "mail_summariser-backend-macos-arm64.tar.gz": ("macos_url", "macos_sha256"),
+              "mail_summariser-backend-linux-x64.tar.gz": ("linux_url", "linux_sha256"),
           }
 
           lines: list[str] = []
@@ -143,22 +143,28 @@ jobs:
             --macos-sha256 "${MACOS_SHA256}" \
             --linux-url "${LINUX_URL}" \
             --linux-sha256 "${LINUX_SHA256}" \
-            --output tap-repo/Formula/mail-summariser.rb
+            --output tap-repo/Formula/mail_summariser.rb
 
       - name: Commit and push formula update
         working-directory: tap-repo
         shell: bash
         env:
-          FORMULA_NAME: mail-summariser
+          FORMULA_NAME: mail_summariser
           RELEASE_TAG: ${{ steps.release.outputs.release_tag }}
         run: |
           set -euo pipefail
 
+          legacy_formula_name="${FORMULA_NAME//_/-}"
+
           if git ls-files --error-unmatch "Formula/${FORMULA_NAME}.rb" >/dev/null 2>&1; then
-            if git diff --quiet -- "Formula/${FORMULA_NAME}.rb"; then
+            if git diff --quiet -- "Formula/${FORMULA_NAME}.rb" && ([[ "${legacy_formula_name}" == "${FORMULA_NAME}" ]] || ! git ls-files --error-unmatch "Formula/${legacy_formula_name}.rb" >/dev/null 2>&1); then
               echo "Formula already up to date."
               exit 0
             fi
+          fi
+
+          if [[ "${legacy_formula_name}" != "${FORMULA_NAME}" ]] && git ls-files --error-unmatch "Formula/${legacy_formula_name}.rb" >/dev/null 2>&1; then
+            git rm -f "Formula/${legacy_formula_name}.rb"
           fi
 
           git add "Formula/${FORMULA_NAME}.rb"

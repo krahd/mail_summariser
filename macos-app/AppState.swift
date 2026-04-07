@@ -2,7 +2,7 @@ import Foundation
 
 @MainActor
 final class AppState: ObservableObject {
-    private static let backendAPIKeyDefaultsKey = "mail-summariser-backend-api-key"
+    private static let backendAPIKeyDefaultsKey = "mail_summariser-backend-api-key"
     private var messageDetailRequestToken = UUID()
 
     let bridge: BackendBridge

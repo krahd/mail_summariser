@@ -1,8 +1,8 @@
 import { createApiClient } from "/web/api.js";
 
 const storageKeys = {
-  baseUrl: "mail-summariser-base-url",
-  apiKey: "mail-summariser-api-key",
+  baseUrl: "mail_summariser-base-url",
+  apiKey: "mail_summariser-api-key",
 };
 
 let currentJobId = null;
@@ -70,7 +70,7 @@ const downloadableModelSelect = document.getElementById("downloadable-model");
 const refreshCatalogBtn = document.getElementById("refresh-catalog");
 const downloadModelBtn = document.getElementById("download-model");
 const catalogStatusLine = document.getElementById("catalog-status");
-const stopMailSummariserBtn = document.getElementById("stop-mail-summariser");
+const stopMailSummariserBtn = document.getElementById("stop-mail_summariser");
 const resetLocalDatabaseBtn = document.getElementById("reset-local-database");
 const backendApiKeyInput = document.getElementById("backend-api-key");
 const providerKeyWarningLine = document.getElementById("provider-key-warning");

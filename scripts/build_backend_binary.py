@@ -60,7 +60,7 @@ def main() -> int:
     DIST_DIR.mkdir(parents=True, exist_ok=True)
 
     separator = ";" if host_platform == "windows" else ":"
-    binary_name = f"mail-summariser-backend-{args.platform}-{args.arch}"
+    binary_name = f"mail_summariser-backend-{args.platform}-{args.arch}"
     add_data = f"webapp{separator}webapp"
 
     cmd = [

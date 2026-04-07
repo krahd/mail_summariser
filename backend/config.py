@@ -16,7 +16,7 @@ def _resolve_data_dir() -> Path:
         return Path(override).expanduser().resolve()
 
     if getattr(sys, "frozen", False):
-        return Path.home() / ".mail-summariser"
+        return Path.home() / ".mail_summariser"
 
     return APP_DIR / "data"
 
@@ -33,7 +33,8 @@ ALLOWED_ORIGINS = _split_csv(
 )
 API_KEY = os.getenv("API_KEY", "").strip()
 API_KEY_HEADER = os.getenv("API_KEY_HEADER", "X-API-Key").strip() or "X-API-Key"
-ENABLE_DEV_TOOLS = os.getenv("MAIL_SUMMARISER_ENABLE_DEV_TOOLS", "false").lower() in ("1", "true", "yes", "on")
+ENABLE_DEV_TOOLS = os.getenv("MAIL_SUMMARISER_ENABLE_DEV_TOOLS",
+                             "false").lower() in ("1", "true", "yes", "on")
 
 # Provider-specific API key env vars — take precedence over DB settings
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
