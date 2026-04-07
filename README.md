@@ -151,6 +151,14 @@ Build the macOS app archive with:
 ./scripts/build_macos_app.sh
 ```
 
+Install the packaged backend with Homebrew on Apple Silicon macOS or x86_64 Linux:
+
+```bash
+brew tap krahd/tap && brew install krahd/tap/mail-summariser
+```
+
+This Homebrew formula installs the backend only. The native SwiftUI macOS app remains a separate asset on the GitHub Releases page.
+
 The release workflow publishes:
 
 - backend binaries for macOS, Linux, and Windows
