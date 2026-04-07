@@ -127,13 +127,13 @@ jobs:
       - name: Compress app artifact
         run: |
           cd dist/macos-app
-          ditto -c -k --sequesterRsrc --keepParent MailSummariser.app MailSummariser-macos-app.zip
+          ditto -c -k --sequesterRsrc --keepParent mail_summariser.app mail_summariser-macos-app.zip
 
       - name: Upload macOS app artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-app
-          path: dist/macos-app/MailSummariser-macos-app.zip
+          path: dist/macos-app/mail_summariser-macos-app.zip
 
   publish-release:
     name: Publish release
@@ -158,7 +158,7 @@ jobs:
           cp "$(find release-assets -type f -name 'mail-summariser-backend-linux-x64.tar.gz' | head -n1)" release-bundle/
           cp "$(find release-assets -type f -name 'mail-summariser-backend-windows-x64.exe' | head -n1)" release-bundle/
           cp "$(find release-assets -type f -name 'mail-summariser-backend-windows-x64.zip' | head -n1)" release-bundle/
-          cp "$(find release-assets -type f -name 'MailSummariser-macos-app.zip' | head -n1)" release-bundle/
+          cp "$(find release-assets -type f -name 'mail_summariser-macos-app.zip' | head -n1)" release-bundle/
 
       - name: Generate checksums
         run: |
@@ -176,5 +176,5 @@ jobs:
             release-bundle/mail-summariser-backend-linux-x64.tar.gz
             release-bundle/mail-summariser-backend-windows-x64.exe
             release-bundle/mail-summariser-backend-windows-x64.zip
-            release-bundle/MailSummariser-macos-app.zip
+            release-bundle/mail_summariser-macos-app.zip
             release-bundle/SHA256SUMS.txt
