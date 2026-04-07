@@ -53,7 +53,7 @@ def render_formula(*, version: str, macos_url: str, macos_sha256: str, linux_url
         f'''\
         class MailSummariser < Formula
           desc "Local-first mail workflow backend"
-          homepage "https://github.com/krahd/Mail-Summariser"
+          homepage "https://github.com/krahd/mail_summariser"
           version "{version}"
           license "MIT"
 

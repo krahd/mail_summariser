@@ -35,7 +35,7 @@ For SMTP we only need:
 - `NOOP`
 - `QUIT`
 
-That is the approach implemented in [`backend/fake_mail_server.py`](/Users/tom/devel/ml-llm/llm/Mail-Summariser/backend/fake_mail_server.py).
+That is the approach implemented in [backend/fake_mail_server.py](../backend/fake_mail_server.py).
 
 ## Plan
 

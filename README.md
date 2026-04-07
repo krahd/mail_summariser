@@ -4,7 +4,7 @@ mail_summariser is a local-first mail workflow with a FastAPI backend, a browser
 
 The main workflow in both clients now keeps the returned messages in a list while opening the selected mail's sender, recipient, and body in a side-by-side detail pane.
 
-User-facing docs, screenshots, and release downloads live on the GitHub Pages project site: [krahd.github.io/Mail-Summariser](https://krahd.github.io/Mail-Summariser/).
+User-facing docs, screenshots, and release downloads live on the GitHub Pages project site: [krahd.github.io/mail_summariser](https://krahd.github.io/mail_summariser/).
 
 <p align="center">
   <img src="docs/assets/web-main.png" alt="mail_summariser main browser workspace" width="100%" />
