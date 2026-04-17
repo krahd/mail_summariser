@@ -1,0 +1,9 @@
+{
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "extraPaths": ["./backend"]
+    }
+  ],
+  "typeCheckingMode": "basic"
+}

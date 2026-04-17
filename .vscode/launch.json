@@ -1,25 +1,55 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Backend: FastAPI (uvicorn)",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "uvicorn",
-            "cwd": "${workspaceFolder}/backend",
-            "args": [
-                "app:app",
-                "--reload",
-                "--host",
-                "127.0.0.1",
-                "--port",
-                "8766"
-            ],
-            "env": {
-                "PYTHONUNBUFFERED": "1"
-            },
-            "console": "integratedTerminal",
-            "justMyCode": true
-        }
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Backend (Debug)",
+      "type": "python",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["backend.app:app", "--reload", "--host", "127.0.0.1", "--port", "8766"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": false
+    {
+      "name": "Launch Chrome (Webapp)",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "url": "http://127.0.0.1:8000",
+      "webRoot": "${workspaceFolder}/webapp",
+      "preLaunchTask": "Start Webapp"
+    }
+    },
+    {
+      "name": "Backend: FastAPI (uvicorn - backend cwd)",
+      "type": "python",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["app:app", "--reload", "--host", "127.0.0.1", "--port", "8766"],
+      "cwd": "${workspaceFolder}/backend",
+      "env": { "PYTHONUNBUFFERED": "1" },
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Launch Chrome (Webapp)",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "url": "http://localhost:8000",
+      "webRoot": "${workspaceFolder}/webapp",
+      "preLaunchTask": "Start Webapp",
+      "userDataDir": "${workspaceFolder}/.vscode/chrome",
+      "breakOnLoad": false
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Backend: Launch & Attach",
+      "configurations": ["Launch Backend (Debug)", "Attach to Backend (debugpy)"]
+    },
+    {
+      "name": "Full Stack: Backend + Browser",
+      "configurations": ["Launch Backend (Debug)", "Attach to Backend (debugpy)", "Launch Chrome (Webapp)"]
+    }
+  ]
 }
+

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any
+from typing import Any, TYPE_CHECKING
 import imaplib
 import smtplib
 from contextlib import contextmanager
@@ -10,6 +10,12 @@ from email.policy import default
 from email.message import EmailMessage
 
 from backend.schemas import SearchCriteria
+
+if TYPE_CHECKING:
+    # Types imported here are only for static analysis (Pylance/pyright).
+    # The fake mail environment is runtime-injected in tests so importing
+    # it unconditionally can confuse test-time patches.
+    from backend.fake_mail_server import FakeMailEnvironment  # type: ignore
 
 
 class MailServiceError(RuntimeError):
@@ -99,7 +105,7 @@ def _find_dummy_messages(message_ids: list[str]) -> list[dict[str, Any]]:
     return [message for message in _dummy_mailbox if message['id'] in wanted]
 
 
-def _get_fake_env_for_host_port(host: str, port: int):
+def _get_fake_env_for_host_port(host: str, port: int) -> Any | None:
     try:
         from backend.fake_mail_server import REGISTRY as _REG  # pylint: disable=import-outside-toplevel
         return _REG.get((host, port))
@@ -107,7 +113,7 @@ def _get_fake_env_for_host_port(host: str, port: int):
         return None
 
 
-def _env_messages_from_env(env) -> list[dict[str, Any]]:
+def _env_messages_from_env(env: Any) -> list[dict[str, Any]]:
     env_messages: list[dict[str, Any]] = []
     for msg in env.list_messages():
         flags = env.flags_for(msg['id'])
@@ -126,7 +132,7 @@ def _env_messages_from_env(env) -> list[dict[str, Any]]:
 
 
 @contextmanager
-def _imap_connection(host: str, port: int, use_ssl: bool, username: str | None, password: str | None):
+def _imap_connection(host: str, port: int, use_ssl: bool, username: str | None, password: str | None) -> Any:
     imap = _open_imap(host, port, use_ssl)
     try:
         if username:
@@ -226,7 +232,7 @@ def _check_smtp_connection(host: str, port: int, use_ssl: bool) -> tuple[bool, s
         return False, str(exc)
 
 
-def _add_tag_to_env(env, normalized_tag: str, message_ids: list[str]) -> list[str]:
+def _add_tag_to_env(env: Any, normalized_tag: str, message_ids: list[str]) -> list[str]:
     added: list[str] = []
     for uid in message_ids:
         for m in env.messages.values():
@@ -238,7 +244,7 @@ def _add_tag_to_env(env, normalized_tag: str, message_ids: list[str]) -> list[st
     return added
 
 
-def _remove_tag_from_env(env, normalized_tag: str, message_ids: list[str]) -> None:
+def _remove_tag_from_env(env: Any, normalized_tag: str, message_ids: list[str]) -> None:
     for uid in message_ids:
         for m in env.messages.values():
             if str(m.get('id')) == str(uid):
@@ -269,7 +275,7 @@ def _imap_remove_flag(host: str, port: int, use_ssl: bool, username: str | None,
                 pass
 
 
-def _open_imap(host: str, port: int, use_ssl: bool):
+def _open_imap(host: str, port: int, use_ssl: bool) -> imaplib.IMAP4 | imaplib.IMAP4_SSL:
     try:
         return imaplib.IMAP4_SSL(host, port) if use_ssl else imaplib.IMAP4(host, port)
     except (imaplib.IMAP4.error, OSError) as exc:
@@ -290,7 +296,7 @@ def _fetch_flags(imap, uid: str) -> list[str]:
     return []
 
 
-def _parse_fetched_message(fdata):
+def _parse_fetched_message(fdata: Any) -> tuple[EmailMessage, str] | None:
     raw = None
     if isinstance(fdata[0], tuple) and fdata[0][1] is not None:
         raw = fdata[0][1]
