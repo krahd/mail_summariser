@@ -18,7 +18,7 @@ class _StubServer:
         return (self.host, self.port)
 
 
-class FakeMailEnvironment:
+class FakeMailEnvironment:  # pylint: disable=too-many-instance-attributes
     def __init__(self) -> None:
         self.host = '127.0.0.1'
         self.imap_server = _StubServer(self.host, next(_next_port))

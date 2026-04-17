@@ -48,7 +48,7 @@ class OpenAIProviderClient(BaseProviderClient):
                 ],
                 temperature=0.2,
             )
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             raise ProviderClientError(str(exc)) from exc
         text = getattr(response, 'output_text', '')
         if not text:
@@ -75,10 +75,11 @@ class AnthropicProviderClient(BaseProviderClient):
                 system=request.system_message,
                 messages=[{'role': 'user', 'content': request.prompt}],
             )
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             raise ProviderClientError(str(exc)) from exc
         blocks = getattr(response, 'content', [])
-        texts = [getattr(block, 'text', '') for block in blocks if getattr(block, 'type', '') == 'text']
+        texts = [getattr(block, 'text', '')
+                 for block in blocks if getattr(block, 'type', '') == 'text']
         text = '\n'.join(part for part in texts if part).strip()
         if not text:
             raise ProviderClientError('Anthropic response contained no text blocks')
@@ -89,7 +90,8 @@ class OllamaProviderClient(BaseProviderClient):
     provider_name = 'ollama'
 
     def summarize(self, request: ProviderRequest) -> str:
-        payload = {'model': request.model, 'system': request.system_message, 'prompt': request.prompt, 'stream': False}
+        payload = {'model': request.model, 'system': request.system_message,
+                   'prompt': request.prompt, 'stream': False}
         req = Request(
             url=f"{request.host.rstrip('/')}/api/generate",
             data=json.dumps(payload).encode('utf-8'),
