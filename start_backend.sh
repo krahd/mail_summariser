@@ -50,5 +50,7 @@ fi
 
 source .venv/bin/activate
 
-# Use module form to avoid stale .venv/bin/uvicorn shebang issues
-python -m uvicorn app:app --reload --host "$HOST" --port "$PORT"
+# Use module form and ensure the repository root is on PYTHONPATH so the
+# top-level `backend` package can be imported even when the script cd's into
+# the `backend` directory.
+PYTHONPATH="$(pwd)/.." python -m uvicorn backend.app:app --reload --host "$HOST" --port "$PORT"

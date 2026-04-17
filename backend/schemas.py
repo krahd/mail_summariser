@@ -1,23 +1,23 @@
-from typing import Optional
+from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
 
 class SearchCriteria(BaseModel):
-    keyword: str = ""
-    rawSearch: str = ""
-    sender: str = ""
-    recipient: str = ""
-    unreadOnly: bool = True
+    keyword: str = ''
+    rawSearch: str = ''
+    sender: str = ''
+    recipient: str = ''
+    tag: str = ''
+    unreadOnly: bool = False
     readOnly: bool = False
-    replied: Optional[bool] = None
-    tag: str = ""
+    replied: bool | None = None
     useAnd: bool = True
 
 
 class SummaryRequest(BaseModel):
-    criteria: SearchCriteria
-    summaryLength: int = Field(default=5, ge=1)
+    criteria: SearchCriteria = Field(default_factory=SearchCriteria)
+    summaryLength: int = 5
 
 
 class MessageItem(BaseModel):
@@ -27,9 +27,13 @@ class MessageItem(BaseModel):
     date: str
 
 
-class MessageDetail(MessageItem):
-    recipient: str = ""
-    body: str = ""
+class MessageDetail(BaseModel):
+    id: str
+    subject: str
+    sender: str
+    recipient: str
+    date: str
+    body: str
 
 
 class SummaryResponse(BaseModel):
@@ -38,23 +42,21 @@ class SummaryResponse(BaseModel):
     summary: str
 
 
-class JobAction(BaseModel):
-    jobId: str
+class DatabaseResetRequest(BaseModel):
+    confirmation: str
 
 
-class ModelDownloadRequest(BaseModel):
-    name: str
-
-
-class ActionLogItem(BaseModel):
-    id: str
-    timestamp: str
-    action: str
+class DatabaseResetResponse(BaseModel):
     status: str
-    details: str
-    job_id: str | None = None
-    undoable: bool | None = None
-    undo_status: str | None = None
+    message: str
+    removed: dict[str, int]
+    settings: 'AppSettings'
+
+
+class SystemMessageDefaultsResponse(BaseModel):
+    ollamaSystemMessage: str
+    openaiSystemMessage: str
+    anthropicSystemMessage: str
 
 
 class AppSettings(BaseModel):
@@ -71,8 +73,8 @@ class AppSettings(BaseModel):
     recipientEmail: str
     summarisedTag: str
     llmProvider: str
-    openaiApiKey: str
-    anthropicApiKey: str
+    openaiApiKey: str = ''
+    anthropicApiKey: str = ''
     ollamaHost: str
     ollamaAutoStart: bool
     ollamaStartOnStartup: bool
@@ -84,70 +86,5 @@ class AppSettings(BaseModel):
     backendBaseURL: str
 
 
-class SystemMessageDefaultsResponse(BaseModel):
-    ollamaSystemMessage: str
-    openaiSystemMessage: str
-    anthropicSystemMessage: str
-
-
 class DummyModeUpdate(BaseModel):
     dummyMode: bool
-
-
-class BackendRuntimeStatus(BaseModel):
-    running: bool
-    canShutdown: bool
-
-
-class OllamaRuntimeStatus(BaseModel):
-    installed: bool
-    running: bool
-    startedByApp: bool
-    host: str
-    modelName: str
-    startupAction: str
-    message: str
-    installUrl: str
-
-
-class RuntimeStatusResponse(BaseModel):
-    backend: BackendRuntimeStatus
-    ollama: OllamaRuntimeStatus
-
-
-class RuntimeActionResponse(BaseModel):
-    status: str
-    message: str
-    runtime: RuntimeStatusResponse
-
-
-class DatabaseResetRequest(BaseModel):
-    confirmation: str
-
-
-class DatabaseResetCounts(BaseModel):
-    settings: int
-    logs: int
-    jobs: int
-    undo: int
-
-
-class DatabaseResetResponse(BaseModel):
-    status: str
-    message: str
-    removed: DatabaseResetCounts
-    settings: AppSettings
-
-
-class FakeMailStatusResponse(BaseModel):
-    enabled: bool = False
-    running: bool = False
-    message: str = "Developer fake mail server is disabled."
-    imapHost: str = "127.0.0.1"
-    imapPort: int = 0
-    smtpHost: str = "127.0.0.1"
-    smtpPort: int = 0
-    username: str = ""
-    password: str = ""
-    recipientEmail: str = ""
-    suggestedSettings: AppSettings | None = None
