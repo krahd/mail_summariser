@@ -42,16 +42,8 @@ class SummaryResponse(BaseModel):
     summary: str
 
 
-class JobAction(BaseModel):
-    jobId: str
-
-
 class DatabaseResetRequest(BaseModel):
     confirmation: str
-
-
-class DummyModeUpdate(BaseModel):
-    dummyMode: bool
 
 
 class DatabaseResetResponse(BaseModel):
@@ -65,45 +57,6 @@ class SystemMessageDefaultsResponse(BaseModel):
     ollamaSystemMessage: str
     openaiSystemMessage: str
     anthropicSystemMessage: str
-
-
-class FakeMailStatusResponse(BaseModel):
-    enabled: bool
-    running: bool
-    message: str
-    imapHost: str
-    imapPort: int
-    smtpHost: str
-    smtpPort: int
-    username: str
-    password: str
-    recipientEmail: str
-    suggestedSettings: dict | None = None
-
-
-class RuntimeBackendStatus(BaseModel):
-    running: bool
-    canShutdown: bool
-
-
-class RuntimeProviderStatus(BaseModel):
-    running: bool
-    message: str
-
-
-class RuntimeStatusResponse(BaseModel):
-    backend: RuntimeBackendStatus
-    ollama: RuntimeProviderStatus
-
-
-class RuntimeActionResponse(BaseModel):
-    status: str
-    message: str
-    runtime: RuntimeStatusResponse
-
-
-class ModelDownloadRequest(BaseModel):
-    name: str
 
 
 class AppSettings(BaseModel):
@@ -131,3 +84,7 @@ class AppSettings(BaseModel):
     anthropicSystemMessage: str
     modelName: str
     backendBaseURL: str
+
+
+class DummyModeUpdate(BaseModel):
+    dummyMode: bool

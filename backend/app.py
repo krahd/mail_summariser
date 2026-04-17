@@ -19,6 +19,7 @@ from backend.mail_service import (
     add_keyword_tag,
     remove_keyword_tag,
     send_summary_email,
+    test_mail_connection,
 )
 from backend.schemas import (
     AppSettings,
@@ -293,10 +294,8 @@ def create_summary(request: SummaryRequest) -> SummaryResponse:
 def test_connection(settings: dict) -> dict:
     try:
         payload = settings if isinstance(settings, dict) else settings.model_dump()
-        # Validate dummy mode flag
-        if is_dummy_mode(payload):
-            return {'mode': 'dummy'}
-        return {'mode': 'imap'}
+        # Delegate to mail service which returns a detailed status payload
+        return test_mail_connection(payload)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -388,33 +387,9 @@ def actions_email_summary(payload: dict) -> dict:
             send_summary_email(settings.get('recipientEmail', ''),
                                'Mail summary', summary_text, settings)
         else:
-            host = settings.get('smtpHost')
-            port = settings.get('smtpPort')
-            use_ssl = bool(settings.get('smtpUseSSL'))
-            username = settings.get('username')
-            password = settings.get('smtpPassword') or settings.get('imapPassword')
-            msg = EmailMessage()
-            msg['Subject'] = 'Mail summary'
-            msg['From'] = username or ''
-            msg['To'] = settings.get('recipientEmail', '')
-            msg.set_content(summary_text or '')
-            if use_ssl:
-                smtp = smtplib.SMTP_SSL(host, int(port))
-            else:
-                smtp = smtplib.SMTP(host, int(port))
-            try:
-                smtp.ehlo()
-                if username and password:
-                    try:
-                        smtp.login(username, password)
-                    except Exception:
-                        pass
-                smtp.send_message(msg)
-            finally:
-                try:
-                    smtp.quit()
-                except Exception:
-                    pass
+            # Use unified helper which handles fake SMTP environments as well as real SMTP
+            send_summary_email(settings.get('recipientEmail', ''),
+                               'Mail summary', summary_text, settings)
         details = 'email_summary_sent'
         _record_log('email_summary', 'ok', details, job_id=job_id, settings=settings)
         return {'status': 'ok'}
@@ -432,6 +407,41 @@ def actions_undo_log(log_id: str) -> dict:
             settings) else __import__('backend').db.pop_undo_by_log_id(log_id)
         if payload is None:
             raise HTTPException(status_code=404, detail='No undo found for log')
+        action = payload.get('action')
+        job_id = payload.get('job_id')
+        message_ids = payload.get('message_ids', []) or []
+        if action == 'mark_read':
+            restore_messages_unread(message_ids, settings)
+            _record_log(
+                'undo', 'ok', f'restored {len(message_ids)} messages', job_id=job_id, settings=settings)
+        elif action == 'tag_summarised':
+            for mid in message_ids:
+                remove_keyword_tag([mid], str(DEFAULT_SETTINGS.get(
+                    'summarisedTag', 'summarised')), settings)
+            _record_log(
+                'undo', 'ok', f'removed tags from {len(message_ids)} messages', job_id=job_id, settings=settings)
+        else:
+            # Unknown undoable action
+            _record_log(
+                'undo', 'ok', f'performed undo for action {action}', job_id=job_id, settings=settings)
+        return {'status': 'ok'}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post('/actions/undo')
+def actions_undo() -> dict:
+    try:
+        settings = _merged_settings()
+        # Pop the most recent undo payload from the appropriate store
+        if is_dummy_mode(settings):
+            payload = dummy_state.pop_latest_undo()
+        else:
+            payload = __import__('backend').db.pop_latest_undo()
+        if payload is None:
+            raise HTTPException(status_code=404, detail='No undo found')
         action = payload.get('action')
         job_id = payload.get('job_id')
         message_ids = payload.get('message_ids', []) or []
@@ -619,3 +629,31 @@ def runtime_shutdown() -> dict:
     # Schedule backend shutdown
     _schedule_backend_shutdown()
     return {'status': 'ok'}
+
+
+@app.get('/models/options')
+def models_options(provider: str | None = None) -> dict:
+    prov = (provider or 'openai').lower()
+    # Minimal response shape used by the webapp and smoke tests
+    if prov == 'openai':
+        return {'provider': 'openai', 'models': []}
+    if prov == 'ollama':
+        host = str(DEFAULT_SETTINGS.get('ollamaHost', 'http://127.0.0.1:11434'))
+        try:
+            models = model_provider_service.list_ollama_models(host)
+        except Exception:
+            models = []
+        running = model_provider_service.is_ollama_running(host)
+        return {'provider': 'ollama', 'models': models, 'ollama': {'running': running, 'host': host, 'message': getattr(model_provider_service, '_runtime_state', None).last_message if getattr(model_provider_service, '_runtime_state', None) is not None else ''}}
+    return {'provider': prov, 'models': []}
+
+
+@app.get('/models/catalog')
+def models_catalog(query: str | None = None, limit: int | None = 20) -> dict:
+    # For the smoke test we return an Ollama-oriented catalog response
+    host = str(DEFAULT_SETTINGS.get('ollamaHost', 'http://127.0.0.1:11434'))
+    try:
+        models = model_provider_service.list_ollama_models(host)
+    except Exception:
+        models = []
+    return {'provider': 'ollama', 'models': models, 'count': len(models)}

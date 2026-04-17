@@ -29,12 +29,7 @@ ALLOWED_ORIGINS = _split_csv(
         'http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:8766,http://localhost:8766',
     )
 )
-API_KEY = os.getenv('API_KEY', '').strip()
-API_KEY_HEADER = os.getenv('API_KEY_HEADER', 'X-API-Key').strip() or 'X-API-Key'
 ENABLE_DEV_TOOLS = os.getenv('MAIL_SUMMARISER_ENABLE_DEV_TOOLS', 'false').lower() in ('1', 'true', 'yes', 'on')
-
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '').strip()
-ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY', '').strip()
 
 DEFAULT_OPENAI_SYSTEM_MESSAGE = os.getenv(
     'OPENAI_SYSTEM_MESSAGE',
@@ -69,8 +64,8 @@ DEFAULT_SETTINGS = {
     'recipientEmail': os.getenv('RECIPIENT_EMAIL', ''),
     'summarisedTag': os.getenv('SUMMARISED_TAG', 'summarised'),
     'llmProvider': os.getenv('LLM_PROVIDER', 'ollama'),
-    'openaiApiKey': OPENAI_API_KEY,
-    'anthropicApiKey': ANTHROPIC_API_KEY,
+    'openaiApiKey': os.getenv('OPENAI_API_KEY', '').strip(),
+    'anthropicApiKey': os.getenv('ANTHROPIC_API_KEY', '').strip(),
     'ollamaHost': os.getenv('OLLAMA_HOST', 'http://127.0.0.1:11434'),
     'ollamaAutoStart': os.getenv('OLLAMA_AUTO_START', 'true').lower() in ('1', 'true', 'yes', 'on'),
     'ollamaStartOnStartup': os.getenv('OLLAMA_START_ON_STARTUP', 'false').lower() in ('1', 'true', 'yes', 'on'),

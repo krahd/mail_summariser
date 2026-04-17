@@ -1,15 +1,27 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "modelito"
+name = "mail-summariser"
 version = "0.1.0"
-description = "Lightweight LLM provider abstraction library extracted from mail_summariser"
-readme = "README.md"
-requires-python = ">=3.8"
-authors = [ { name = "mail_summariser contributors" } ]
+description = "Backend service for searching mail and generating summaries via pluggable LLM providers"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "pydantic>=2.8,<3",
+  "uvicorn>=0.30,<1",
+]
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["modelito"]
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3,<9",
+  "httpx>=0.27,<1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = [".", "backend"]
+testpaths = ["tests"]
+
+[tool.setuptools]
+packages = ["backend", "modelito"]

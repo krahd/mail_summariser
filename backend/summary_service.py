@@ -64,27 +64,15 @@ def _detail_label(level: int) -> str:
 
 def _demo_summarize_messages(messages: list[dict], summary_length: int) -> str:
     level = _effective_detail_level(summary_length)
-    intro = _detail_label(level)
-    lines = [intro, '', f'Messages summarized: {len(messages)}', '']
+    lines = [_detail_label(level), '', f'Messages summarized: {len(messages)}', '']
     for idx, message in enumerate(messages, start=1):
         body = message.get('body', '').strip().replace('\n', ' ')
-        excerpt_length = min(520, 60 + level * 20)
-        excerpt = body[:excerpt_length]
+        excerpt = body[: min(520, 60 + level * 20)]
         lines.append(f"{idx}. {message['sender']} — {message['subject']}")
         lines.append(f'   {excerpt}')
         if level >= 5:
             lines.append('   Action: review and decide whether a reply is needed.')
-        if level >= 11 and message.get('date'):
-            lines.append(f"   Timing: message date {message.get('date')}.")
-        if level >= 15:
-            lines.append('   Priority: consider whether this belongs in today’s response queue.')
         lines.append('')
-    if level >= 7:
-        lines.extend(['Overall themes:', '- Follow-ups and planning', '- Items that may need a response'])
-    if level >= 12:
-        lines.extend(['', 'Suggested next steps:', '- Reply to any time-sensitive senders first.', '- Group non-urgent items into one later batch.'])
-    if level >= 18:
-        lines.extend(['', 'Risk watch:', '- Flag anything that could become overdue if ignored.', '- Check for missing context before replying to complex threads.'])
     return '\n'.join(lines).strip()
 
 
@@ -102,9 +90,8 @@ def _build_prompt(messages: list[dict], summary_length: int) -> str:
     ]
     for idx, message in enumerate(messages, start=1):
         body = message.get('body', '').strip().replace('\n', ' ')
-        excerpt = body[:800]
         chunks.append(
-            f"{idx}. Subject: {message.get('subject', '')} | From: {message.get('sender', '')} | Date: {message.get('date', '')}\n   Body: {excerpt}"
+            f"{idx}. Subject: {message.get('subject', '')} | From: {message.get('sender', '')} | Date: {message.get('date', '')}\n   Body: {body[:800]}"
         )
     return '\n'.join(chunks)
 
@@ -118,26 +105,16 @@ def _resolve_provider_api_key(provider: str, cfg: dict) -> str:
     legacy_key = str(cfg.get('llmApiKey', ''))
     openai_key = str(cfg.get('openaiApiKey', ''))
     anthropic_key = str(cfg.get('anthropicApiKey', ''))
-    if legacy_key == '__MASKED__':
-        legacy_key = ''
-    if openai_key == '__MASKED__':
-        openai_key = ''
-    if anthropic_key == '__MASKED__':
-        anthropic_key = ''
+    masked = {'__MASKED__', ''}
     if provider == 'openai':
-        return os.getenv('OPENAI_API_KEY', '').strip() or openai_key or legacy_key
+        return os.getenv('OPENAI_API_KEY', '').strip() or ('' if openai_key in masked else openai_key) or ('' if legacy_key in masked else legacy_key)
     if provider == 'anthropic':
-        return os.getenv('ANTHROPIC_API_KEY', '').strip() or anthropic_key or legacy_key
+        return os.getenv('ANTHROPIC_API_KEY', '').strip() or ('' if anthropic_key in masked else anthropic_key) or ('' if legacy_key in masked else legacy_key)
     return ''
 
 
 def _resolve_system_message(provider: str, cfg: dict) -> str:
-    mapping = {
-        'openai': 'openaiSystemMessage',
-        'anthropic': 'anthropicSystemMessage',
-        'ollama': 'ollamaSystemMessage',
-    }
-    key = mapping[provider]
+    key = {'openai': 'openaiSystemMessage', 'anthropic': 'anthropicSystemMessage', 'ollama': 'ollamaSystemMessage'}[provider]
     fallback = DEFAULT_SYSTEM_MESSAGES[key]
     return str(cfg.get(key, fallback)).strip() or fallback
 
@@ -151,12 +128,7 @@ def _summarize_with_provider(provider: str, model_name: str, prompt: str, system
             raise ProviderError(message)
         request = ProviderRequest(model=model_name, prompt=prompt, system_message=system_message, host=ollama_host, auto_start=auto_start)
     else:
-        request = ProviderRequest(
-            model=model_name,
-            prompt=prompt,
-            system_message=system_message,
-            api_key=_resolve_provider_api_key(provider, cfg),
-        )
+        request = ProviderRequest(model=model_name, prompt=prompt, system_message=system_message, api_key=_resolve_provider_api_key(provider, cfg))
     try:
         return get_provider_client(provider).summarize(request)
     except ProviderClientError as exc:
@@ -178,7 +150,6 @@ def summarize_messages(messages: list[dict], summary_length: int, settings: dict
     except ProviderError as exc:
         fallback = _demo_summarize_messages(messages, summary_length)
         return (
-            'Fallback summary (provider unavailable).\n'
-            f'Reason: {exc}\n\n{fallback}',
+            'Fallback summary (provider unavailable).\n' f'Reason: {exc}\n\n{fallback}',
             {'provider': provider, 'model': model_name, 'status': 'fallback', 'fallback': 'true', 'error': str(exc)},
         )

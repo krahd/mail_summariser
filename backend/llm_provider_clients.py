@@ -38,7 +38,6 @@ class OpenAIProviderClient(BaseProviderClient):
             openai_module = importlib.import_module('openai')
         except ModuleNotFoundError as exc:
             raise ProviderClientError('openai package is not installed') from exc
-
         client = openai_module.OpenAI(api_key=request.api_key.strip())
         try:
             response = client.responses.create(
@@ -49,12 +48,12 @@ class OpenAIProviderClient(BaseProviderClient):
                 ],
                 temperature=0.2,
             )
-            text = getattr(response, 'output_text', '')
-            if text:
-                return str(text).strip()
-            raise ProviderClientError('OpenAI response did not include output_text')
-        except Exception as exc:  # pragma: no cover - depends on library internals
+        except Exception as exc:
             raise ProviderClientError(str(exc)) from exc
+        text = getattr(response, 'output_text', '')
+        if not text:
+            raise ProviderClientError('OpenAI response did not include output_text')
+        return str(text).strip()
 
 
 class AnthropicProviderClient(BaseProviderClient):
@@ -67,7 +66,6 @@ class AnthropicProviderClient(BaseProviderClient):
             anthropic_module = importlib.import_module('anthropic')
         except ModuleNotFoundError as exc:
             raise ProviderClientError('anthropic package is not installed') from exc
-
         client = anthropic_module.Anthropic(api_key=request.api_key.strip())
         try:
             response = client.messages.create(
@@ -77,26 +75,21 @@ class AnthropicProviderClient(BaseProviderClient):
                 system=request.system_message,
                 messages=[{'role': 'user', 'content': request.prompt}],
             )
-            blocks = getattr(response, 'content', [])
-            texts = [getattr(block, 'text', '') for block in blocks if getattr(block, 'type', '') == 'text']
-            text = '\n'.join(part for part in texts if part).strip()
-            if not text:
-                raise ProviderClientError('Anthropic response contained no text blocks')
-            return text
-        except Exception as exc:  # pragma: no cover
+        except Exception as exc:
             raise ProviderClientError(str(exc)) from exc
+        blocks = getattr(response, 'content', [])
+        texts = [getattr(block, 'text', '') for block in blocks if getattr(block, 'type', '') == 'text']
+        text = '\n'.join(part for part in texts if part).strip()
+        if not text:
+            raise ProviderClientError('Anthropic response contained no text blocks')
+        return text
 
 
 class OllamaProviderClient(BaseProviderClient):
     provider_name = 'ollama'
 
     def summarize(self, request: ProviderRequest) -> str:
-        payload = {
-            'model': request.model,
-            'system': request.system_message,
-            'prompt': request.prompt,
-            'stream': False,
-        }
+        payload = {'model': request.model, 'system': request.system_message, 'prompt': request.prompt, 'stream': False}
         req = Request(
             url=f"{request.host.rstrip('/')}/api/generate",
             data=json.dumps(payload).encode('utf-8'),

@@ -1,33 +1,52 @@
-# mail_summariser – implementation patch
+# mail_summariser
 
-This package contains a tested backend-focused implementation update for the `feature/llm-provider-library-extraction` branch.
+This branch extracts provider-specific LLM access behind a small client layer and hardens the backend mail flow around three modes:
+
+- dummy mode for local/demo use
+- real IMAP/SMTP mode
+- developer fake-mail mode for end-to-end tests
 
 ## What changed
 
-- extracted provider integrations into `backend/llm_provider_clients.py`
-- switched OpenAI integration from raw HTTP requests to the official `openai` Python library interface
-- switched Anthropic integration from raw HTTP requests to the official `anthropic` Python library interface
-- kept Ollama on its local HTTP API, but isolated it behind the same provider-client abstraction
-- normalised provider selection so unknown providers fail safe to `ollama`
-- preserved the sentinel-based response validation already used by the backend
-- tightened handling of masked credentials so `__MASKED__` never leaks into provider calls as a fake key
-- expanded the automated test suite to cover provider client behaviour and fallback cases
-- documented the new provider-library architecture and local test workflow
+- cleaned up provider abstractions for OpenAI, Anthropic, and Ollama
+- made summary generation validate responses with a sentinel and fall back safely
+- fixed connection testing so it exercises the actual configured mail path
+- fixed tagging/undo behaviour to use the saved `summarisedTag` setting rather than a hard-coded default
+- simplified app startup and state handling so tests can isolate their own database file cleanly
+- documented the backend flow and test strategy
 
-## Running tests
+## Development
 
-Create a virtual environment, install the dependencies, and run:
+Create a virtual environment and install the project with dev dependencies:
 
 ```bash
-pytest -q
+python -m venv .venv
+source .venv/bin/activate
+pip install -e '.[dev]'
 ```
 
-## Recommended backend dependencies
+Run tests:
 
 ```bash
-pip install fastapi pydantic pytest httpx openai anthropic
+pytest
 ```
 
-## Notes
+Run the API locally:
 
-This package is a backend reconstruction focused on the code paths implicated by the target branch and the existing system-message tests. It is designed to be dropped into the repository and reviewed as a coherent patch.
+```bash
+uvicorn backend.app:app --reload --port 8766
+```
+
+## Notes on provider credentials
+
+The API masks stored secrets on reads. When saving settings, masked values are ignored so existing secrets remain stored.
+
+## Test coverage
+
+The test suite covers:
+
+- provider-library integration and fallbacks
+- provider-specific system messages
+- dummy-mode mail flow, undo, and job isolation
+- live IMAP/SMTP flow against a controllable fake local server
+- developer fake-mail endpoints
