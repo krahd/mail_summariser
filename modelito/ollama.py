@@ -9,13 +9,14 @@ Supports both synchronous and asynchronous operation.
 import subprocess
 import threading
 import json
+import asyncio
 from typing import Any, Dict, List, Optional
 from urllib.request import urlopen, Request
 
 from .base import LLMProvider
 from .base import AsyncLLMProvider
 from .exceptions import LLMProviderError, ProviderUnavailableError, ModelDownloadError
-from .utils import setup_logger
+from .utils import setup_logger, get_env_setting, RateLimiter
 
 _ollama_lock = threading.Lock()
 _logger = setup_logger("modelito.ollama")
@@ -23,9 +24,15 @@ _logger = setup_logger("modelito.ollama")
 class OllamaProvider(LLMProvider):
     def __init__(self, host: str = "http://127.0.0.1:11434"):
         self.host = host.rstrip("/")
+        try:
+            rl = int(get_env_setting("MODELITO_RATE_LIMIT", 60))
+        except Exception:
+            rl = 60
+        self.rate_limiter = RateLimiter(max_calls=rl, period=60.0)
 
     def summarize(self, messages: List[Dict[str, Any]], settings: Optional[Dict[str, Any]] = None) -> str:
-        prompt = self._build_prompt(messages, settings)
+        provided_prompt = (settings or {}).get("prompt")
+        prompt = provided_prompt or self._build_prompt(messages, settings)
         model = (settings or {}).get("modelName", "llama3.2:latest")
         system_message = (settings or {}).get("ollamaSystemMessage", "")
         payload = {
@@ -35,6 +42,9 @@ class OllamaProvider(LLMProvider):
             "stream": False,
         }
         try:
+            _logger.debug("Calling Ollama host=%s model=%s", self.host, model)
+            # apply rate limiting before external request
+            self.rate_limiter.acquire()
             resp = self._post_json(f"{self.host}/api/generate", payload, timeout=45.0)
             text = str(resp.get("response", "")).strip()
             if not text:
@@ -58,14 +68,14 @@ class OllamaProvider(LLMProvider):
             payload = {"name": model_name, "stream": False}
             self._post_json(f"{self.host}/api/pull", payload, timeout=20.0)
             return f"Download requested for {model_name}"
-        except Exception as exc:
+        except (OSError, json.JSONDecodeError) as exc:
             raise ModelDownloadError(f"Failed to request model download: {exc}") from exc
 
     def get_model_status(self, model_name: str) -> Dict[str, Any]:
         try:
             models = self.list_models()
             return {"installed": model_name in models}
-        except Exception as exc:
+        except (OSError, json.JSONDecodeError) as exc:
             raise LLMProviderError(f"Failed to get model status: {exc}") from exc
 
     def start(self) -> str:
@@ -81,7 +91,7 @@ class OllamaProvider(LLMProvider):
                     "ollama", "serve"
                 ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True, env=env)
             return f"Ollama started at {self.host}"
-        except Exception as exc:
+        except (OSError, subprocess.SubprocessError) as exc:
             raise ProviderUnavailableError(f"Failed to start Ollama: {exc}") from exc
 
     def stop(self) -> str:
@@ -116,19 +126,34 @@ class OllamaProvider(LLMProvider):
         # _settings argument is unused but kept for interface compatibility
         return "\n".join(m.get("content", "") for m in messages)
 
-# Async implementation stub (to be completed)
 class AsyncOllamaProvider(AsyncLLMProvider):
+    def __init__(self, host: str = "http://127.0.0.1:11434"):
+        self._sync = OllamaProvider(host=host)
+
     async def summarize(self, messages: List[Dict[str, Any]], settings: Optional[Dict[str, Any]] = None) -> str:
-        raise NotImplementedError("Async Ollama not yet implemented")
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._sync.summarize, messages, settings)
+
     async def list_models(self) -> List[str]:
-        raise NotImplementedError("Async Ollama not yet implemented")
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._sync.list_models)
+
     async def download_model(self, model_name: str) -> str:
-        raise NotImplementedError("Async Ollama not yet implemented")
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._sync.download_model, model_name)
+
     async def get_model_status(self, model_name: str) -> Dict[str, Any]:
-        raise NotImplementedError("Async Ollama not yet implemented")
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._sync.get_model_status, model_name)
+
     async def start(self) -> str:
-        raise NotImplementedError("Async Ollama not yet implemented")
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._sync.start)
+
     async def stop(self) -> str:
-        raise NotImplementedError("Async Ollama not yet implemented")
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._sync.stop)
+
     async def get_runtime_status(self) -> Dict[str, Any]:
-        raise NotImplementedError("Async Ollama not yet implemented")
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._sync.get_runtime_status)

@@ -9,6 +9,8 @@ from .openai import OpenAIProvider
 from .ollama import OllamaProvider
 from .base import LLMProvider, AsyncLLMProvider
 from .exceptions import *
+from .translation import translate_text
+from .scheduler import manager as scheduler
 
 # Provider registry for extensibility
 PROVIDER_REGISTRY = {}

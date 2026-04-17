@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "modelito"
+version = "0.1.0"
+description = "Lightweight LLM provider abstraction library extracted from mail_summariser"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [ { name = "mail_summariser contributors" } ]
+
+[tool.setuptools]
+packages = ["modelito"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["modelito"]
