@@ -33,9 +33,11 @@ class AnthropicProvider(LLMProvider):
     def summarize(self, messages: List[Dict[str, Any]], settings: Optional[Dict[str, Any]] = None) -> str:
         model = (settings or {}).get("modelName", self.default_model)
         system_message = (settings or {}).get("anthropicSystemMessage", "")
-        messages_payload = self._build_messages_payload(messages, (settings or {}).get("prompt"), system_message)
+        messages_payload = self._build_messages_payload(
+            messages, (settings or {}).get("prompt"), system_message)
 
-        payload = {"model": model, "system": system_message, "messages": messages_payload, "max_tokens": 1024}
+        payload = {"model": model, "system": system_message,
+                   "messages": messages_payload, "max_tokens": 1024}
         api_key = (settings or {}).get("apiKey") or self.api_key
         headers = {"x-api-key": api_key, "Content-Type": "application/json"}
         _logger.debug("Anthropic request model=%s api_key=%s", model, mask_api_key(api_key))

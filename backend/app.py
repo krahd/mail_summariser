@@ -67,7 +67,7 @@ async def lifespan(_: FastAPI):
     if 'db' in _sys.modules:
         # copy DB_PATH from top-level db module into backend.db
         try:
-                # Import inside lifespan to respect test-time top-level patching
+            # Import inside lifespan to respect test-time top-level patching
             from backend import db as _backend_db  # pylint: disable=import-outside-toplevel
             _backend_db.DB_PATH = _sys.modules['db'].DB_PATH
         except (ImportError, AttributeError):
