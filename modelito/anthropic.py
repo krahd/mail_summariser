@@ -59,7 +59,8 @@ class AnthropicProvider(LLMProvider):
         _logger.debug("Anthropic request model=%s api_key=%s", model, mask_api_key(api_key))
         try:
             self.rate_limiter.acquire()
-            resp = self._call_post_json(self.endpoint, payload, headers, timeout=45.0, settings=settings)
+            resp = self._call_post_json(self.endpoint, payload, headers,
+                                        timeout=45.0, settings=settings)
             content = resp.get("content", "")
             if not content:
                 raise LLMProviderError(f"Empty Anthropic response: {resp}")
@@ -72,7 +73,8 @@ class AnthropicProvider(LLMProvider):
                     if isinstance(item, dict) and "text" in item:
                         return str(item.get("text", "")).strip()
                 # fallback: concatenate any text fields
-                parts = [str(item.get("text", "")) for item in content if isinstance(item, dict) and item.get("text")]
+                parts = [str(item.get("text", ""))
+                         for item in content if isinstance(item, dict) and item.get("text")]
                 joined = "".join(parts).strip()
                 if joined:
                     return joined

@@ -62,7 +62,8 @@ class OpenAIProvider(LLMProvider):
         try:
             # rate limit external calls
             self.rate_limiter.acquire()
-            resp = self._call_post_json(self.endpoint, payload, headers, timeout=45.0, settings=settings)
+            resp = self._call_post_json(self.endpoint, payload, headers,
+                                        timeout=45.0, settings=settings)
             choices = resp.get("choices", [])
             if not choices:
                 raise LLMProviderError(f"Empty OpenAI response: {resp}")
