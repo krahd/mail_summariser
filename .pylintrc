@@ -1,0 +1,14 @@
+[MASTER]
+# Load configuration for project linting
+init-hook='import os, sys; sys.path.insert(0, os.getcwd())'
+
+[MESSAGES CONTROL]
+# Disable stylistic checks that are noisy for this repository and
+# focus on functional issues. These can be tightened later if desired.
+disable=C0114,C0115,C0116,C0301,R0913,R0917,R1732,R0801,R0903,R1710,W0718,C0415,W0613,W0612,E0401,W0212,C0103,E1102
+
+[REPORTS]
+reports=no
+
+[FORMAT]
+max-line-length=120

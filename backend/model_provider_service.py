@@ -11,14 +11,14 @@ _managed_process = None
 _managed_process_host: str | None = None
 
 
-def _mark_managed_process(process, host: str) -> None:
-    global _managed_process, _managed_process_host
+def _mark_managed_process(process, host: str) -> None:  # pylint: disable=global-statement
+    global _managed_process, _managed_process_host  # pylint: disable=global-statement
     _managed_process = process
     _managed_process_host = host
 
 
-def _clear_managed_process() -> None:
-    global _managed_process, _managed_process_host
+def _clear_managed_process() -> None:  # pylint: disable=global-statement
+    global _managed_process, _managed_process_host  # pylint: disable=global-statement
     _managed_process = None
     _managed_process_host = None
 
@@ -41,13 +41,13 @@ def is_ollama_installed(host: str) -> bool:
 
 def is_ollama_running(host: str) -> bool:
     # Default implementation checks if a managed process appears to be alive
-    global _managed_process
     if _managed_process is None:
         return False
-    poll = getattr(_managed_process, 'poll', None)
+    if not hasattr(_managed_process, 'poll'):
+        return False
     try:
-        return poll() is None
-    except Exception:
+        return _managed_process.poll() is None
+    except (OSError, TypeError):
         return False
 
 
@@ -66,90 +66,72 @@ def ensure_ollama_running(ollama_host: str, auto_start: bool) -> tuple[bool, str
 
     Returns (success: bool, message: str).
     """
+    # Initialize defaults
+    success = False
+    msg = ''
+    warning = True
+
     # Check installed
     if not is_ollama_installed(ollama_host):
-        _runtime_state.last_message = 'Install Ollama'
-        _runtime_state.last_message_host = ollama_host
-        _runtime_state.last_message_warning = True
-        return False, 'Install Ollama'
-
-    # Already running?
-    if is_ollama_running(ollama_host):
+        msg = 'Install Ollama'
+        success = False
+        warning = True
+    elif is_ollama_running(ollama_host):
         msg = f'Ollama already running at {ollama_host}'
-        _runtime_state.last_message = msg
-        _runtime_state.last_message_host = ollama_host
-        _runtime_state.last_message_warning = False
-        return True, msg
+        success = True
+        warning = False
+    elif not auto_start:
+        msg = 'Ollama not running'
+        success = False
+        warning = True
+    else:
+        # Attempt to start and warm Ollama in a helper to reduce nested branching
+        def _start_and_warm(host: str) -> tuple[bool, str, bool]:
+            try:
+                proc = subprocess.Popen(['ollama', 'serve'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                _mark_managed_process(proc, host)
+            except (OSError, subprocess.SubprocessError) as exc:
+                return False, f'Failed to start Ollama: {exc}', True
 
-    if not auto_start:
-        _runtime_state.last_message = 'Ollama not running'
-        _runtime_state.last_message_host = ollama_host
-        _runtime_state.last_message_warning = True
-        return False, 'Ollama not running'
+            for _ in range(10):
+                if is_ollama_running(host):
+                    break
+                time.sleep(0.05)
 
-    # Try to start a managed process - tests may patch subprocess.Popen
-    try:
-        proc = subprocess.Popen(['ollama', 'serve'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        _mark_managed_process(proc, ollama_host)
-    except Exception as exc:
-        msg = f'Failed to start Ollama: {exc}'
-        _runtime_state.last_message = msg
-        _runtime_state.last_message_host = ollama_host
-        _runtime_state.last_message_warning = True
-        return False, msg
+            if not is_ollama_running(host):
+                return False, 'Failed to start Ollama', True
 
-    # Wait briefly for it to report running
-    for _ in range(10):
-        if is_ollama_running(ollama_host):
-            break
-        time.sleep(0.05)
+            models = list_ollama_models(host)
+            if not models:
+                return True, 'running (models not installed)', True
 
-    if not is_ollama_running(ollama_host):
-        msg = 'Failed to start Ollama'
-        _runtime_state.last_message = msg
-        _runtime_state.last_message_host = ollama_host
-        _runtime_state.last_message_warning = True
-        return False, msg
+            try:
+                _post_json(f"{host}/models/{models[0]}/generate", {"prompt": "warm up"})
+                _runtime_state.last_message_model = models[0]
+                return True, f'ready with model {models[0]}', False
+            except Exception:  # pylint: disable=broad-except
+                return True, 'running (model warm-up failed)', False
 
-    # Warm model if available
-    models = list_ollama_models(ollama_host)
-    if models:
-        try:
-            _post_json(f"{ollama_host}/models/{models[0]}/generate", {"prompt": "warm up"})
-            msg = f'ready with model {models[0]}'
-            _runtime_state.last_message = msg
-            _runtime_state.last_message_host = ollama_host
-            _runtime_state.last_message_model = models[0]
-            _runtime_state.last_message_warning = False
-            return True, msg
-        except Exception:
-            msg = 'running (model warm-up failed)'
-            _runtime_state.last_message = msg
-            _runtime_state.last_message_host = ollama_host
-            _runtime_state.last_message_warning = False
-            return True, msg
-    # No models installed on the Ollama runtime
-    msg = 'running (models not installed)'
+        success, msg, warning = _start_and_warm(ollama_host)
+
+    # Update runtime state once before returning
     _runtime_state.last_message = msg
     _runtime_state.last_message_host = ollama_host
-    _runtime_state.last_message_warning = True
-    return True, msg
+    _runtime_state.last_message_warning = bool(warning)
+    return success, msg
 
 
-def stop_managed_ollama(only_owned: bool) -> tuple[bool, str]:
-    global _managed_process
+def stop_managed_ollama(only_owned: bool) -> tuple[bool, str]:  # pylint: disable=global-statement
     if _managed_process is None:
         return False, 'No Ollama process started by mail_summariser'
     try:
         # Prefer a graceful stop if available
-        send_signal = getattr(_managed_process, 'send_signal', None)
-        if callable(send_signal):
-            send_signal(None)
-        else:
-            terminate = getattr(_managed_process, 'terminate', None)
-            if callable(terminate):
-                terminate()
-    except Exception:
+        if hasattr(_managed_process, 'send_signal') and callable(_managed_process.send_signal):
+            _managed_process.send_signal(None)
+        elif hasattr(_managed_process, 'terminate') and callable(_managed_process.terminate):
+            _managed_process.terminate()
+    except OSError:
+        # Best-effort: ignore OS-level errors during shutdown
         pass
     _clear_managed_process()
     return True, 'Stopped app-managed Ollama'

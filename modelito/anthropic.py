@@ -33,29 +33,11 @@ class AnthropicProvider(LLMProvider):
     def summarize(self, messages: List[Dict[str, Any]], settings: Optional[Dict[str, Any]] = None) -> str:
         model = (settings or {}).get("modelName", self.default_model)
         system_message = (settings or {}).get("anthropicSystemMessage", "")
-        provided_prompt = (settings or {}).get("prompt")
-        if provided_prompt:
-            messages_payload = [
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": provided_prompt},
-            ]
-        else:
-            messages_payload = [
-                *[{"role": m.get("role", "user"), "content": m.get("content", "")}
-                  for m in messages],
-            ]
+        messages_payload = self._build_messages_payload(messages, (settings or {}).get("prompt"), system_message)
 
-        payload = {
-            "model": model,
-            "system": system_message,
-            "messages": messages_payload,
-            "max_tokens": 1024,
-        }
+        payload = {"model": model, "system": system_message, "messages": messages_payload, "max_tokens": 1024}
         api_key = (settings or {}).get("apiKey") or self.api_key
-        headers = {
-            "x-api-key": api_key,
-            "Content-Type": "application/json",
-        }
+        headers = {"x-api-key": api_key, "Content-Type": "application/json"}
         _logger.debug("Anthropic request model=%s api_key=%s", model, mask_api_key(api_key))
         try:
             self.rate_limiter.acquire()
@@ -81,6 +63,11 @@ class AnthropicProvider(LLMProvider):
                 raise LLMProviderError(f"Anthropic returned unexpected content shape: {resp}")
         except (OSError, URLError, json.JSONDecodeError) as exc:
             raise LLMProviderError(f"Anthropic summarize failed: {exc}") from exc
+
+    def _build_messages_payload(self, messages: List[Dict[str, Any]], provided_prompt: Optional[str], system_message: str) -> List[Dict[str, Any]]:
+        if provided_prompt:
+            return [{"role": "system", "content": system_message}, {"role": "user", "content": provided_prompt}]
+        return [{"role": m.get("role", "user"), "content": m.get("content", "")} for m in messages]
 
     def _call_post_json(self, url: str, payload: dict, headers: dict, timeout: float = 15.0, settings: Optional[Dict[str, Any]] = None) -> dict:
         hook = (settings or {}).get("_post_json")

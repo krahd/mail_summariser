@@ -45,20 +45,18 @@ def _effective_detail_level(summary_length: int) -> int:
 
 
 def _detail_label(level: int) -> str:
-    if level <= 2:
-        return 'Very terse digest'
-    if level <= 4:
-        return 'Compact digest'
-    if level <= 6:
-        return 'Balanced digest'
-    if level <= 9:
-        return 'Detailed digest'
-    if level <= 12:
-        return 'Comprehensive digest'
-    if level <= 16:
-        return 'Expanded digest'
-    if level <= 20:
-        return 'In-depth digest'
+    labels = [
+        (2, 'Very terse digest'),
+        (4, 'Compact digest'),
+        (6, 'Balanced digest'),
+        (9, 'Detailed digest'),
+        (12, 'Comprehensive digest'),
+        (16, 'Expanded digest'),
+        (20, 'In-depth digest'),
+    ]
+    for max_level, text in labels:
+        if level <= max_level:
+            return text
     return 'Extended digest'
 
 

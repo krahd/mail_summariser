@@ -1,13 +1,37 @@
+"""mail_summariser FastAPI application and HTTP route handlers.
+
+This module exposes the FastAPI application and routes used by the mail
+summariser backend. Pylint checks are selectively disabled here for some
+dynamic import and callable detection patterns used for test patching.
+"""
+
+# Local pylint tweaks: dynamic imports and runtime-callable checks used by tests
+# pylint: disable=not-callable
+
 import contextlib
 from datetime import datetime
+from typing import Callable, Optional
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, HTTPException  # pylint: disable=import-error
+from fastapi.middleware.cors import CORSMiddleware  # pylint: disable=import-error
 
 from backend import dummy_state
-from backend.config import ALLOWED_ORIGINS, DEFAULT_SETTINGS, DEFAULT_SYSTEM_MESSAGES, ENABLE_DEV_TOOLS as _CONFIG_ENABLE_DEV_TOOLS
-from backend.db import get_job, init_db, insert_job, list_logs, list_settings, reset_database, set_setting
+from backend.config import (
+    ALLOWED_ORIGINS,
+    DEFAULT_SETTINGS,
+    DEFAULT_SYSTEM_MESSAGES,
+    ENABLE_DEV_TOOLS as _CONFIG_ENABLE_DEV_TOOLS,
+)
+from backend.db import (
+    get_job,
+    init_db,
+    insert_job,
+    list_logs,
+    list_settings,
+    reset_database,
+    set_setting,
+)
 from backend.logging_service import log_action
 from backend.mail_service import (
     MailServiceError,
@@ -33,56 +57,42 @@ from backend.schemas import (
 )
 from backend.summary_service import summarize_messages
 from backend import model_provider_service
-import smtplib
-from email.message import EmailMessage
 
 
 @contextlib.asynccontextmanager
 async def lifespan(_: FastAPI):
     # If tests imported a top-level 'db' module and set its DB_PATH, honor it here so
     # the app uses the same database file as the tests.
-    try:
-        import sys as _sys
-        if 'db' in _sys.modules:
-            # copy DB_PATH from top-level db module into backend.db
-            try:
-                from backend import db as _backend_db
-                _backend_db.DB_PATH = _sys.modules['db'].DB_PATH
-            except Exception:
-                pass
-    except Exception:
-        pass
+    import sys as _sys  # pylint: disable=import-outside-toplevel
+    if 'db' in _sys.modules:
+        # copy DB_PATH from top-level db module into backend.db
+        try:
+                # Import inside lifespan to respect test-time top-level patching
+            from backend import db as _backend_db  # pylint: disable=import-outside-toplevel
+            _backend_db.DB_PATH = _sys.modules['db'].DB_PATH
+        except (ImportError, AttributeError):
+            pass
     init_db()
     # If a top-level model_provider_service module was imported by tests and patched,
     # prefer that module so the app observes the test patches.
-    try:
-        import sys as _sys
-        if 'model_provider_service' in _sys.modules:
-            try:
-                import importlib
-
-                # Replace the reference used by this module
-                globals()['model_provider_service'] = _sys.modules['model_provider_service']
-            except Exception:
-                pass
-    except Exception:
-        pass
+    if 'model_provider_service' in _sys.modules:
+        try:
+            # Replace the reference used by this module with the test-patched one
+            globals()['model_provider_service'] = _sys.modules['model_provider_service']
+        except (ImportError, AttributeError):
+            pass
     # If tests imported a top-level dummy_state module, prefer that instance
-    try:
-        import sys as _sys
-        if 'dummy_state' in _sys.modules:
-            try:
-                globals()['dummy_state'] = _sys.modules['dummy_state']
-            except Exception:
-                pass
-    except Exception:
-        pass
+    if 'dummy_state' in _sys.modules:
+        try:
+            globals()['dummy_state'] = _sys.modules['dummy_state']
+        except (ImportError, AttributeError):
+            pass
     # Ensure database contains the known defaults at startup (add missing defaults only)
     # Debug: show DB path and seeded settings
     try:
-        from backend import db as _db
+        from backend import db as _db  # pylint: disable=import-outside-toplevel
         print(f"[DEBUG-lifespan] seeded DB_PATH={_db.DB_PATH}")
-    except Exception:
+    except (ImportError, AttributeError):
         pass
     current = list_settings()
     print(f"[DEBUG-lifespan] seeded settings at lifespan start: {current}")
@@ -98,9 +108,10 @@ async def lifespan(_: FastAPI):
             try:
                 # Best-effort; allow provider to handle subprocess mocking in tests
                 model_provider_service.ensure_ollama_running(host, auto_start=True)
-            except Exception:
+            except (AttributeError, TypeError, OSError):
+                # Ignore common issues when test-patching the provider or starting subprocesses
                 pass
-    except Exception:
+    except (AttributeError, TypeError):
         pass
     yield
 
@@ -123,7 +134,7 @@ ENABLE_DEV_TOOLS = _CONFIG_ENABLE_DEV_TOOLS
 
 # Backend runtime/shutdown state used by tests
 _backend_shutdown_requested: bool = False
-_shutdown_callback = None
+_shutdown_callback: Optional[Callable[[], None]] = None  # pylint: disable=invalid-name
 
 
 # Fake mail manager (dev tools) -------------------------------------------------
@@ -136,22 +147,20 @@ class _FakeMailManager:
             return
         try:
             # FakeMailEnvironment provides stop()/start() or context manager methods
-            stop = getattr(self._environment, "stop", None)
-            if callable(stop):
-                stop()
+            if hasattr(self._environment, 'stop') and callable(self._environment.stop):
+                self._environment.stop()
         finally:
             self._environment = None
 
     def start(self):
         if self._environment is not None:
             return self._environment
-        from backend.fake_mail_server import FakeMailEnvironment
+        from backend.fake_mail_server import FakeMailEnvironment  # pylint: disable=import-outside-toplevel
 
         env = FakeMailEnvironment()
         # Prefer explicit start() when available
-        start = getattr(env, "start", None)
-        if callable(start):
-            start()
+        if hasattr(env, 'start') and callable(env.start):
+            env.start()
         self._environment = env
         return env
 
@@ -163,17 +172,20 @@ def _reset_dummy_sandbox() -> None:
     # Clear in-memory dummy stores and reset fake mailbox state
     try:
         dummy_state.reset_dummy_session_store()
-    except Exception:
+    except (AttributeError, TypeError):
         pass
     try:
         reset_dummy_mailbox()
-    except Exception:
+    except (AttributeError, TypeError):
         pass
 
 
+# Some runtime patterns here use test-time injected callbacks and dynamic imports
+# which confuse static checks; disable the not-callable check locally.
+# pylint: disable=not-callable, import-outside-toplevel
 def _schedule_backend_shutdown(delay_seconds: float = 0.1) -> None:
     """Schedule a backend shutdown callback after a short delay."""
-    global _backend_shutdown_requested
+    global _backend_shutdown_requested  # pylint: disable=global-statement
     _backend_shutdown_requested = True
     if _shutdown_callback is None:
         return
@@ -181,8 +193,11 @@ def _schedule_backend_shutdown(delay_seconds: float = 0.1) -> None:
 
     def _run() -> None:
         try:
-            _shutdown_callback()
-        except Exception:
+            if callable(_shutdown_callback):
+                # _shutdown_callback is typed as Optional[Callable], guard with callable()
+                _shutdown_callback()  # pylint: disable=not-callable
+        except Exception:  # pylint: disable=broad-except
+            # Swallow errors from callbacks; shutdown should be best-effort
             pass
 
     t = threading.Timer(delay_seconds, _run)
@@ -242,7 +257,7 @@ def get_settings() -> AppSettings:
     # Debug: show effective defaults and persisted settings when running tests
     try:
         current = list_settings()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         current = {}
     print(
         f"[DEBUG] DEFAULT_SETTINGS dummyMode={DEFAULT_SETTINGS.get('dummyMode')} persisted={current.get('dummyMode')}")
@@ -296,7 +311,7 @@ def test_connection(settings: dict) -> dict:
         payload = settings if isinstance(settings, dict) else settings.model_dump()
         # Delegate to mail service which returns a detailed status payload
         return test_mail_connection(payload)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
@@ -309,7 +324,7 @@ def set_dummy_mode(payload: dict) -> dict:
         if not dummy_mode:
             dummy_state.reset_dummy_session_store()
         return {'dummyMode': dummy_mode}
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
@@ -348,7 +363,7 @@ def actions_mark_read(payload: dict) -> dict:
         return {'status': 'ok'}
     except HTTPException:
         raise
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
@@ -370,7 +385,7 @@ def actions_tag_summarised(payload: dict) -> dict:
         return {'status': 'ok'}
     except HTTPException:
         raise
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
@@ -395,7 +410,7 @@ def actions_email_summary(payload: dict) -> dict:
         return {'status': 'ok'}
     except HTTPException:
         raise
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
@@ -427,7 +442,7 @@ def actions_undo_log(log_id: str) -> dict:
         return {'status': 'ok'}
     except HTTPException:
         raise
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
@@ -462,7 +477,7 @@ def actions_undo() -> dict:
         return {'status': 'ok'}
     except HTTPException:
         raise
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
@@ -559,16 +574,16 @@ def _build_runtime_status() -> dict:
 
     try:
         installed = bool(getattr(model_provider_service, 'is_ollama_installed')(host))
-    except Exception:
+    except (AttributeError, TypeError, OSError):
         installed = False
     try:
         running = bool(getattr(model_provider_service, 'is_ollama_running')(host))
-    except Exception:
+    except (AttributeError, TypeError, OSError):
         running = False
     try:
         # Determine whether the running process was started by this app
         started_by_app = getattr(model_provider_service, '_managed_process_host', None) == host
-    except Exception:
+    except (AttributeError, TypeError):
         started_by_app = False
 
     if not installed:
@@ -587,7 +602,7 @@ def _build_runtime_status() -> dict:
         rt = getattr(model_provider_service, '_runtime_state', None)
         if rt and getattr(rt, 'last_message_host', '') == host and getattr(rt, 'last_message', ''):
             message = rt.last_message
-    except Exception:
+    except (AttributeError, TypeError):
         pass
 
     # Expose current runtime structure
@@ -618,7 +633,7 @@ def runtime_start_ollama() -> dict:
     # If models are missing, return a warning
     try:
         models = model_provider_service.list_ollama_models(host)
-    except Exception:
+    except (AttributeError, TypeError, OSError):
         models = []
     status = 'ok' if models else 'warning'
     return {'status': status, 'message': message, 'runtime': runtime}
@@ -641,7 +656,7 @@ def models_options(provider: str | None = None) -> dict:
         host = str(DEFAULT_SETTINGS.get('ollamaHost', 'http://127.0.0.1:11434'))
         try:
             models = model_provider_service.list_ollama_models(host)
-        except Exception:
+        except (AttributeError, TypeError, OSError):
             models = []
         running = model_provider_service.is_ollama_running(host)
         return {'provider': 'ollama', 'models': models, 'ollama': {'running': running, 'host': host, 'message': getattr(model_provider_service, '_runtime_state', None).last_message if getattr(model_provider_service, '_runtime_state', None) is not None else ''}}
@@ -654,6 +669,6 @@ def models_catalog(query: str | None = None, limit: int | None = 20) -> dict:
     host = str(DEFAULT_SETTINGS.get('ollamaHost', 'http://127.0.0.1:11434'))
     try:
         models = model_provider_service.list_ollama_models(host)
-    except Exception:
+    except (AttributeError, TypeError, OSError):
         models = []
     return {'provider': 'ollama', 'models': models, 'count': len(models)}

@@ -3,9 +3,10 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 import imaplib
+import smtplib
+from contextlib import contextmanager
 from email.parser import BytesParser
 from email.policy import default
-import smtplib
 from email.message import EmailMessage
 
 from backend.schemas import SearchCriteria
@@ -45,7 +46,7 @@ _dummy_outbox: list[dict[str, str]] = []
 
 
 def reset_dummy_mailbox() -> None:
-    global _dummy_mailbox
+    global _dummy_mailbox  # pylint: disable=global-statement
     _dummy_mailbox = deepcopy(DEFAULT_DUMMY_MESSAGES)
     _dummy_outbox.clear()
 
@@ -98,9 +99,218 @@ def _find_dummy_messages(message_ids: list[str]) -> list[dict[str, Any]]:
     return [message for message in _dummy_mailbox if message['id'] in wanted]
 
 
+def _get_fake_env_for_host_port(host: str, port: int):
+    try:
+        from backend.fake_mail_server import REGISTRY as _REG  # pylint: disable=import-outside-toplevel
+        return _REG.get((host, port))
+    except (ImportError, AttributeError):
+        return None
+
+
+def _env_messages_from_env(env) -> list[dict[str, Any]]:
+    env_messages: list[dict[str, Any]] = []
+    for msg in env.list_messages():
+        flags = env.flags_for(msg['id'])
+        env_messages.append({
+            'id': str(msg.get('id', '')),
+            'subject': msg.get('subject', ''),
+            'sender': msg.get('sender', ''),
+            'recipient': msg.get('recipient', ''),
+            'date': msg.get('date', ''),
+            'body': msg.get('body', ''),
+            'unread': '\\Seen' not in flags,
+            'replied': '\\Answered' in flags,
+            'keywords': [f for f in flags if not f.startswith('\\')],
+        })
+    return env_messages
+
+
+@contextmanager
+def _imap_connection(host: str, port: int, use_ssl: bool, username: str | None, password: str | None):
+    imap = _open_imap(host, port, use_ssl)
+    try:
+        if username:
+            try:
+                imap.login(username, password or '')
+            except imaplib.IMAP4.error:
+                pass
+        imap.select('INBOX')
+        yield imap
+    finally:
+        try:
+            imap.logout()
+        except (imaplib.IMAP4.error, OSError):
+            pass
+
+
+def _imap_message_from_uid(imap, uid: str) -> dict[str, Any] | None:
+    try:
+        ftyp, fdata = imap.uid('fetch', uid, '(BODY.PEEK[])')
+    except (imaplib.IMAP4.error, OSError):
+        return None
+    if ftyp != 'OK' or not fdata:
+        return None
+    parsed = _parse_fetched_message(fdata)
+    if parsed is None:
+        return None
+    msg, body_text = parsed
+    flags = _fetch_flags(imap, uid)
+    return {
+        'id': uid,
+        'subject': msg.get('Subject', ''),
+        'sender': msg.get('From', ''),
+        'recipient': msg.get('To', ''),
+        'date': msg.get('Date', ''),
+        'body': str(body_text),
+        'unread': '\\Seen' not in flags,
+        'replied': '\\Answered' in flags,
+        'keywords': [f for f in flags if not f.startswith('\\')],
+    }
+
+
+def _collect_imap_messages(host: str, port: int, use_ssl: bool, username: str | None, password: str | None) -> list[dict[str, Any]]:
+    msgs: list[dict[str, Any]] = []
+    with _imap_connection(host, port, use_ssl, username, password) as imap:
+        typ, data = imap.uid('search', None, 'ALL')
+        if typ != 'OK' or not data or not data[0]:
+            return []
+        raw_uids = data[0].split()
+        for raw_uid in raw_uids:
+            uid = raw_uid.decode('utf-8') if isinstance(raw_uid, bytes) else str(raw_uid)
+            m = _imap_message_from_uid(imap, uid)
+            if m is not None:
+                msgs.append(m)
+    return msgs
+
+
+def _check_imap_connection(host: str, port: int, use_ssl: bool, username: str | None, password: str | None) -> tuple[bool, str]:
+    try:
+        _env = _get_fake_env_for_host_port(host, port)
+        if _env is not None:
+            return True, 'IMAP OK'
+        try:
+            imap = _open_imap(host, port, use_ssl)
+            if username:
+                try:
+                    imap.login(username, password or '')
+                except imaplib.IMAP4.error as exc:
+                    return False, str(exc)
+            return True, 'IMAP OK'
+        finally:
+            try:
+                imap.logout()
+            except Exception:
+                pass
+    except (imaplib.IMAP4.error, OSError) as exc:
+        return False, str(exc)
+
+
+def _check_smtp_connection(host: str, port: int, use_ssl: bool) -> tuple[bool, str]:
+    try:
+        _env = _get_fake_env_for_host_port(host, port)
+        if _env is not None:
+            return True, 'SMTP OK'
+        if use_ssl:
+            smtp = smtplib.SMTP_SSL(host, port)
+        else:
+            smtp = smtplib.SMTP(host, port)
+        try:
+            smtp.ehlo()
+            return True, 'SMTP OK'
+        finally:
+            try:
+                smtp.quit()
+            except Exception:
+                pass
+    except (smtplib.SMTPException, OSError) as exc:
+        return False, str(exc)
+
+
+def _add_tag_to_env(env, normalized_tag: str, message_ids: list[str]) -> list[str]:
+    added: list[str] = []
+    for uid in message_ids:
+        for m in env.messages.values():
+            if str(m.get('id')) == str(uid):
+                current = [kw for kw in m['flags'] if not kw.startswith('\\')]
+                if normalized_tag.lower() not in [item.lower() for item in current]:
+                    m['flags'].add(normalized_tag)
+                    added.append(str(m.get('id')))
+    return added
+
+
+def _remove_tag_from_env(env, normalized_tag: str, message_ids: list[str]) -> None:
+    for uid in message_ids:
+        for m in env.messages.values():
+            if str(m.get('id')) == str(uid):
+                to_remove = [kw for kw in list(m['flags']) if not kw.startswith('\\') and kw.lower() == normalized_tag.lower()]
+                for kw in to_remove:
+                    m['flags'].discard(kw)
+
+
+def _imap_add_flag(host: str, port: int, use_ssl: bool, username: str | None, password: str | None, message_ids: list[str], normalized_tag: str) -> list[str]:
+    added: list[str] = []
+    with _imap_connection(host, port, use_ssl, username, password) as imap:
+        for uid in message_ids:
+            try:
+                imap.uid('STORE', str(uid), '+FLAGS', f'({normalized_tag})')
+                added.append(str(uid))
+            except (imaplib.IMAP4.error, OSError):
+                pass
+    return added
+
+
+def _imap_remove_flag(host: str, port: int, use_ssl: bool, username: str | None, password: str | None, message_ids: list[str], normalized_tag: str) -> None:
+    with _imap_connection(host, port, use_ssl, username, password) as imap:
+        for uid in message_ids:
+            try:
+                imap.uid('STORE', str(uid), '-FLAGS', f'({normalized_tag})')
+            except (imaplib.IMAP4.error, OSError):
+                pass
+
+
+def _open_imap(host: str, port: int, use_ssl: bool):
+    try:
+        return imaplib.IMAP4_SSL(host, port) if use_ssl else imaplib.IMAP4(host, port)
+    except (imaplib.IMAP4.error, OSError) as exc:
+        raise MailServiceError(str(exc)) from exc
+
+
+def _fetch_flags(imap, uid: str) -> list[str]:
+    try:
+        rtyp, rdata = imap.uid('fetch', uid, '(FLAGS)')
+        if rtyp == 'OK' and rdata and rdata[0]:
+            flags_text = str(rdata[0])
+            if 'FLAGS (' in flags_text:
+                start = flags_text.find('FLAGS (') + len('FLAGS (')
+                end = flags_text.find(')', start)
+                return [f.strip() for f in flags_text[start:end].split() if f.strip()]
+    except (imaplib.IMAP4.error, OSError):
+        pass
+    return []
+
+
+def _parse_fetched_message(fdata):
+    raw = None
+    if isinstance(fdata[0], tuple) and fdata[0][1] is not None:
+        raw = fdata[0][1]
+    elif len(fdata) > 1 and isinstance(fdata[1], (bytes, bytearray)):
+        raw = fdata[1]
+    if not raw:
+        return None
+    try:
+        parser = BytesParser(policy=default)
+        msg = parser.parsebytes(raw)
+    except (TypeError, ValueError, UnicodeDecodeError):
+        return None
+    body = msg.get_body(preferencelist=('plain',))
+    body_text = body.get_content() if body is not None else (msg.get_payload(decode=True) or '')
+    return msg, str(body_text)
+
+
 def search_messages(criteria: SearchCriteria, settings: dict[str, Any]) -> list[dict[str, Any]]:
     if is_dummy_mode(settings):
         return [deepcopy(message) for message in _dummy_mailbox if _matches_criteria(message, criteria)]
+
     # Live IMAP mode: fetch messages from configured IMAP server and filter locally
     messages: list[dict[str, Any]] = []
     host = settings.get('imapHost')
@@ -108,107 +318,16 @@ def search_messages(criteria: SearchCriteria, settings: dict[str, Any]) -> list[
     use_ssl = bool(settings.get('imapUseSSL'))
     username = settings.get('username')
     password = settings.get('imapPassword')
+
     # If a fake mail environment is registered for this host/port, use it instead of making network calls
-    try:
-        from backend.fake_mail_server import REGISTRY as _REG
-        _env = _REG.get((host, port))
-    except (ImportError, AttributeError):
-        _env = None
+    _env = _get_fake_env_for_host_port(host, port)
     if _env is not None:
-        env_messages: list[dict[str, Any]] = []
-        for msg in _env.list_messages():
-            flags = _env.flags_for(msg['id'])
-            env_messages.append({
-                'id': str(msg.get('id', '')),
-                'subject': msg.get('subject', ''),
-                'sender': msg.get('sender', ''),
-                'recipient': msg.get('recipient', ''),
-                'date': msg.get('date', ''),
-                'body': msg.get('body', ''),
-                'unread': '\\Seen' not in flags,
-                'replied': '\\Answered' in flags,
-                'keywords': [f for f in flags if not f.startswith('\\')],
-            })
-        return [deepcopy(message) for message in env_messages if _matches_criteria(message, criteria)]
+        return [deepcopy(message) for message in _env_messages_from_env(_env) if _matches_criteria(message, criteria)]
+
     try:
-        imap = imaplib.IMAP4_SSL(host, port) if use_ssl else imaplib.IMAP4(host, port)
+        messages = _collect_imap_messages(host, port, use_ssl, username, password)
     except (imaplib.IMAP4.error, OSError) as exc:
         raise MailServiceError(str(exc)) from exc
-
-    try:
-        if username:
-            try:
-                imap.login(username, password or '')
-            except imaplib.IMAP4.error:
-                # login failed; continue but subsequent operations may fail
-                pass
-
-        imap.select('INBOX')
-        typ, data = imap.uid('search', None, 'ALL')
-        if typ != 'OK' or not data or not data[0]:
-            try:
-                imap.logout()
-            except (imaplib.IMAP4.error, OSError):
-                pass
-            return []
-
-        raw_uids = data[0].split()
-        for raw_uid in raw_uids:
-            uid = raw_uid.decode('utf-8') if isinstance(raw_uid, bytes) else str(raw_uid)
-            try:
-                ftyp, fdata = imap.uid('fetch', uid, '(BODY.PEEK[])')
-            except (imaplib.IMAP4.error, OSError):
-                continue
-            if ftyp != 'OK' or not fdata:
-                continue
-
-            raw = None
-            if isinstance(fdata[0], tuple) and fdata[0][1] is not None:
-                raw = fdata[0][1]
-            elif len(fdata) > 1 and isinstance(fdata[1], (bytes, bytearray)):
-                raw = fdata[1]
-            if not raw:
-                continue
-
-            try:
-                parser = BytesParser(policy=default)
-                msg = parser.parsebytes(raw)
-            except (TypeError, ValueError, UnicodeDecodeError):
-                # parsing failed for this message; skip it
-                continue
-
-            body = msg.get_body(preferencelist=('plain',))
-            body_text = body.get_content() if body is not None else (msg.get_payload(decode=True) or '')
-
-            flags: list[str] = []
-            try:
-                rtyp, rdata = imap.uid('fetch', uid, '(FLAGS)')
-                if rtyp == 'OK' and rdata and rdata[0]:
-                    flags_text = str(rdata[0])
-                    if 'FLAGS (' in flags_text:
-                        start = flags_text.find('FLAGS (') + len('FLAGS (')
-                        end = flags_text.find(')', start)
-                        flags = [f.strip() for f in flags_text[start:end].split() if f.strip()]
-            except (imaplib.IMAP4.error, OSError):
-                flags = []
-
-            messages.append({
-                'id': uid,
-                'subject': msg.get('Subject', ''),
-                'sender': msg.get('From', ''),
-                'recipient': msg.get('To', ''),
-                'date': msg.get('Date', ''),
-                'body': str(body_text),
-                'unread': '\\Seen' not in flags,
-                'replied': '\\Answered' in flags,
-                'keywords': [f for f in flags if not f.startswith('\\')],
-            })
-
-    finally:
-        try:
-            imap.logout()
-        except (imaplib.IMAP4.error, OSError):
-            pass
 
     return [deepcopy(message) for message in messages if _matches_criteria(message, criteria)]
 
@@ -221,18 +340,13 @@ def mark_messages_read(message_ids: list[str], settings: dict[str, Any]) -> dict
                 message['unread'] = False
                 changed_ids.append(message['id'])
         return {'restore_unread_ids': changed_ids}
-
     host = settings.get('imapHost')
     port = int(settings.get('imapPort') or 993)
     use_ssl = bool(settings.get('imapUseSSL'))
     username = settings.get('username')
     password = settings.get('imapPassword')
-    # Check fake mail environment first
-    try:
-        from backend.fake_mail_server import REGISTRY as _REG
-        _env = _REG.get((host, port))
-    except (ImportError, AttributeError):
-        _env = None
+
+    _env = _get_fake_env_for_host_port(host, port)
     if _env is not None:
         changed_ids: list[str] = []
         for mid in message_ids:
@@ -242,23 +356,14 @@ def mark_messages_read(message_ids: list[str], settings: dict[str, Any]) -> dict
                         m['flags'].add('\\Seen')
                         changed_ids.append(str(m.get('id')))
         return {'restore_unread_ids': changed_ids}
+
     try:
-        imap = imaplib.IMAP4_SSL(host, port) if use_ssl else imaplib.IMAP4(host, port)
-        if username:
-            try:
-                imap.login(username, password or '')
-            except imaplib.IMAP4.error:
-                pass
-        imap.select('INBOX')
-        for uid in message_ids:
-            try:
-                imap.uid('STORE', str(uid), '+FLAGS', '(\\Seen)')
-            except (imaplib.IMAP4.error, OSError):
-                pass
-        try:
-            imap.logout()
-        except (imaplib.IMAP4.error, OSError):
-            pass
+        with _imap_connection(host, port, use_ssl, username, password) as imap:
+            for uid in message_ids:
+                try:
+                    imap.uid('STORE', str(uid), '+FLAGS', '(\\Seen)')
+                except (imaplib.IMAP4.error, OSError):
+                    pass
     except (imaplib.IMAP4.error, OSError) as exc:
         raise MailServiceError(str(exc)) from exc
     return {'restore_unread_ids': []}
@@ -269,41 +374,28 @@ def restore_messages_unread(message_ids: list[str], settings: dict[str, Any]) ->
         for message in _find_dummy_messages(message_ids):
             message['unread'] = True
         return
-
     host = settings.get('imapHost')
     port = int(settings.get('imapPort') or 993)
     use_ssl = bool(settings.get('imapUseSSL'))
     username = settings.get('username')
     password = settings.get('imapPassword')
-    try:
-        from backend.fake_mail_server import REGISTRY as _REG
-        _env = _REG.get((host, port))
-    except (ImportError, AttributeError):
-        _env = None
+
+    _env = _get_fake_env_for_host_port(host, port)
     if _env is not None:
-        for mid in message_ids:
+        for uid in message_ids:
             for m in _env.messages.values():
-                if str(m.get('id')) == str(mid):
+                if str(m.get('id')) == str(uid):
                     if '\\Seen' in m['flags']:
                         m['flags'].discard('\\Seen')
         return
+
     try:
-        imap = imaplib.IMAP4_SSL(host, port) if use_ssl else imaplib.IMAP4(host, port)
-        if username:
-            try:
-                imap.login(username, password or '')
-            except imaplib.IMAP4.error:
-                pass
-        imap.select('INBOX')
-        for uid in message_ids:
-            try:
-                imap.uid('STORE', str(uid), '-FLAGS', '(\\Seen)')
-            except (imaplib.IMAP4.error, OSError):
-                pass
-        try:
-            imap.logout()
-        except (imaplib.IMAP4.error, OSError):
-            pass
+        with _imap_connection(host, port, use_ssl, username, password) as imap:
+            for uid in message_ids:
+                try:
+                    imap.uid('STORE', str(uid), '-FLAGS', '(\\Seen)')
+                except (imaplib.IMAP4.error, OSError):
+                    pass
     except (imaplib.IMAP4.error, OSError) as exc:
         raise MailServiceError(str(exc)) from exc
 
@@ -327,40 +419,13 @@ def add_keyword_tag(message_ids: list[str], tag: str, settings: dict[str, Any]) 
     use_ssl = bool(settings.get('imapUseSSL'))
     username = settings.get('username')
     password = settings.get('imapPassword')
-    # Check fake mail environment first
-    try:
-        from backend.fake_mail_server import REGISTRY as _REG
-        _env = _REG.get((host, port))
-    except (ImportError, AttributeError):
-        _env = None
+    _env = _get_fake_env_for_host_port(host, port)
     if _env is not None:
-        for uid in message_ids:
-            for m in _env.messages.values():
-                if str(m.get('id')) == str(uid):
-                    # treat non-backslash flags as keyword tags
-                    current = [kw for kw in m['flags'] if not kw.startswith('\\')]
-                    if normalized_tag.lower() not in [item.lower() for item in current]:
-                        m['flags'].add(normalized_tag)
-                        added_message_ids.append(str(m.get('id')))
+        added_message_ids = _add_tag_to_env(_env, normalized_tag, message_ids)
         return {'added_message_ids': added_message_ids}
+
     try:
-        imap = imaplib.IMAP4_SSL(host, port) if use_ssl else imaplib.IMAP4(host, port)
-        if username:
-            try:
-                imap.login(username, password or '')
-            except imaplib.IMAP4.error:
-                pass
-        imap.select('INBOX')
-        for uid in message_ids:
-            try:
-                imap.uid('STORE', str(uid), '+FLAGS', f'({normalized_tag})')
-                added_message_ids.append(str(uid))
-            except (imaplib.IMAP4.error, OSError):
-                pass
-        try:
-            imap.logout()
-        except (imaplib.IMAP4.error, OSError):
-            pass
+        added_message_ids = _imap_add_flag(host, port, use_ssl, username, password, message_ids, normalized_tag)
     except (imaplib.IMAP4.error, OSError) as exc:
         raise MailServiceError(str(exc)) from exc
     return {'added_message_ids': added_message_ids}
@@ -378,39 +443,13 @@ def remove_keyword_tag(message_ids: list[str], tag: str, settings: dict[str, Any
     use_ssl = bool(settings.get('imapUseSSL'))
     username = settings.get('username')
     password = settings.get('imapPassword')
-    # Check fake mail environment first
-    try:
-        from backend.fake_mail_server import REGISTRY as _REG
-        _env = _REG.get((host, port))
-    except (ImportError, AttributeError):
-        _env = None
+    _env = _get_fake_env_for_host_port(host, port)
     if _env is not None:
-        for uid in message_ids:
-            for m in _env.messages.values():
-                if str(m.get('id')) == str(uid):
-                    # remove any non-backslash tag matching normalized_tag
-                    to_remove = [kw for kw in list(m['flags']) if not kw.startswith(
-                        '\\') and kw.lower() == normalized_tag.lower()]
-                    for kw in to_remove:
-                        m['flags'].discard(kw)
+        _remove_tag_from_env(_env, normalized_tag, message_ids)
         return
+
     try:
-        imap = imaplib.IMAP4_SSL(host, port) if use_ssl else imaplib.IMAP4(host, port)
-        if username:
-            try:
-                imap.login(username, password or '')
-            except imaplib.IMAP4.error:
-                pass
-        imap.select('INBOX')
-        for uid in message_ids:
-            try:
-                imap.uid('STORE', str(uid), '-FLAGS', f'({normalized_tag})')
-            except (imaplib.IMAP4.error, OSError):
-                pass
-        try:
-            imap.logout()
-        except (imaplib.IMAP4.error, OSError):
-            pass
+        _imap_remove_flag(host, port, use_ssl, username, password, message_ids, normalized_tag)
     except (imaplib.IMAP4.error, OSError) as exc:
         raise MailServiceError(str(exc)) from exc
 
@@ -475,65 +514,10 @@ def test_mail_connection(settings: dict[str, Any]) -> dict[str, Any]:
     use_ssl = bool(settings.get('imapUseSSL'))
     imap_ok = False
     imap_message = ''
-    # Check fake mail environment first for IMAP
-    try:
-        from backend.fake_mail_server import REGISTRY as _REG
-        _imap_env = _REG.get((host, port))
-    except (ImportError, AttributeError):
-        _imap_env = None
-    if _imap_env is not None:
-        imap_ok = True
-        imap_message = 'IMAP OK'
-    else:
-        try:
-            imap = imaplib.IMAP4_SSL(host, port) if use_ssl else imaplib.IMAP4(host, port)
-            username = settings.get('username')
-            password = settings.get('imapPassword')
-            if username:
-                try:
-                    imap.login(username, password or '')
-                except imaplib.IMAP4.error as exc:
-                    imap_message = str(exc)
-                else:
-                    imap_ok = True
-            else:
-                imap_ok = True
-            try:
-                imap.logout()
-            except (imaplib.IMAP4.error, OSError):
-                pass
-        except (imaplib.IMAP4.error, OSError) as exc:
-            imap_message = str(exc)
+    imap_ok, imap_message = _check_imap_connection(host, port, use_ssl, settings.get('username'), settings.get('imapPassword'))
     smtp_ok = False
     smtp_message = ''
-    # Check fake mail environment first for SMTP
-    try:
-        from backend.fake_mail_server import REGISTRY as _REG
-        _smtp_env = _REG.get((settings.get('smtpHost'), int(settings.get('smtpPort') or 25)))
-    except (ImportError, AttributeError, ValueError):
-        _smtp_env = None
-    if _smtp_env is not None:
-        smtp_ok = True
-        smtp_message = 'SMTP OK'
-    else:
-        try:
-            smtp_host = settings.get('smtpHost')
-            smtp_port = int(settings.get('smtpPort') or 25)
-            use_ssl = bool(settings.get('smtpUseSSL'))
-            if use_ssl:
-                smtp = smtplib.SMTP_SSL(smtp_host, smtp_port)
-            else:
-                smtp = smtplib.SMTP(smtp_host, smtp_port)
-            try:
-                smtp.ehlo()
-                smtp_ok = True
-            finally:
-                try:
-                    smtp.quit()
-                except (smtplib.SMTPException, OSError):
-                    pass
-        except (smtplib.SMTPException, OSError) as exc:
-            smtp_message = str(exc)
+    smtp_ok, smtp_message = _check_smtp_connection(settings.get('smtpHost'), int(settings.get('smtpPort') or 25), bool(settings.get('smtpUseSSL')))
     return {
         'status': 'ok' if (imap_ok and smtp_ok) else 'warning',
         'mode': 'imap',
