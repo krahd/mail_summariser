@@ -112,7 +112,7 @@ def search_messages(criteria: SearchCriteria, settings: dict[str, Any]) -> list[
     try:
         from backend.fake_mail_server import REGISTRY as _REG
         _env = _REG.get((host, port))
-    except Exception:
+    except (ImportError, AttributeError):
         _env = None
     if _env is not None:
         env_messages: list[dict[str, Any]] = []
@@ -132,14 +132,15 @@ def search_messages(criteria: SearchCriteria, settings: dict[str, Any]) -> list[
         return [deepcopy(message) for message in env_messages if _matches_criteria(message, criteria)]
     try:
         imap = imaplib.IMAP4_SSL(host, port) if use_ssl else imaplib.IMAP4(host, port)
-    except Exception as exc:
+    except (imaplib.IMAP4.error, OSError) as exc:
         raise MailServiceError(str(exc)) from exc
 
     try:
         if username:
             try:
                 imap.login(username, password or '')
-            except Exception:
+            except imaplib.IMAP4.error:
+                # login failed; continue but subsequent operations may fail
                 pass
 
         imap.select('INBOX')
@@ -147,7 +148,7 @@ def search_messages(criteria: SearchCriteria, settings: dict[str, Any]) -> list[
         if typ != 'OK' or not data or not data[0]:
             try:
                 imap.logout()
-            except Exception:
+            except (imaplib.IMAP4.error, OSError):
                 pass
             return []
 
@@ -156,7 +157,7 @@ def search_messages(criteria: SearchCriteria, settings: dict[str, Any]) -> list[
             uid = raw_uid.decode('utf-8') if isinstance(raw_uid, bytes) else str(raw_uid)
             try:
                 ftyp, fdata = imap.uid('fetch', uid, '(BODY.PEEK[])')
-            except Exception:
+            except (imaplib.IMAP4.error, OSError):
                 continue
             if ftyp != 'OK' or not fdata:
                 continue
@@ -172,7 +173,8 @@ def search_messages(criteria: SearchCriteria, settings: dict[str, Any]) -> list[
             try:
                 parser = BytesParser(policy=default)
                 msg = parser.parsebytes(raw)
-            except Exception:
+            except (TypeError, ValueError, UnicodeDecodeError):
+                # parsing failed for this message; skip it
                 continue
 
             body = msg.get_body(preferencelist=('plain',))
@@ -187,7 +189,7 @@ def search_messages(criteria: SearchCriteria, settings: dict[str, Any]) -> list[
                         start = flags_text.find('FLAGS (') + len('FLAGS (')
                         end = flags_text.find(')', start)
                         flags = [f.strip() for f in flags_text[start:end].split() if f.strip()]
-            except Exception:
+            except (imaplib.IMAP4.error, OSError):
                 flags = []
 
             messages.append({
@@ -205,7 +207,7 @@ def search_messages(criteria: SearchCriteria, settings: dict[str, Any]) -> list[
     finally:
         try:
             imap.logout()
-        except Exception:
+        except (imaplib.IMAP4.error, OSError):
             pass
 
     return [deepcopy(message) for message in messages if _matches_criteria(message, criteria)]
@@ -229,7 +231,7 @@ def mark_messages_read(message_ids: list[str], settings: dict[str, Any]) -> dict
     try:
         from backend.fake_mail_server import REGISTRY as _REG
         _env = _REG.get((host, port))
-    except Exception:
+    except (ImportError, AttributeError):
         _env = None
     if _env is not None:
         changed_ids: list[str] = []
@@ -245,19 +247,19 @@ def mark_messages_read(message_ids: list[str], settings: dict[str, Any]) -> dict
         if username:
             try:
                 imap.login(username, password or '')
-            except Exception:
+            except imaplib.IMAP4.error:
                 pass
         imap.select('INBOX')
         for uid in message_ids:
             try:
                 imap.uid('STORE', str(uid), '+FLAGS', '(\\Seen)')
-            except Exception:
+            except (imaplib.IMAP4.error, OSError):
                 pass
         try:
             imap.logout()
-        except Exception:
+        except (imaplib.IMAP4.error, OSError):
             pass
-    except Exception as exc:
+    except (imaplib.IMAP4.error, OSError) as exc:
         raise MailServiceError(str(exc)) from exc
     return {'restore_unread_ids': []}
 
@@ -276,7 +278,7 @@ def restore_messages_unread(message_ids: list[str], settings: dict[str, Any]) ->
     try:
         from backend.fake_mail_server import REGISTRY as _REG
         _env = _REG.get((host, port))
-    except Exception:
+    except (ImportError, AttributeError):
         _env = None
     if _env is not None:
         for mid in message_ids:
@@ -290,19 +292,19 @@ def restore_messages_unread(message_ids: list[str], settings: dict[str, Any]) ->
         if username:
             try:
                 imap.login(username, password or '')
-            except Exception:
+            except imaplib.IMAP4.error:
                 pass
         imap.select('INBOX')
         for uid in message_ids:
             try:
                 imap.uid('STORE', str(uid), '-FLAGS', '(\\Seen)')
-            except Exception:
+            except (imaplib.IMAP4.error, OSError):
                 pass
         try:
             imap.logout()
-        except Exception:
+        except (imaplib.IMAP4.error, OSError):
             pass
-    except Exception as exc:
+    except (imaplib.IMAP4.error, OSError) as exc:
         raise MailServiceError(str(exc)) from exc
 
 
@@ -329,7 +331,7 @@ def add_keyword_tag(message_ids: list[str], tag: str, settings: dict[str, Any]) 
     try:
         from backend.fake_mail_server import REGISTRY as _REG
         _env = _REG.get((host, port))
-    except Exception:
+    except (ImportError, AttributeError):
         _env = None
     if _env is not None:
         for uid in message_ids:
@@ -346,17 +348,20 @@ def add_keyword_tag(message_ids: list[str], tag: str, settings: dict[str, Any]) 
         if username:
             try:
                 imap.login(username, password or '')
-            except Exception:
+            except imaplib.IMAP4.error:
                 pass
         imap.select('INBOX')
         for uid in message_ids:
             try:
                 imap.uid('STORE', str(uid), '+FLAGS', f'({normalized_tag})')
                 added_message_ids.append(str(uid))
-            except Exception:
+            except (imaplib.IMAP4.error, OSError):
                 pass
-        imap.logout()
-    except Exception as exc:
+        try:
+            imap.logout()
+        except (imaplib.IMAP4.error, OSError):
+            pass
+    except (imaplib.IMAP4.error, OSError) as exc:
         raise MailServiceError(str(exc)) from exc
     return {'added_message_ids': added_message_ids}
 
@@ -377,7 +382,7 @@ def remove_keyword_tag(message_ids: list[str], tag: str, settings: dict[str, Any
     try:
         from backend.fake_mail_server import REGISTRY as _REG
         _env = _REG.get((host, port))
-    except Exception:
+    except (ImportError, AttributeError):
         _env = None
     if _env is not None:
         for uid in message_ids:
@@ -394,16 +399,19 @@ def remove_keyword_tag(message_ids: list[str], tag: str, settings: dict[str, Any
         if username:
             try:
                 imap.login(username, password or '')
-            except Exception:
+            except imaplib.IMAP4.error:
                 pass
         imap.select('INBOX')
         for uid in message_ids:
             try:
                 imap.uid('STORE', str(uid), '-FLAGS', f'({normalized_tag})')
-            except Exception:
+            except (imaplib.IMAP4.error, OSError):
                 pass
-        imap.logout()
-    except Exception as exc:
+        try:
+            imap.logout()
+        except (imaplib.IMAP4.error, OSError):
+            pass
+    except (imaplib.IMAP4.error, OSError) as exc:
         raise MailServiceError(str(exc)) from exc
 
 
@@ -425,7 +433,7 @@ def send_summary_email(recipient: str, subject: str, body: str, settings: dict[s
     try:
         from backend.fake_mail_server import REGISTRY as _REG
         _env = _REG.get((host, port))
-    except Exception:
+    except (ImportError, AttributeError):
         _env = None
     if _env is not None:
         _env.sent_messages.append({'recipient': recipient, 'subject': subject, 'body': body})
@@ -440,15 +448,15 @@ def send_summary_email(recipient: str, subject: str, body: str, settings: dict[s
             if username and password:
                 try:
                     smtp.login(username, password)
-                except Exception:
+                except smtplib.SMTPException:
                     pass
             smtp.send_message(msg)
         finally:
             try:
                 smtp.quit()
-            except Exception:
+            except (smtplib.SMTPException, OSError):
                 pass
-    except Exception as exc:
+    except (smtplib.SMTPException, OSError) as exc:
         raise MailServiceError(str(exc)) from exc
 
 
@@ -471,7 +479,7 @@ def test_mail_connection(settings: dict[str, Any]) -> dict[str, Any]:
     try:
         from backend.fake_mail_server import REGISTRY as _REG
         _imap_env = _REG.get((host, port))
-    except Exception:
+    except (ImportError, AttributeError):
         _imap_env = None
     if _imap_env is not None:
         imap_ok = True
@@ -484,7 +492,7 @@ def test_mail_connection(settings: dict[str, Any]) -> dict[str, Any]:
             if username:
                 try:
                     imap.login(username, password or '')
-                except Exception as exc:
+                except imaplib.IMAP4.error as exc:
                     imap_message = str(exc)
                 else:
                     imap_ok = True
@@ -492,9 +500,9 @@ def test_mail_connection(settings: dict[str, Any]) -> dict[str, Any]:
                 imap_ok = True
             try:
                 imap.logout()
-            except Exception:
+            except (imaplib.IMAP4.error, OSError):
                 pass
-        except Exception as exc:
+        except (imaplib.IMAP4.error, OSError) as exc:
             imap_message = str(exc)
     smtp_ok = False
     smtp_message = ''
@@ -502,7 +510,7 @@ def test_mail_connection(settings: dict[str, Any]) -> dict[str, Any]:
     try:
         from backend.fake_mail_server import REGISTRY as _REG
         _smtp_env = _REG.get((settings.get('smtpHost'), int(settings.get('smtpPort') or 25)))
-    except Exception:
+    except (ImportError, AttributeError, ValueError):
         _smtp_env = None
     if _smtp_env is not None:
         smtp_ok = True
@@ -522,9 +530,9 @@ def test_mail_connection(settings: dict[str, Any]) -> dict[str, Any]:
             finally:
                 try:
                     smtp.quit()
-                except Exception:
+                except (smtplib.SMTPException, OSError):
                     pass
-        except Exception as exc:
+        except (smtplib.SMTPException, OSError) as exc:
             smtp_message = str(exc)
     return {
         'status': 'ok' if (imap_ok and smtp_ok) else 'warning',
