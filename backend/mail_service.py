@@ -242,7 +242,8 @@ def _remove_tag_from_env(env, normalized_tag: str, message_ids: list[str]) -> No
     for uid in message_ids:
         for m in env.messages.values():
             if str(m.get('id')) == str(uid):
-                to_remove = [kw for kw in list(m['flags']) if not kw.startswith('\\') and kw.lower() == normalized_tag.lower()]
+                to_remove = [kw for kw in list(m['flags']) if not kw.startswith(
+                    '\\') and kw.lower() == normalized_tag.lower()]
                 for kw in to_remove:
                     m['flags'].discard(kw)
 
@@ -425,7 +426,8 @@ def add_keyword_tag(message_ids: list[str], tag: str, settings: dict[str, Any]) 
         return {'added_message_ids': added_message_ids}
 
     try:
-        added_message_ids = _imap_add_flag(host, port, use_ssl, username, password, message_ids, normalized_tag)
+        added_message_ids = _imap_add_flag(
+            host, port, use_ssl, username, password, message_ids, normalized_tag)
     except (imaplib.IMAP4.error, OSError) as exc:
         raise MailServiceError(str(exc)) from exc
     return {'added_message_ids': added_message_ids}
@@ -514,10 +516,12 @@ def test_mail_connection(settings: dict[str, Any]) -> dict[str, Any]:
     use_ssl = bool(settings.get('imapUseSSL'))
     imap_ok = False
     imap_message = ''
-    imap_ok, imap_message = _check_imap_connection(host, port, use_ssl, settings.get('username'), settings.get('imapPassword'))
+    imap_ok, imap_message = _check_imap_connection(
+        host, port, use_ssl, settings.get('username'), settings.get('imapPassword'))
     smtp_ok = False
     smtp_message = ''
-    smtp_ok, smtp_message = _check_smtp_connection(settings.get('smtpHost'), int(settings.get('smtpPort') or 25), bool(settings.get('smtpUseSSL')))
+    smtp_ok, smtp_message = _check_smtp_connection(settings.get('smtpHost'), int(
+        settings.get('smtpPort') or 25), bool(settings.get('smtpUseSSL')))
     return {
         'status': 'ok' if (imap_ok and smtp_ok) else 'warning',
         'mode': 'imap',

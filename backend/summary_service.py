@@ -112,7 +112,8 @@ def _resolve_provider_api_key(provider: str, cfg: dict) -> str:
 
 
 def _resolve_system_message(provider: str, cfg: dict) -> str:
-    key = {'openai': 'openaiSystemMessage', 'anthropic': 'anthropicSystemMessage', 'ollama': 'ollamaSystemMessage'}[provider]
+    key = {'openai': 'openaiSystemMessage', 'anthropic': 'anthropicSystemMessage',
+           'ollama': 'ollamaSystemMessage'}[provider]
     fallback = DEFAULT_SYSTEM_MESSAGES[key]
     return str(cfg.get(key, fallback)).strip() or fallback
 
@@ -124,9 +125,11 @@ def _summarize_with_provider(provider: str, model_name: str, prompt: str, system
         running, message = ensure_ollama_running(ollama_host, auto_start)
         if not running:
             raise ProviderError(message)
-        request = ProviderRequest(model=model_name, prompt=prompt, system_message=system_message, host=ollama_host, auto_start=auto_start)
+        request = ProviderRequest(model=model_name, prompt=prompt,
+                                  system_message=system_message, host=ollama_host, auto_start=auto_start)
     else:
-        request = ProviderRequest(model=model_name, prompt=prompt, system_message=system_message, api_key=_resolve_provider_api_key(provider, cfg))
+        request = ProviderRequest(model=model_name, prompt=prompt,
+                                  system_message=system_message, api_key=_resolve_provider_api_key(provider, cfg))
     try:
         return get_provider_client(provider).summarize(request)
     except ProviderClientError as exc:
@@ -149,5 +152,6 @@ def summarize_messages(messages: list[dict], summary_length: int, settings: dict
         fallback = _demo_summarize_messages(messages, summary_length)
         return (
             'Fallback summary (provider unavailable).\n' f'Reason: {exc}\n\n{fallback}',
-            {'provider': provider, 'model': model_name, 'status': 'fallback', 'fallback': 'true', 'error': str(exc)},
+            {'provider': provider, 'model': model_name,
+                'status': 'fallback', 'fallback': 'true', 'error': str(exc)},
         )

@@ -88,7 +88,8 @@ def ensure_ollama_running(ollama_host: str, auto_start: bool) -> tuple[bool, str
         # Attempt to start and warm Ollama in a helper to reduce nested branching
         def _start_and_warm(host: str) -> tuple[bool, str, bool]:
             try:
-                proc = subprocess.Popen(['ollama', 'serve'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                proc = subprocess.Popen(['ollama', 'serve'],
+                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 _mark_managed_process(proc, host)
             except (OSError, subprocess.SubprocessError) as exc:
                 return False, f'Failed to start Ollama: {exc}', True
