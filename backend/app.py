@@ -10,7 +10,7 @@ dynamic import and callable detection patterns used for test patching.
 
 import contextlib
 from datetime import datetime
-from typing import Callable, Optional
+from typing import Callable, Optional, TYPE_CHECKING, Any
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException  # pylint: disable=import-error
@@ -57,6 +57,15 @@ from backend.schemas import (
 )
 from backend.summary_service import summarize_messages
 from backend import model_provider_service
+
+if TYPE_CHECKING:
+    # Provide imports for static type checkers. These modules are often
+    # test-patched at runtime which confuses static analysis; the
+    # TYPE_CHECKING block makes their attributes available to tools.
+    from backend import db as _db  # type: ignore  # pylint: disable=reimported
+    from backend import dummy_state as _dummy_state  # type: ignore  # pylint: disable=reimported
+    # type: ignore  # pylint: disable=reimported
+    from backend import model_provider_service as _model_provider_service
 
 
 @contextlib.asynccontextmanager
@@ -226,6 +235,15 @@ def _masked_settings_payload() -> dict[str, object]:
 
 def _new_log_id() -> str:
     return f'log-{uuid4()}'
+
+
+def _get_db() -> Any:
+    """Return the backend.db module (supports test-time patching).
+
+    Uses a dynamic import at runtime but provides a static name for
+    type-checkers via the TYPE_CHECKING imports above.
+    """
+    return __import__('backend').db  # type: ignore[attr-defined]
 
 
 def _record_log(action: str, status: str, details: str, *, job_id: str | None = None, settings: dict[str, object] | None = None) -> str:
@@ -418,8 +436,10 @@ def actions_email_summary(payload: dict) -> dict:
 def actions_undo_log(log_id: str) -> dict:
     try:
         settings = _merged_settings()
-        payload = dummy_state.pop_undo_by_log_id(log_id) if is_dummy_mode(
-            settings) else __import__('backend').db.pop_undo_by_log_id(log_id)
+        if is_dummy_mode(settings):
+            payload = dummy_state.pop_undo_by_log_id(log_id)
+        else:
+            payload = _get_db().pop_undo_by_log_id(log_id)
         if payload is None:
             raise HTTPException(status_code=404, detail='No undo found for log')
         action = payload.get('action')
@@ -451,10 +471,7 @@ def actions_undo() -> dict:
     try:
         settings = _merged_settings()
         # Pop the most recent undo payload from the appropriate store
-        if is_dummy_mode(settings):
-            payload = dummy_state.pop_latest_undo()
-        else:
-            payload = __import__('backend').db.pop_latest_undo()
+        payload = dummy_state.pop_latest_undo() if is_dummy_mode(settings) else _get_db().pop_latest_undo()
         if payload is None:
             raise HTTPException(status_code=404, detail='No undo found')
         action = payload.get('action')
@@ -485,7 +502,7 @@ def actions_undo() -> dict:
 def get_logs() -> list[dict]:
     raw = dummy_state.list_logs() if is_dummy_mode(_merged_settings()) else list_logs()
     undoable = dummy_state.list_undoable_log_ids() if is_dummy_mode(
-        _merged_settings()) else __import__('backend').db.list_undoable_log_ids()
+        _merged_settings()) else _get_db().list_undoable_log_ids()
     enriched: list[dict] = []
     for item in raw:
         entry = dict(item)
@@ -659,7 +676,13 @@ def models_options(provider: str | None = None) -> dict:
         except (AttributeError, TypeError, OSError):
             models = []
         running = model_provider_service.is_ollama_running(host)
-        return {'provider': 'ollama', 'models': models, 'ollama': {'running': running, 'host': host, 'message': getattr(model_provider_service, '_runtime_state', None).last_message if getattr(model_provider_service, '_runtime_state', None) is not None else ''}}
+        rt = getattr(model_provider_service, '_runtime_state', None)
+        last_message = getattr(rt, 'last_message', '') if rt is not None else ''
+        return {
+            'provider': 'ollama',
+            'models': models,
+            'ollama': {'running': running, 'host': host, 'message': last_message},
+        }
     return {'provider': prov, 'models': []}
 
 
