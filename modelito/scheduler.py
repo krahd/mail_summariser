@@ -37,7 +37,7 @@ class ScheduledDigestManager:
                 start = time.time()
                 try:
                     func(*args, **kwargs)
-                except Exception as exc:
+                except Exception as exc:  # broad catch intentional to keep scheduler running
                     _logger.exception("Scheduled job %s failed: %s", name, exc)
                 elapsed = time.time() - start
                 wait = max(0, interval_seconds - elapsed)

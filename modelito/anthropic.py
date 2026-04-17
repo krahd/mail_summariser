@@ -59,13 +59,32 @@ class AnthropicProvider(LLMProvider):
         _logger.debug("Anthropic request model=%s api_key=%s", model, mask_api_key(api_key))
         try:
             self.rate_limiter.acquire()
-            resp = self._post_json(self.endpoint, payload, headers, timeout=45.0)
+            resp = self._call_post_json(self.endpoint, payload, headers, timeout=45.0, settings=settings)
             content = resp.get("content", "")
             if not content:
                 raise LLMProviderError(f"Empty Anthropic response: {resp}")
-            return content.strip()
+            # Support multiple response shapes: string or list of text blocks
+            if isinstance(content, str):
+                return content.strip()
+            if isinstance(content, list):
+                # find first textual element
+                for item in content:
+                    if isinstance(item, dict) and "text" in item:
+                        return str(item.get("text", "")).strip()
+                # fallback: concatenate any text fields
+                parts = [str(item.get("text", "")) for item in content if isinstance(item, dict) and item.get("text")]
+                joined = "".join(parts).strip()
+                if joined:
+                    return joined
+                raise LLMProviderError(f"Anthropic returned unexpected content shape: {resp}")
         except (OSError, URLError, json.JSONDecodeError) as exc:
             raise LLMProviderError(f"Anthropic summarize failed: {exc}") from exc
+
+    def _call_post_json(self, url: str, payload: dict, headers: dict, timeout: float = 15.0, settings: Optional[Dict[str, Any]] = None) -> dict:
+        hook = (settings or {}).get("_post_json")
+        if callable(hook):
+            return hook(url, payload)
+        return self._post_json(url, payload, headers, timeout)
 
     def list_models(self) -> List[str]:
         # Hardcoded for now; can be extended to fetch from Anthropic API

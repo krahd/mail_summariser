@@ -107,6 +107,48 @@ def _build_prompt(messages: list[dict], summary_length: int) -> str:
     return "\n".join(chunks)
 
 
+def _post_json(url: str, payload: dict, headers: dict | None = None, timeout: float = 15.0) -> dict:
+    """Simple POST helper used by tests (can be patched). Signature kept minimal (url, payload).
+
+    Returns parsed JSON or raises ProviderError on network/parse error.
+    """
+    import json as _json
+    from urllib.request import Request, urlopen
+    from urllib.error import URLError
+
+    hdrs = headers or {"Content-Type": "application/json"}
+    body = _json.dumps(payload).encode("utf-8")
+    req = Request(url=url, data=body, headers=hdrs, method="POST")
+    try:
+        with urlopen(req, timeout=timeout) as resp:
+            raw = resp.read().decode("utf-8")
+            if not raw.strip():
+                return {}
+            return _json.loads(raw)
+    except URLError as exc:
+        raise ProviderError(f"Network error posting to {url}: {exc}") from exc
+    except Exception as exc:
+        raise ProviderError(f"Error parsing response from {url}: {exc}") from exc
+
+
+def ensure_ollama_running(settings: dict) -> tuple[bool, str]:
+    """Check whether Ollama is reachable at the configured host. Returns (running, message).
+
+    This helper is kept for test compatibility and may be patched in tests.
+    """
+    host = str((settings or {}).get("ollamaHost", "http://127.0.0.1:11434")).rstrip("/")
+    from urllib.request import urlopen
+    from urllib.error import URLError
+
+    try:
+        urlopen(f"{host}/api/version", timeout=1.2)
+        return True, "ok"
+    except URLError as exc:
+        return False, str(exc)
+    except Exception as exc:
+        return False, str(exc)
+
+
 def _effective_detail_level(summary_length: int) -> int:
     return max(1, min(int(summary_length), 24))
 
@@ -149,6 +191,7 @@ def summarize_messages(messages: list[dict], summary_length: int, settings: dict
                 **cfg,
                 "modelName": model_name,
                 "prompt": prompt,
+                "_post_json": _post_json,
             },
         )
         if _looks_like_placeholder_response(text):

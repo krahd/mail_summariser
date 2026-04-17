@@ -45,7 +45,7 @@ class OllamaProvider(LLMProvider):
             _logger.debug("Calling Ollama host=%s model=%s", self.host, model)
             # apply rate limiting before external request
             self.rate_limiter.acquire()
-            resp = self._post_json(f"{self.host}/api/generate", payload, timeout=45.0)
+            resp = self._call_post_json(f"{self.host}/api/generate", payload, timeout=45.0, settings=settings)
             text = str(resp.get("response", "")).strip()
             if not text:
                 raise LLMProviderError(f"Empty Ollama response: {resp}")
@@ -121,6 +121,12 @@ class OllamaProvider(LLMProvider):
             if not raw.strip():
                 return {}
             return json.loads(raw)
+
+    def _call_post_json(self, url: str, payload: dict, timeout: float = 15.0, settings: Optional[Dict[str, Any]] = None) -> dict:
+        hook = (settings or {}).get("_post_json")
+        if callable(hook):
+            return hook(url, payload)
+        return self._post_json(url, payload, timeout)
 
     def _build_prompt(self, messages: List[Dict[str, Any]], _settings: Optional[Dict[str, Any]]) -> str:
         # _settings argument is unused but kept for interface compatibility

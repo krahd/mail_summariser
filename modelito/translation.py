@@ -24,7 +24,8 @@ def translate_text(text: str, target_language: str, api_key: Optional[str] = Non
     """
     url = get_env_setting("TRANSLATE_API_URL")
     if not url:
-        raise NotImplementedError("No translation provider configured. Set TRANSLATE_API_URL to enable translation.")
+        raise NotImplementedError(
+            "No translation provider configured. Set TRANSLATE_API_URL to enable translation.")
 
     payload = {"q": text, "source": "auto", "target": target_language, "format": "text"}
     headers = {"Content-Type": "application/json"}

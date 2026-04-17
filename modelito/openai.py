@@ -62,13 +62,21 @@ class OpenAIProvider(LLMProvider):
         try:
             # rate limit external calls
             self.rate_limiter.acquire()
-            resp = self._post_json(self.endpoint, payload, headers, timeout=45.0)
+            resp = self._call_post_json(self.endpoint, payload, headers, timeout=45.0, settings=settings)
             choices = resp.get("choices", [])
             if not choices:
                 raise LLMProviderError(f"Empty OpenAI response: {resp}")
             return choices[0]["message"]["content"].strip()
         except (OSError, URLError, json.JSONDecodeError) as exc:
             raise LLMProviderError(f"OpenAI summarize failed: {exc}") from exc
+
+    def _call_post_json(self, url: str, payload: dict, headers: dict, timeout: float = 15.0, settings: Optional[Dict[str, Any]] = None) -> dict:
+        """Delegate posting to a provided hook in settings when available (for tests) or use internal _post_json."""
+        hook = (settings or {}).get("_post_json")
+        if callable(hook):
+            # Tests expect signature (url, payload)
+            return hook(url, payload)
+        return self._post_json(url, payload, headers, timeout)
 
     def list_models(self) -> List[str]:
         # Hardcoded for now; can be extended to fetch from OpenAI API
