@@ -1,4 +1,12 @@
 from __future__ import annotations
+from fastapi.testclient import TestClient
+import unittest
+import tempfile
+import sqlite3
+import app as backend_app
+import db
+import dummy_state
+import mail_service
 from pathlib import Path
 import sys
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -6,14 +14,6 @@ BACKEND_DIR = REPO_ROOT / "backend"
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-import mail_service
-import dummy_state
-import db
-import app as backend_app
-import sqlite3
-import tempfile
-import unittest
-from fastapi.testclient import TestClient
 
 
 try:
