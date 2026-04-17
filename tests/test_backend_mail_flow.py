@@ -1,22 +1,28 @@
 from __future__ import annotations
-from fake_mail_server import FakeMailEnvironment
-import mail_service
-import dummy_state
-import db
-import app as backend_app
-
-import sys
-import sqlite3
-import tempfile
-import unittest
-from pathlib import Path
-
 from fastapi.testclient import TestClient
-
+import unittest
+import tempfile
+import sqlite3
+import app as backend_app
+import db
+import dummy_state
+import mail_service
+from pathlib import Path
+import sys
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BACKEND_DIR = REPO_ROOT / "backend"
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
+
+
+
+try:
+    from tests.support.fake_mail_server import FakeMailEnvironment
+except Exception:
+    from backend.fake_mail_server import FakeMailEnvironment
+
+
+
 
 
 
