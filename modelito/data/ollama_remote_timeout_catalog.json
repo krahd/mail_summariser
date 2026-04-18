@@ -1,0 +1,71 @@
+{
+  "version": "1.1",
+  "size_bands": [
+    {"max_input_tokens": 256, "timeout_seconds": 6},
+    {"max_input_tokens": 512, "timeout_seconds": 12},
+    {"max_input_tokens": 2048, "timeout_seconds": 30},
+    {"max_input_tokens": 8192, "timeout_seconds": 100},
+    {"max_input_tokens": 32768, "timeout_seconds": 360},
+    {"max_input_tokens": 131072, "timeout_seconds": 1200}
+  ],
+
+  "family_overrides": {
+    "llama": 1.0,
+    "llama2": 1.1,
+    "smollm": 0.45,
+    "vicuna": 1.6,
+    "mistral": 0.95,
+    "mixtral": 1.25,
+    "falcon": 1.2,
+    "mpt": 1.15,
+    "gpt": 1.4
+  },
+
+  "keyword_adjustments": {
+    "tiny": 0.45,
+    "smol": 0.6,
+    "base": 1.0,
+    "large": 1.9,
+    "xl": 2.4,
+    "xxl": 3.2
+  },
+
+  "concurrency_factor": {
+    "per_extra_request": 1.15
+  },
+
+  "model_overrides": {
+    "llama-2-70b": 3.2,
+    "llama-2-13b": 1.6,
+    "llama-2-7b": 1.15,
+    "vicuna-13b": 1.9,
+    "mistral-7b": 1.05,
+    "mixtral-8x7b": 1.3,
+    "falcon-40b": 2.6,
+    "falcon-7b": 1.1,
+    "mpt-30b": 2.0,
+    "gpt-4o": 4.0
+  },
+
+  "pattern_overrides": [
+    {"pattern": ".*llama.*70b.*", "multiplier": 3.0},
+    {"pattern": ".*13b.*", "multiplier": 1.7},
+    {"pattern": ".*7b.*", "multiplier": 1.15},
+    {"pattern": ".*mixtral.*", "multiplier": 1.25},
+    {"pattern": ".*vicuna.*", "multiplier": 1.9}
+  ],
+
+  "calibration_defaults": {
+    "iterations": 3,
+    "prompt_samples": [
+      "Summarize the following text in one sentence: {text}",
+      "Write a short (3-line) summary for the text below: {text}",
+      "Extract the key action items from the text: {text}"
+    ],
+    "max_tokens": 64,
+    "timeout_seconds_per_request": 60
+  },
+
+  "notes": "This catalog contains conservative defaults and model-specific multipliers. Run the calibration CLI to generate measured values for your environment.",
+  "source": "modelito (derived from BatLLM heuristics)"
+}

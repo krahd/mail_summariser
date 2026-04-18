@@ -5,7 +5,7 @@ Anthropic provider implementation for the LLM provider library.
 Supports both synchronous and asynchronous operation.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import json
 import asyncio
@@ -65,16 +65,18 @@ class AnthropicProvider(LLMProvider):
                 raise LLMProviderError(f"Anthropic returned unexpected content shape: {resp}")
         except (OSError, URLError, json.JSONDecodeError) as exc:
             raise LLMProviderError(f"Anthropic summarize failed: {exc}") from exc
+        # Should never reach here; add explicit error to satisfy static type checking
+        raise LLMProviderError("Anthropic summarize returned no usable content")
 
     def _build_messages_payload(self, messages: List[Dict[str, Any]], provided_prompt: Optional[str], system_message: str) -> List[Dict[str, Any]]:
         if provided_prompt:
             return [{"role": "system", "content": system_message}, {"role": "user", "content": provided_prompt}]
         return [{"role": m.get("role", "user"), "content": m.get("content", "")} for m in messages]
 
-    def _call_post_json(self, url: str, payload: dict, headers: dict, timeout: float = 15.0, settings: Optional[Dict[str, Any]] = None) -> dict:
+    def _call_post_json(self, url: str, payload: dict, headers: dict, timeout: float = 15.0, settings: Optional[Dict[str, Any]] = None) -> dict[str, Any]:
         hook = (settings or {}).get("_post_json")
         if callable(hook):
-            return hook(url, payload)
+            return cast(Dict[str, Any], hook(url, payload))
         return self._post_json(url, payload, headers, timeout)
 
     def list_models(self) -> List[str]:
@@ -96,7 +98,7 @@ class AnthropicProvider(LLMProvider):
     def get_runtime_status(self) -> Dict[str, Any]:
         return {"available": True}
 
-    def _post_json(self, url: str, payload: dict, headers: dict, timeout: float = 15.0) -> dict:
+    def _post_json(self, url: str, payload: dict, headers: dict, timeout: float = 15.0) -> dict[str, Any]:
         body = json.dumps(payload).encode("utf-8")
         req = Request(url=url, data=body, headers=headers, method="POST")
         with urlopen(req, timeout=timeout) as response:

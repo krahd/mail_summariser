@@ -74,7 +74,9 @@ def insert_job(job_id: str, created_at: str, criteria: dict[str, Any], summary_l
         )
 
 
-def get_job(job_id: str) -> dict[str, Any] | None:
+def get_job(job_id: str | None) -> dict[str, Any] | None:
+    if job_id is None:
+        return None
     with _connect() as conn:
         row = conn.execute('SELECT * FROM jobs WHERE id = ?', (job_id,)).fetchone()
     if row is None:

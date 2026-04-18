@@ -1,0 +1,28 @@
+{
+  "calibrated_at": "2026-04-17T19:54:02Z",
+  "models": [
+    {
+      "model": "mistral-small:latest",
+      "samples": [
+        {
+          "prompt_len": 90,
+          "input_tokens": 22,
+          "latency": 0.9880987919168547
+        },
+        {
+          "prompt_len": 97,
+          "input_tokens": 24,
+          "latency": 2.069551583030261
+        },
+        {
+          "prompt_len": 79,
+          "input_tokens": 19,
+          "latency": 6.790509958053008
+        }
+      ],
+      "runs": 3,
+      "avg_latency_seconds": 3.282720111000041,
+      "avg_seconds_per_1000_input_tokens": 151.51015896923266
+    }
+  ]
+}

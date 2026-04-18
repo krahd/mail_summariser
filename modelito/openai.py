@@ -8,7 +8,7 @@ Supports both synchronous and asynchronous operation.
 
 import json
 import asyncio
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 from urllib.request import Request, urlopen
 from urllib.error import URLError
 
@@ -71,12 +71,12 @@ class OpenAIProvider(LLMProvider):
         except (OSError, URLError, json.JSONDecodeError) as exc:
             raise LLMProviderError(f"OpenAI summarize failed: {exc}") from exc
 
-    def _call_post_json(self, url: str, payload: dict, headers: dict, timeout: float = 15.0, settings: Optional[Dict[str, Any]] = None) -> dict:
+    def _call_post_json(self, url: str, payload: dict, headers: dict, timeout: float = 15.0, settings: Optional[Dict[str, Any]] = None) -> dict[str, Any]:
         """Delegate posting to a provided hook in settings when available (for tests) or use internal _post_json."""
         hook = (settings or {}).get("_post_json")
         if callable(hook):
             # Tests expect signature (url, payload)
-            return hook(url, payload)
+            return cast(Dict[str, Any], hook(url, payload))
         return self._post_json(url, payload, headers, timeout)
 
     def list_models(self) -> List[str]:
@@ -98,7 +98,7 @@ class OpenAIProvider(LLMProvider):
     def get_runtime_status(self) -> Dict[str, Any]:
         return {"available": True}
 
-    def _post_json(self, url: str, payload: dict, headers: dict, timeout: float = 15.0) -> dict:
+    def _post_json(self, url: str, payload: dict, headers: dict, timeout: float = 15.0) -> dict[str, Any]:
         body = json.dumps(payload).encode("utf-8")
         req = Request(url=url, data=body, headers=headers, method="POST")
         with urlopen(req, timeout=timeout) as response:

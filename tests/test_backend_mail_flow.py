@@ -9,6 +9,7 @@ import dummy_state
 import mail_service
 from pathlib import Path
 import sys
+from typing import Any, cast
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BACKEND_DIR = REPO_ROOT / "backend"
 if str(BACKEND_DIR) not in sys.path:
@@ -251,7 +252,7 @@ class BackendMailFlowTests(unittest.TestCase):
             self.assertEqual(client.post("/actions/tag-summarised",
                              json={"jobId": job_id}).status_code, 200)
 
-            environment = backend_app._fake_mail_manager._environment
+            environment = cast(Any, backend_app._fake_mail_manager._environment)
             self.assertIsNotNone(environment)
             self.assertIn("\\Seen", environment.flags_for("102"))
             self.assertIn("summarised", environment.flags_for("102"))
