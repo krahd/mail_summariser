@@ -1,0 +1,72 @@
+{
+  "source": "/Users/tom/devel/ml-llm/llm/mail_summariser/macos-app/SummaryView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Last Summary",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 8
+        }
+      },
+      {
+        "comment": "",
+        "key": "Create a summary in the Main tab.",
+        "location": {
+          "startingColumn": 117,
+          "startingLine": 12
+        }
+      },
+      {
+        "comment": "",
+        "key": "Job ID: %@",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 14
+        }
+      },
+      {
+        "comment": "",
+        "key": "Digest",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 25
+        }
+      },
+      {
+        "comment": "",
+        "key": "No summary yet",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 12
+        }
+      },
+      {
+        "comment": "",
+        "key": "Date",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 19
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sender",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 20
+        }
+      },
+      {
+        "comment": "",
+        "key": "Subject",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 21
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,72 @@
+{
+  "source": "/Users/tom/devel/ml-llm/llm/mail_summariser/macos-app/ContentView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Ollama Setup",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 163
+        }
+      },
+      {
+        "comment": "",
+        "key": "Summaries, actions, and logs in one local workspace.",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 129
+        }
+      },
+      {
+        "comment": "",
+        "key": "mail_summariser",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 124
+        }
+      },
+      {
+        "comment": "",
+        "key": "Main",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 140
+        }
+      },
+      {
+        "comment": "",
+        "key": "Log",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 143
+        }
+      },
+      {
+        "comment": "",
+        "key": "Install Ollama",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 165
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start Ollama",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 171
+        }
+      },
+      {
+        "comment": "",
+        "key": "Later",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 175
+        }
+      }
+    ]
+  },
+  "version": 1
+}

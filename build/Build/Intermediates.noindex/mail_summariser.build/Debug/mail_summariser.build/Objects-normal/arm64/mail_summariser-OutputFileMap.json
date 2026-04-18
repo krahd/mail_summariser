@@ -1,0 +1,99 @@
+{
+  "" : {
+    "diagnostics" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/mail_summariser-primary.dia",
+    "emit-module-dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/mail_summariser-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/mail_summariser-primary-emit-module.dia",
+    "pch" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/mail_summariser-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/mail_summariser-primary.swiftdeps"
+  },
+  "/Users/tom/devel/ml-llm/llm/mail_summariser/macos-app/AppState.swift" : {
+    "const-values" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/AppState.swiftconstvalues",
+    "dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/AppState.d",
+    "diagnostics" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/AppState.dia",
+    "index-unit-output-path" : "/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/AppState.o",
+    "llvm-bc" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/AppState.bc",
+    "object" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/AppState.o",
+    "swift-dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/AppState.swiftdeps",
+    "swiftmodule" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/AppState~partial.swiftmodule"
+  },
+  "/Users/tom/devel/ml-llm/llm/mail_summariser/macos-app/BackendBridge.swift" : {
+    "const-values" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/BackendBridge.swiftconstvalues",
+    "dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/BackendBridge.d",
+    "diagnostics" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/BackendBridge.dia",
+    "index-unit-output-path" : "/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/BackendBridge.o",
+    "llvm-bc" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/BackendBridge.bc",
+    "object" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/BackendBridge.o",
+    "swift-dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/BackendBridge.swiftdeps",
+    "swiftmodule" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/BackendBridge~partial.swiftmodule"
+  },
+  "/Users/tom/devel/ml-llm/llm/mail_summariser/macos-app/ContentView.swift" : {
+    "const-values" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/ContentView.swiftconstvalues",
+    "dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/ContentView.d",
+    "diagnostics" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/ContentView.dia",
+    "index-unit-output-path" : "/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/ContentView.o",
+    "llvm-bc" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/ContentView.bc",
+    "object" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/ContentView.o",
+    "swift-dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/ContentView.swiftdeps",
+    "swiftmodule" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/ContentView~partial.swiftmodule"
+  },
+  "/Users/tom/devel/ml-llm/llm/mail_summariser/macos-app/LogView.swift" : {
+    "const-values" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/LogView.swiftconstvalues",
+    "dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/LogView.d",
+    "diagnostics" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/LogView.dia",
+    "index-unit-output-path" : "/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/LogView.o",
+    "llvm-bc" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/LogView.bc",
+    "object" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/LogView.o",
+    "swift-dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/LogView.swiftdeps",
+    "swiftmodule" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/LogView~partial.swiftmodule"
+  },
+  "/Users/tom/devel/ml-llm/llm/mail_summariser/macos-app/MailSummariserApp.swift" : {
+    "const-values" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/MailSummariserApp.swiftconstvalues",
+    "dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/MailSummariserApp.d",
+    "diagnostics" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/MailSummariserApp.dia",
+    "index-unit-output-path" : "/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/MailSummariserApp.o",
+    "llvm-bc" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/MailSummariserApp.bc",
+    "object" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/MailSummariserApp.o",
+    "swift-dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/MailSummariserApp.swiftdeps",
+    "swiftmodule" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/MailSummariserApp~partial.swiftmodule"
+  },
+  "/Users/tom/devel/ml-llm/llm/mail_summariser/macos-app/Models.swift" : {
+    "const-values" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/Models.swiftconstvalues",
+    "dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/Models.d",
+    "diagnostics" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/Models.dia",
+    "index-unit-output-path" : "/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/Models.o",
+    "llvm-bc" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/Models.bc",
+    "object" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/Models.o",
+    "swift-dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/Models.swiftdeps",
+    "swiftmodule" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/Models~partial.swiftmodule"
+  },
+  "/Users/tom/devel/ml-llm/llm/mail_summariser/macos-app/SearchView.swift" : {
+    "const-values" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SearchView.swiftconstvalues",
+    "dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SearchView.d",
+    "diagnostics" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SearchView.dia",
+    "index-unit-output-path" : "/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SearchView.o",
+    "llvm-bc" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SearchView.bc",
+    "object" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SearchView.o",
+    "swift-dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SearchView.swiftdeps",
+    "swiftmodule" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SearchView~partial.swiftmodule"
+  },
+  "/Users/tom/devel/ml-llm/llm/mail_summariser/macos-app/SettingsView.swift" : {
+    "const-values" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SettingsView.swiftconstvalues",
+    "dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SettingsView.d",
+    "diagnostics" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SettingsView.dia",
+    "index-unit-output-path" : "/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SettingsView.o",
+    "llvm-bc" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SettingsView.bc",
+    "object" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SettingsView.o",
+    "swift-dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SettingsView.swiftdeps",
+    "swiftmodule" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SettingsView~partial.swiftmodule"
+  },
+  "/Users/tom/devel/ml-llm/llm/mail_summariser/macos-app/SummaryView.swift" : {
+    "const-values" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SummaryView.swiftconstvalues",
+    "dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SummaryView.d",
+    "diagnostics" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SummaryView.dia",
+    "index-unit-output-path" : "/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SummaryView.o",
+    "llvm-bc" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SummaryView.bc",
+    "object" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SummaryView.o",
+    "swift-dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SummaryView.swiftdeps",
+    "swiftmodule" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariser.build/Objects-normal/arm64/SummaryView~partial.swiftmodule"
+  }
+}

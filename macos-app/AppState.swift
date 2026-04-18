@@ -133,8 +133,8 @@ final class AppState: ObservableObject {
             }
 
             isLoadingSelectedMessage = false
-            selectedMessageErrorText = error.localizedDescription
-            statusText = "Message load failed: \(error.localizedDescription)"
+            selectedMessageErrorText = userFriendlyMessage(error)
+            statusText = "Message load failed: \(userFriendlyMessage(error))"
         }
     }
 

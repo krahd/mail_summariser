@@ -1,0 +1,632 @@
+{
+  "source": "/Users/tom/devel/ml-llm/llm/mail_summariser/macos-app/SettingsView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Stop mail_summariser?",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 127
+        }
+      },
+      {
+        "comment": "",
+        "key": "Settings",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 98
+        }
+      },
+      {
+        "comment": "",
+        "key": "Mail",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 43
+        }
+      },
+      {
+        "comment": "",
+        "key": "Connection Check",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 73
+        }
+      },
+      {
+        "comment": "",
+        "key": "Dummy Mode",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 37
+        }
+      },
+      {
+        "comment": "",
+        "key": "Using the built-in test mailbox and outbox.",
+        "location": {
+          "startingColumn": 60,
+          "startingLine": 38
+        }
+      },
+      {
+        "comment": "",
+        "key": "Using the configured IMAP and SMTP servers.",
+        "location": {
+          "startingColumn": 108,
+          "startingLine": 38
+        }
+      },
+      {
+        "comment": "",
+        "key": "IMAP Host",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 44
+        }
+      },
+      {
+        "comment": "",
+        "key": "IMAP Port",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 45
+        }
+      },
+      {
+        "comment": "",
+        "key": "Use SSL for IMAP",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 46
+        }
+      },
+      {
+        "comment": "",
+        "key": "IMAP Password",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 48
+        }
+      },
+      {
+        "comment": "",
+        "key": "IMAP Password",
+        "location": {
+          "startingColumn": 45,
+          "startingLine": 50
+        }
+      },
+      {
+        "comment": "",
+        "key": "Hide IMAP Password",
+        "location": {
+          "startingColumn": 58,
+          "startingLine": 52
+        }
+      },
+      {
+        "comment": "",
+        "key": "Show IMAP Password",
+        "location": {
+          "startingColumn": 81,
+          "startingLine": 52
+        }
+      },
+      {
+        "comment": "",
+        "key": "SMTP Host",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 56
+        }
+      },
+      {
+        "comment": "",
+        "key": "SMTP Port",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 57
+        }
+      },
+      {
+        "comment": "",
+        "key": "Use SSL for SMTP",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 58
+        }
+      },
+      {
+        "comment": "",
+        "key": "SMTP Password",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 60
+        }
+      },
+      {
+        "comment": "",
+        "key": "SMTP Password",
+        "location": {
+          "startingColumn": 45,
+          "startingLine": 62
+        }
+      },
+      {
+        "comment": "",
+        "key": "Hide SMTP Password",
+        "location": {
+          "startingColumn": 58,
+          "startingLine": 64
+        }
+      },
+      {
+        "comment": "",
+        "key": "Show SMTP Password",
+        "location": {
+          "startingColumn": 81,
+          "startingLine": 64
+        }
+      },
+      {
+        "comment": "",
+        "key": "Username",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 68
+        }
+      },
+      {
+        "comment": "",
+        "key": "Digest recipient",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 69
+        }
+      },
+      {
+        "comment": "",
+        "key": "Summarised tag",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 70
+        }
+      },
+      {
+        "comment": "",
+        "key": "Test Connection",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 74
+        }
+      },
+      {
+        "comment": "",
+        "key": "Advanced Settings",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 82
+        }
+      },
+      {
+        "comment": "",
+        "key": "Advanced Settings",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 324
+        }
+      },
+      {
+        "comment": "",
+        "key": "Load",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 89
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 92
+        }
+      },
+      {
+        "comment": "",
+        "key": "Stop",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 128
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 131
+        }
+      },
+      {
+        "comment": "",
+        "key": "This will stop the connected backend and close the macOS app.",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 133
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reset Local Database",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 137
+        }
+      },
+      {
+        "comment": "",
+        "key": "Type RESET DATABASE to delete all stored backend data and restore defaults.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 139
+        }
+      },
+      {
+        "comment": "",
+        "key": "RESET DATABASE",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 141
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 145
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reset",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 148
+        }
+      },
+      {
+        "comment": "",
+        "key": "Provider",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 161
+        }
+      },
+      {
+        "comment": "",
+        "key": "Local Ollama",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 219
+        }
+      },
+      {
+        "comment": "",
+        "key": "Backend Client",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 241
+        }
+      },
+      {
+        "comment": "",
+        "key": "Fake Mail Server",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 266
+        }
+      },
+      {
+        "comment": "",
+        "key": "Application",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 297
+        }
+      },
+      {
+        "comment": "",
+        "key": "LLM Provider",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 162
+        }
+      },
+      {
+        "comment": "",
+        "key": "OpenAI API Key",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 198
+        }
+      },
+      {
+        "comment": "",
+        "key": "OpenAI API Key",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 200
+        }
+      },
+      {
+        "comment": "",
+        "key": "Hide OpenAI API Key",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 202
+        }
+      },
+      {
+        "comment": "",
+        "key": "Show OpenAI API Key",
+        "location": {
+          "startingColumn": 71,
+          "startingLine": 202
+        }
+      },
+      {
+        "comment": "",
+        "key": "Anthropic API Key",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 209
+        }
+      },
+      {
+        "comment": "",
+        "key": "Anthropic API Key",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 211
+        }
+      },
+      {
+        "comment": "",
+        "key": "Hide Anthropic API Key",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 213
+        }
+      },
+      {
+        "comment": "",
+        "key": "Show Anthropic API Key",
+        "location": {
+          "startingColumn": 77,
+          "startingLine": 213
+        }
+      },
+      {
+        "comment": "",
+        "key": "Ollama",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 163
+        }
+      },
+      {
+        "comment": "",
+        "key": "OpenAI",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 164
+        }
+      },
+      {
+        "comment": "",
+        "key": "Anthropic",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 165
+        }
+      },
+      {
+        "comment": "",
+        "key": "System Message for %@",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 174
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ stores its own system message. Switching providers swaps the prompt shown here.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 188
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reset to Default",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 191
+        }
+      },
+      {
+        "comment": "",
+        "key": "Ollama Host",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 220
+        }
+      },
+      {
+        "comment": "",
+        "key": "Model",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 221
+        }
+      },
+      {
+        "comment": "",
+        "key": "Auto-start Ollama when needed",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 222
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start Ollama automatically on startup",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 223
+        }
+      },
+      {
+        "comment": "",
+        "key": "Stop Ollama automatically on exit",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 224
+        }
+      },
+      {
+        "comment": "",
+        "key": "Refresh Runtime Status",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 235
+        }
+      },
+      {
+        "comment": "",
+        "key": "Stored locally on this Mac and sent as X-API-Key with backend requests.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 260
+        }
+      },
+      {
+        "comment": "",
+        "key": "Backend URL",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 243
+        }
+      },
+      {
+        "comment": "",
+        "key": "Backend API Key",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 253
+        }
+      },
+      {
+        "comment": "",
+        "key": "Backend API Key",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 255
+        }
+      },
+      {
+        "comment": "",
+        "key": "Hide Backend API Key",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 257
+        }
+      },
+      {
+        "comment": "",
+        "key": "Show Backend API Key",
+        "location": {
+          "startingColumn": 72,
+          "startingLine": 257
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start Fake Mail Server",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 281
+        }
+      },
+      {
+        "comment": "",
+        "key": "Stop Fake Mail Server",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 285
+        }
+      },
+      {
+        "comment": "",
+        "key": "Use Fake Mail Settings",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 289
+        }
+      },
+      {
+        "comment": "",
+        "key": "This removes every stored setting, job, log, and undo entry from the backend database and restores defaults.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 302
+        }
+      },
+      {
+        "comment": "",
+        "key": "This shuts down the connected backend. If shutdown succeeds, the macOS app also closes.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 308
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reset Local Database",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 298
+        }
+      },
+      {
+        "comment": "",
+        "key": "Stop mail_summariser",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 305
+        }
+      },
+      {
+        "comment": "",
+        "key": "Load",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 315
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 318
+        }
+      }
+    ]
+  },
+  "version": 1
+}

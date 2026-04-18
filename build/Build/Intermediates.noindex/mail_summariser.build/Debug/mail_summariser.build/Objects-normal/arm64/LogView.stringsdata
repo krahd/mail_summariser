@@ -1,0 +1,152 @@
+{
+  "source": "/Users/tom/devel/ml-llm/llm/mail_summariser/macos-app/LogView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Refresh",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 31
+        }
+      },
+      {
+        "comment": "",
+        "key": "No log entries",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 40
+        }
+      },
+      {
+        "comment": "",
+        "key": "Time",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 44
+        }
+      },
+      {
+        "comment": "",
+        "key": "Action",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 45
+        }
+      },
+      {
+        "comment": "",
+        "key": "Status",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 46
+        }
+      },
+      {
+        "comment": "",
+        "key": "Details",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 47
+        }
+      },
+      {
+        "comment": "",
+        "key": "Undo",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 50
+        }
+      },
+      {
+        "comment": "",
+        "key": "Final",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 58
+        }
+      },
+      {
+        "comment": "",
+        "key": "Undo",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 52
+        }
+      },
+      {
+        "comment": "",
+        "key": "Error details",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 72
+        }
+      },
+      {
+        "comment": "",
+        "key": "Hide details",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 75
+        }
+      },
+      {
+        "comment": "",
+        "key": "Show details",
+        "location": {
+          "startingColumn": 67,
+          "startingLine": 75
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 85
+        }
+      },
+      {
+        "comment": "",
+        "key": "Copy",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 99
+        }
+      },
+      {
+        "comment": "",
+        "key": "Copy+Meta",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 106
+        }
+      },
+      {
+        "comment": "",
+        "key": "Export JSON",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 113
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save As…",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 120
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 127
+        }
+      }
+    ]
+  },
+  "version": 1
+}

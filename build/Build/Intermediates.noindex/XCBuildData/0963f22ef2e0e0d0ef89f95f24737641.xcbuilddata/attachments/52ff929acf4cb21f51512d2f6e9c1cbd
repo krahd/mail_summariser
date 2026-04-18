@@ -1,0 +1,39 @@
+{
+  "" : {
+    "diagnostics" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/mail_summariserTests-primary.dia",
+    "emit-module-dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/mail_summariserTests-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/mail_summariserTests-primary-emit-module.dia",
+    "pch" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/mail_summariserTests-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/mail_summariserTests-primary.swiftdeps"
+  },
+  "/Users/tom/devel/ml-llm/llm/mail_summariser/macos-app-tests/AppStateTests.swift" : {
+    "const-values" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/AppStateTests.swiftconstvalues",
+    "dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/AppStateTests.d",
+    "diagnostics" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/AppStateTests.dia",
+    "index-unit-output-path" : "/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/AppStateTests.o",
+    "llvm-bc" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/AppStateTests.bc",
+    "object" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/AppStateTests.o",
+    "swift-dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/AppStateTests.swiftdeps",
+    "swiftmodule" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/AppStateTests~partial.swiftmodule"
+  },
+  "/Users/tom/devel/ml-llm/llm/mail_summariser/macos-app-tests/BackendBridgeTests.swift" : {
+    "const-values" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/BackendBridgeTests.swiftconstvalues",
+    "dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/BackendBridgeTests.d",
+    "diagnostics" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/BackendBridgeTests.dia",
+    "index-unit-output-path" : "/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/BackendBridgeTests.o",
+    "llvm-bc" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/BackendBridgeTests.bc",
+    "object" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/BackendBridgeTests.o",
+    "swift-dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/BackendBridgeTests.swiftdeps",
+    "swiftmodule" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/BackendBridgeTests~partial.swiftmodule"
+  },
+  "/Users/tom/devel/ml-llm/llm/mail_summariser/macos-app-tests/MockURLProtocol.swift" : {
+    "const-values" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/MockURLProtocol.swiftconstvalues",
+    "dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/MockURLProtocol.d",
+    "diagnostics" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/MockURLProtocol.dia",
+    "index-unit-output-path" : "/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/MockURLProtocol.o",
+    "llvm-bc" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/MockURLProtocol.bc",
+    "object" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/MockURLProtocol.o",
+    "swift-dependencies" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/MockURLProtocol.swiftdeps",
+    "swiftmodule" : "/Users/tom/devel/ml-llm/llm/mail_summariser/build/Build/Intermediates.noindex/mail_summariser.build/Debug/mail_summariserTests.build/Objects-normal/arm64/MockURLProtocol~partial.swiftmodule"
+  }
+}

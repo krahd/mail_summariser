@@ -1,0 +1,4 @@
+Target dependency graph (2 targets)
+Target 'mail_summariserTests' in project 'mail_summariser'
+➜ Explicit dependency on target 'mail_summariser' in project 'mail_summariser'
+Target 'mail_summariser' in project 'mail_summariser' (no dependencies)
