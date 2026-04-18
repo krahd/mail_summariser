@@ -116,7 +116,7 @@
       },
       {
         "comment": "",
-        "key": "Copy+Meta",
+        "key": "Copy+Time",
         "location": {
           "startingColumn": 47,
           "startingLine": 106
@@ -124,7 +124,7 @@
       },
       {
         "comment": "",
-        "key": "Export JSON",
+        "key": "Copy+Meta",
         "location": {
           "startingColumn": 47,
           "startingLine": 113
@@ -132,7 +132,7 @@
       },
       {
         "comment": "",
-        "key": "Save As…",
+        "key": "Export JSON",
         "location": {
           "startingColumn": 47,
           "startingLine": 120
@@ -140,10 +140,18 @@
       },
       {
         "comment": "",
-        "key": "Save",
+        "key": "Save As…",
         "location": {
           "startingColumn": 47,
           "startingLine": 127
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 134
         }
       }
     ]

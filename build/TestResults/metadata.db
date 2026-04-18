@@ -13,47 +13,47 @@
 				<key>testLoadFakeMailStatusUpdatesPublishedState</key>
 				<dict>
 					<key>mrnet</key>
-					<real>0.0029469728469848633</real>
+					<real>0.0026699304580688477</real>
 				</dict>
 				<key>testLoadRuntimeStatusUpdatesPublishedRuntimeStatus</key>
 				<dict>
 					<key>mrnet</key>
-					<real>0.0019489526748657227</real>
+					<real>0.0017349720001220703</real>
 				</dict>
 				<key>testLoadSettingsUpdatesSettingsAndBridgeBaseURL</key>
 				<dict>
 					<key>mrnet</key>
-					<real>0.001601099967956543</real>
+					<real>0.0018699169158935547</real>
 				</dict>
 				<key>testLoadSystemMessageDefaultsUpdatesPublishedState</key>
 				<dict>
 					<key>mrnet</key>
-					<real>0.0023059844970703125</real>
+					<real>0.0016410350799560547</real>
 				</dict>
 				<key>testRequestShutdownReturnsBackendStatus</key>
 				<dict>
 					<key>mrnet</key>
-					<real>0.0029370784759521484</real>
+					<real>0.001582026481628418</real>
 				</dict>
 				<key>testResetDatabaseClearsWorkspaceAndUpdatesSettings</key>
 				<dict>
 					<key>mrnet</key>
-					<real>0.0068459510803222656</real>
+					<real>0.0022310018539428711</real>
 				</dict>
 				<key>testSelectMessageLoadsDetailIntoPublishedState</key>
 				<dict>
 					<key>mrnet</key>
-					<real>0.0014379024505615234</real>
+					<real>0.0020209550857543945</real>
 				</dict>
 				<key>testStartAndStopFakeMailServerUpdatePublishedState</key>
 				<dict>
 					<key>mrnet</key>
-					<real>0.0020771026611328125</real>
+					<real>0.0022829771041870117</real>
 				</dict>
 				<key>testStartManagedOllamaUpdatesRuntimeStatus</key>
 				<dict>
 					<key>mrnet</key>
-					<real>0.0027619600296020508</real>
+					<real>0.0096989870071411133</real>
 				</dict>
 			</dict>
 			<key>BackendBridgeTests</key>
@@ -61,47 +61,57 @@
 				<key>testGetDecodingFailureReturnsDecodingError</key>
 				<dict>
 					<key>mrnet</key>
-					<real>0.0019400119781494141</real>
+					<real>0.0026400089263916016</real>
 				</dict>
 				<key>testGetMessageDetailDecodesPayloadFromEncodedPath</key>
 				<dict>
 					<key>mrnet</key>
-					<real>0.001582026481628418</real>
+					<real>0.0016869306564331055</real>
 				</dict>
 				<key>testGetRuntimeStatusDecodesPayloadFromConfiguredBaseURL</key>
 				<dict>
 					<key>mrnet</key>
-					<real>0.0047659873962402344</real>
+					<real>0.0027689933776855469</real>
 				</dict>
 				<key>testInvalidBaseURLThrows</key>
 				<dict>
 					<key>mrnet</key>
-					<real>0.0026429891586303711</real>
+					<real>0.0049239397048950195</real>
 				</dict>
 				<key>testNoRetryOnHTTP4xx</key>
 				<dict>
 					<key>mrnet</key>
-					<real>0.0015870332717895508</real>
+					<real>0.0015950202941894531</real>
 				</dict>
 				<key>testPostJSONIncludesBodyAndSurfacesBackendErrors</key>
 				<dict>
 					<key>mrnet</key>
-					<real>0.0014350414276123047</real>
+					<real>0.0014389753341674805</real>
+				</dict>
+				<key>testRandomizedJitterBounds</key>
+				<dict>
+					<key>mrnet</key>
+					<real>0.011216998100280762</real>
 				</dict>
 				<key>testRequestsIncludeBackendAPIKeyWhenConfigured</key>
 				<dict>
 					<key>mrnet</key>
-					<real>0.0012840032577514648</real>
+					<real>0.001278996467590332</real>
 				</dict>
 				<key>testRetryOnHTTP5xxSucceeds</key>
 				<dict>
 					<key>mrnet</key>
-					<real>0.63184106349945068</real>
+					<real>0.63834798336029053</real>
 				</dict>
 				<key>testRetryOnTransientNetworkError</key>
 				<dict>
 					<key>mrnet</key>
-					<real>0.61083400249481201</real>
+					<real>0.61116600036621094</real>
+				</dict>
+				<key>testServerErrorFormats</key>
+				<dict>
+					<key>mrnet</key>
+					<real>0.61261200904846191</real>
 				</dict>
 			</dict>
 		</dict>

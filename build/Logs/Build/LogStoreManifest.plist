@@ -6,7 +6,7 @@
 	<integer>12</integer>
 	<key>logs</key>
 	<dict>
-		<key>7FDF5F55-627D-44BE-8D04-1AB7B8355FAC</key>
+		<key>0F867D12-121F-4C59-9A42-0AF5897BD10D</key>
 		<dict>
 			<key>className</key>
 			<string>IDECommandLineBuildLog</string>
@@ -15,7 +15,7 @@
 			<key>domainType</key>
 			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
 			<key>fileName</key>
-			<string>7FDF5F55-627D-44BE-8D04-1AB7B8355FAC.xcactivitylog</string>
+			<string>0F867D12-121F-4C59-9A42-0AF5897BD10D.xcactivitylog</string>
 			<key>hasPrimaryLog</key>
 			<true/>
 			<key>primaryObservable</key>
@@ -29,7 +29,7 @@
 				<key>totalNumberOfTestFailures</key>
 				<integer>0</integer>
 				<key>totalNumberOfWarnings</key>
-				<integer>2</integer>
+				<integer>3</integer>
 			</dict>
 			<key>schemeIdentifier-containerName</key>
 			<string>mail_summariser project</string>
@@ -40,13 +40,13 @@
 			<key>signature</key>
 			<string>Testing project mail_summariser with scheme mail_summariser</string>
 			<key>timeStartedRecording</key>
-			<real>798246556.65780401</real>
+			<real>798247546.34761095</real>
 			<key>timeStoppedRecording</key>
-			<real>798246561.05403197</real>
+			<real>798247549.32366598</real>
 			<key>title</key>
 			<string>Testing project mail_summariser with scheme mail_summariser</string>
 			<key>uniqueIdentifier</key>
-			<string>7FDF5F55-627D-44BE-8D04-1AB7B8355FAC</string>
+			<string>0F867D12-121F-4C59-9A42-0AF5897BD10D</string>
 		</dict>
 		<key>D08650EA-BE75-4B31-B258-8AD6CABDABF2</key>
 		<dict>
@@ -89,6 +89,48 @@
 			<string>Testing project mail_summariser with scheme mail_summariser</string>
 			<key>uniqueIdentifier</key>
 			<string>D08650EA-BE75-4B31-B258-8AD6CABDABF2</string>
+		</dict>
+		<key>FFDAE300-5788-48A0-A915-8DADC728FB16</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>FFDAE300-5788-48A0-A915-8DADC728FB16.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>W</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>4</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>mail_summariser project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>mail_summariser</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Testing project mail_summariser with scheme mail_summariser</string>
+			<key>timeStartedRecording</key>
+			<real>798247495.02807605</real>
+			<key>timeStoppedRecording</key>
+			<real>798247499.74105096</real>
+			<key>title</key>
+			<string>Testing project mail_summariser with scheme mail_summariser</string>
+			<key>uniqueIdentifier</key>
+			<string>FFDAE300-5788-48A0-A915-8DADC728FB16</string>
 		</dict>
 	</dict>
 </dict>

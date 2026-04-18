@@ -100,19 +100,19 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			bQNMiYr97Iu0ezNa4mwsBZ59E5o=
+			34NDuluxiau1+n1rX7Na8b0JpDo=
 			</data>
 			<key>requirement</key>
-			<string>cdhash H"6d034c898afdec8bb47b335ae26c2c059e7d139a"</string>
+			<string>cdhash H"df8343ba5bb189abb5fa7d6b5fb35af1bd09a43a"</string>
 		</dict>
 		<key>PlugIns/mail_summariserTests.xctest</key>
 		<dict>
 			<key>cdhash</key>
 			<data>
-			mRwMORlpmJs1J8oj8mXRRyrW/DI=
+			j7b4mVPa/WCcLWz32AE4KsVujso=
 			</data>
 			<key>requirement</key>
-			<string>cdhash H"991c0c391969989b3527ca23f265d1472ad6fc32"</string>
+			<string>cdhash H"8fb6f89953dafd609c2d6cf7d801382ac56e8eca"</string>
 		</dict>
 	</dict>
 	<key>rules</key>
