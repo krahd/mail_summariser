@@ -1,21 +1,27 @@
 from __future__ import annotations
-
 import sys
 import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
+
+
+# Module-level placeholder for dynamically-imported backend module
+db: Any = None
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BACKEND_DIR = REPO_ROOT / "backend"
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-import db
-
 
 class DatabaseInitTests(unittest.TestCase):
     def setUp(self) -> None:
+        # import backend module dynamically after sys.path has been configured
+        import importlib
+        globals()["db"] = importlib.import_module("db")
+
         self.original_db_path = db.DB_PATH
         self.temp_dir = tempfile.TemporaryDirectory()
 

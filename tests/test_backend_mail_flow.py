@@ -1,26 +1,25 @@
 from __future__ import annotations
-from fastapi.testclient import TestClient
-import unittest
-import tempfile
-import sqlite3
-import app as backend_app
-import db
-import dummy_state
-import mail_service
-from pathlib import Path
 import sys
+import tempfile
+import unittest
+import sqlite3
+from pathlib import Path
 from typing import Any, cast
-REPO_ROOT = Path(__file__).resolve().parents[1]
-BACKEND_DIR = REPO_ROOT / "backend"
-if str(BACKEND_DIR) not in sys.path:
-    sys.path.insert(0, str(BACKEND_DIR))
 
+from fastapi.testclient import TestClient
 
-
+# backend modules are imported dynamically in setUp after sys.path is configured
 try:
     from tests.support.fake_mail_server import FakeMailEnvironment
 except Exception:
     from backend.fake_mail_server import FakeMailEnvironment
+
+
+# Module-level placeholders for dynamically-imported backend modules
+mail_service: Any = None
+dummy_state: Any = None
+db: Any = None
+backend_app: Any = None
 
 
 
@@ -53,6 +52,19 @@ SUMMARY_PAYLOAD = {
 
 class BackendMailFlowTests(unittest.TestCase):
     def setUp(self) -> None:
+        # ensure backend path is on sys.path then import backend modules
+        REPO_ROOT = Path(__file__).resolve().parents[1]
+        BACKEND_DIR = REPO_ROOT / "backend"
+        if str(BACKEND_DIR) not in sys.path:
+            sys.path.insert(0, str(BACKEND_DIR))
+
+        # import backend modules dynamically after sys.path has been configured
+        import importlib
+        globals()["mail_service"] = importlib.import_module("mail_service")
+        globals()["dummy_state"] = importlib.import_module("dummy_state")
+        globals()["db"] = importlib.import_module("db")
+        globals()["backend_app"] = importlib.import_module("app")
+
         self.temp_dir = tempfile.TemporaryDirectory()
         db.DB_PATH = Path(self.temp_dir.name) / "mail_summariser.sqlite3"
         self.original_dev_tools_enabled = backend_app.ENABLE_DEV_TOOLS
@@ -70,6 +82,93 @@ class BackendMailFlowTests(unittest.TestCase):
     def _client(self) -> TestClient:
         return TestClient(backend_app.app)
 
+    def _create_summary_and_get_job(self, client: TestClient, keyword: str) -> tuple[str, dict]:
+        summary = client.post(
+            "/summaries",
+            json={**SUMMARY_PAYLOAD, "criteria": {**
+                                                  SUMMARY_PAYLOAD["criteria"], "keyword": keyword}},
+        )
+        self.assertEqual(summary.status_code, 200)
+        payload = summary.json()
+        job_id = payload["jobId"]
+        return job_id, payload
+
+    def _perform_undo_checks(self, client: TestClient, job_id: str, payload: dict) -> None:
+        # mark as read and tag summarised, then verify undo behavior
+        self.assertEqual(client.post("/actions/mark-read", json={"jobId": job_id}).status_code, 200)
+        self.assertEqual(client.post("/actions/tag-summarised",
+                         json={"jobId": job_id}).status_code, 200)
+
+        logs = client.get("/logs").json()
+        job_logs = [item for item in logs if item.get("job_id") == job_id]
+        mark_log = next(item for item in job_logs if item["action"] == "mark_read")
+        tag_log = next(item for item in job_logs if item["action"] == "tag_summarised")
+        self.assertTrue(mark_log["undoable"])
+        self.assertTrue(tag_log["undoable"])
+
+        undo_response = client.post(f"/actions/undo/logs/{tag_log['id']}")
+        self.assertEqual(undo_response.status_code, 200)
+
+        logs_after_tag_undo = client.get("/logs").json()
+        job_logs_after_tag_undo = [
+            item for item in logs_after_tag_undo if item.get("job_id") == job_id]
+        mark_log_after = next(
+            item for item in job_logs_after_tag_undo if item["id"] == mark_log["id"])
+        tag_log_after = next(
+            item for item in job_logs_after_tag_undo if item["id"] == tag_log["id"])
+        self.assertTrue(mark_log_after["undoable"])
+        self.assertEqual(tag_log_after["undo_status"], "final")
+
+        undo_mark_response = client.post(f"/actions/undo/logs/{mark_log['id']}")
+        self.assertEqual(undo_mark_response.status_code, 200)
+
+        restored = mail_service.search_messages(
+            backend_app.SummaryRequest(
+                **{**SUMMARY_PAYLOAD, "criteria": {**SUMMARY_PAYLOAD["criteria"], "keyword": "project"}}
+            ).criteria,
+            {"dummyMode": True},
+        )
+        self.assertTrue(restored[0]["unread"])
+
+    def _perform_imap_flow_checks(self, client: TestClient, environment: Any, job_id: str, payload: dict) -> None:
+        self.assertEqual(len(payload["messages"]), 1)
+        self.assertEqual(payload["messages"][0]["id"], "102")
+        self.assertNotIn("body", payload["messages"][0])
+
+        detail_response = client.get(f"/jobs/{job_id}/messages/{payload['messages'][0]['id']}")
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertIn("invoice", detail_response.json()["body"].lower())
+
+        self.assertEqual(client.post("/actions/mark-read", json={"jobId": job_id}).status_code, 200)
+        self.assertIn("\\Seen", environment.flags_for("102"))
+
+        self.assertEqual(client.post("/actions/tag-summarised",
+                         json={"jobId": job_id}).status_code, 200)
+        self.assertIn("summarised", environment.flags_for("102"))
+
+        logs = client.get("/logs").json()
+        job_logs = [item for item in logs if item.get("job_id") == job_id]
+        mark_log = next(item for item in job_logs if item["action"] == "mark_read")
+        tag_log = next(item for item in job_logs if item["action"] == "tag_summarised")
+
+        self.assertEqual(client.post(f"/actions/undo/logs/{tag_log['id']}").status_code, 200)
+        self.assertNotIn("summarised", environment.flags_for("102"))
+
+        self.assertEqual(client.post(f"/actions/undo/logs/{mark_log['id']}").status_code, 200)
+        self.assertNotIn("\\Seen", environment.flags_for("102"))
+
+        email_response = client.post("/actions/email-summary", json={"jobId": job_id})
+        self.assertEqual(email_response.status_code, 200)
+        self.assertEqual(len(environment.sent_messages), 1)
+        self.assertIn("Mail summary", environment.sent_messages[0]["subject"])
+
+        latest_logs = client.get("/logs").json()
+        email_log = next(
+            item for item in latest_logs if item["action"] == "email_summary" and item.get("job_id") == job_id
+        )
+        self.assertEqual(email_log["undo_status"], "final")
+        self.assertFalse(email_log["undoable"])
+
     def _table_count(self, table_name: str) -> int:
         with sqlite3.connect(db.DB_PATH) as conn:
             row = conn.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()
@@ -83,52 +182,15 @@ class BackendMailFlowTests(unittest.TestCase):
             connection = client.post("/settings/test-connection", json=settings)
             self.assertEqual(connection.status_code, 200)
             self.assertEqual(connection.json()["mode"], "dummy")
-
-            summary = client.post(
-                "/summaries", json={**SUMMARY_PAYLOAD, "criteria": {**SUMMARY_PAYLOAD["criteria"], "keyword": "project"}})
-            self.assertEqual(summary.status_code, 200)
-            payload = summary.json()
+            job_id, payload = self._create_summary_and_get_job(client, "project")
             self.assertNotIn("body", payload["messages"][0])
-            job_id = payload["jobId"]
 
             detail_response = client.get(f"/jobs/{job_id}/messages/{payload['messages'][0]['id']}")
             self.assertEqual(detail_response.status_code, 200)
             self.assertIn("deployment schedule", detail_response.json()["body"].lower())
 
-            self.assertEqual(client.post("/actions/mark-read",
-                             json={"jobId": job_id}).status_code, 200)
-            self.assertEqual(client.post("/actions/tag-summarised",
-                             json={"jobId": job_id}).status_code, 200)
-
-            logs = client.get("/logs").json()
-            job_logs = [item for item in logs if item.get("job_id") == job_id]
-            mark_log = next(item for item in job_logs if item["action"] == "mark_read")
-            tag_log = next(item for item in job_logs if item["action"] == "tag_summarised")
-            self.assertTrue(mark_log["undoable"])
-            self.assertTrue(tag_log["undoable"])
-
-            undo_response = client.post(f"/actions/undo/logs/{tag_log['id']}")
-            self.assertEqual(undo_response.status_code, 200)
-
-            logs_after_tag_undo = client.get("/logs").json()
-            job_logs_after_tag_undo = [
-                item for item in logs_after_tag_undo if item.get("job_id") == job_id]
-            mark_log_after = next(
-                item for item in job_logs_after_tag_undo if item["id"] == mark_log["id"])
-            tag_log_after = next(
-                item for item in job_logs_after_tag_undo if item["id"] == tag_log["id"])
-            self.assertTrue(mark_log_after["undoable"])
-            self.assertEqual(tag_log_after["undo_status"], "final")
-
-            undo_mark_response = client.post(f"/actions/undo/logs/{mark_log['id']}")
-            self.assertEqual(undo_mark_response.status_code, 200)
-
-            restored = mail_service.search_messages(
-                backend_app.SummaryRequest(
-                    **{**SUMMARY_PAYLOAD, "criteria": {**SUMMARY_PAYLOAD["criteria"], "keyword": "project"}}).criteria,
-                {"dummyMode": True},
-            )
-            self.assertTrue(restored[0]["unread"])
+            # perform mark/tag and undo checks in helper to reduce local variables
+            self._perform_undo_checks(client, job_id, payload)
 
     def test_message_detail_endpoint_returns_404_for_unknown_job_or_message(self) -> None:
         with self._client() as client:
@@ -176,51 +238,8 @@ class BackendMailFlowTests(unittest.TestCase):
             self.assertEqual(connection.status_code, 200)
             self.assertEqual(connection.json()["mode"], "imap")
 
-            summary = client.post(
-                "/summaries",
-                json={**SUMMARY_PAYLOAD, "criteria": {**
-                                                      SUMMARY_PAYLOAD["criteria"], "keyword": "invoice"}},
-            )
-            self.assertEqual(summary.status_code, 200)
-            payload = summary.json()
-            self.assertEqual(len(payload["messages"]), 1)
-            self.assertEqual(payload["messages"][0]["id"], "102")
-            self.assertNotIn("body", payload["messages"][0])
-            job_id = payload["jobId"]
-
-            detail_response = client.get(f"/jobs/{job_id}/messages/{payload['messages'][0]['id']}")
-            self.assertEqual(detail_response.status_code, 200)
-            self.assertIn("invoice", detail_response.json()["body"].lower())
-
-            self.assertEqual(client.post("/actions/mark-read",
-                             json={"jobId": job_id}).status_code, 200)
-            self.assertIn("\\Seen", environment.flags_for("102"))
-
-            self.assertEqual(client.post("/actions/tag-summarised",
-                             json={"jobId": job_id}).status_code, 200)
-            self.assertIn("summarised", environment.flags_for("102"))
-
-            logs = client.get("/logs").json()
-            job_logs = [item for item in logs if item.get("job_id") == job_id]
-            mark_log = next(item for item in job_logs if item["action"] == "mark_read")
-            tag_log = next(item for item in job_logs if item["action"] == "tag_summarised")
-
-            self.assertEqual(client.post(f"/actions/undo/logs/{tag_log['id']}").status_code, 200)
-            self.assertNotIn("summarised", environment.flags_for("102"))
-
-            self.assertEqual(client.post(f"/actions/undo/logs/{mark_log['id']}").status_code, 200)
-            self.assertNotIn("\\Seen", environment.flags_for("102"))
-
-            email_response = client.post("/actions/email-summary", json={"jobId": job_id})
-            self.assertEqual(email_response.status_code, 200)
-            self.assertEqual(len(environment.sent_messages), 1)
-            self.assertIn("Mail summary", environment.sent_messages[0]["subject"])
-
-            latest_logs = client.get("/logs").json()
-            email_log = next(
-                item for item in latest_logs if item["action"] == "email_summary" and item.get("job_id") == job_id)
-            self.assertEqual(email_log["undo_status"], "final")
-            self.assertFalse(email_log["undoable"])
+            job_id, payload = self._create_summary_and_get_job(client, "invoice")
+            self._perform_imap_flow_checks(client, environment, job_id, payload)
 
     def test_embedded_fake_mail_server_can_drive_live_mail_flow(self) -> None:
         backend_app.ENABLE_DEV_TOOLS = True

@@ -11,6 +11,7 @@ dependencies = [
   "fastapi>=0.115,<1",
   "pydantic>=2.8,<3",
   "uvicorn>=0.30,<1",
+  "modelito==0.1.0",
 ]
 
 [project.optional-dependencies]
@@ -24,4 +25,4 @@ pythonpath = [".", "backend"]
 testpaths = ["tests"]
 
 [tool.setuptools]
-packages = ["backend", "modelito"]
+packages = ["backend"]
