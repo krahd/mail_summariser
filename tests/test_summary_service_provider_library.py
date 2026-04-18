@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
@@ -27,9 +28,11 @@ def test_unknown_provider_falls_back_to_ollama(monkeypatch: pytest.MonkeyPatch) 
             return f"{summary_service.RESPONSE_SENTINEL}\nDone"
 
     monkeypatch.setattr(summary_service, 'get_provider_client', lambda provider: StubClient())
-    monkeypatch.setattr(summary_service, 'ensure_ollama_running', lambda host, auto_start: (True, 'ok'))
+    monkeypatch.setattr(summary_service, 'ensure_ollama_running',
+                        lambda host, auto_start: (True, 'ok'))
 
-    text, meta = summary_service.summarize_messages(MESSAGES, 5, settings={'llmProvider': 'mystery-provider'})
+    text, meta = summary_service.summarize_messages(
+        MESSAGES, 5, settings={'llmProvider': 'mystery-provider'})
     assert text == 'Done'
     assert meta['provider'] == 'ollama'
     assert captured['request'].host == 'http://127.0.0.1:11434'
@@ -41,7 +44,8 @@ def test_placeholder_provider_response_triggers_fallback(monkeypatch: pytest.Mon
             return "I'm ready to summarize. Please provide the emails."
 
     monkeypatch.setattr(summary_service, 'get_provider_client', lambda provider: StubClient())
-    monkeypatch.setattr(summary_service, 'ensure_ollama_running', lambda host, auto_start: (True, 'ok'))
+    monkeypatch.setattr(summary_service, 'ensure_ollama_running',
+                        lambda host, auto_start: (True, 'ok'))
 
     text, meta = summary_service.summarize_messages(MESSAGES, 5, settings={'llmProvider': 'ollama'})
     assert text.startswith('Fallback summary (provider unavailable).')
@@ -69,7 +73,7 @@ def test_masked_provider_keys_do_not_count_as_real_credentials(monkeypatch: pyte
 def test_openai_client_uses_library_response_api(monkeypatch: pytest.MonkeyPatch) -> None:
     import importlib
 
-    captured: dict[str, object] = {}
+    captured: dict[str, Any] = {}
 
     class ResponsesAPI:
         def create(self, **kwargs):
@@ -91,7 +95,8 @@ def test_openai_client_uses_library_response_api(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr(importlib, 'import_module', fake_import_module)
 
     client = get_provider_client('openai')
-    text = client.summarize(ProviderRequest(model='gpt-4.1-mini', api_key='secret', system_message='system', prompt='prompt'))
+    text = client.summarize(ProviderRequest(model='gpt-4.1-mini',
+                            api_key='secret', system_message='system', prompt='prompt'))
     assert text.endswith('Library path works')
     assert captured['api_key'] == 'secret'
     assert captured['model'] == 'gpt-4.1-mini'
@@ -106,7 +111,8 @@ def test_anthropic_client_joins_text_blocks(monkeypatch: pytest.MonkeyPatch) -> 
         def create(self, **kwargs):
             return SimpleNamespace(
                 content=[
-                    SimpleNamespace(type='text', text=f'{summary_service.RESPONSE_SENTINEL}\nPart one'),
+                    SimpleNamespace(
+                        type='text', text=f'{summary_service.RESPONSE_SENTINEL}\nPart one'),
                     SimpleNamespace(type='text', text='Part two'),
                 ]
             )
@@ -125,6 +131,7 @@ def test_anthropic_client_joins_text_blocks(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setattr(importlib, 'import_module', fake_import_module)
 
     client = get_provider_client('anthropic')
-    text = client.summarize(ProviderRequest(model='claude-3-7-sonnet', api_key='secret', system_message='system', prompt='prompt'))
+    text = client.summarize(ProviderRequest(model='claude-3-7-sonnet',
+                            api_key='secret', system_message='system', prompt='prompt'))
     assert text.startswith(summary_service.RESPONSE_SENTINEL)
     assert 'Part two' in text

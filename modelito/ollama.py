@@ -10,8 +10,12 @@ import subprocess
 import threading
 import json
 import asyncio
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 from urllib.request import urlopen, Request
+from urllib.parse import urlparse
+
+from . import ollama_service
+from .timeout import estimate_remote_timeout
 
 from .base import LLMProvider
 from .base import AsyncLLMProvider
@@ -66,9 +70,16 @@ class OllamaProvider(LLMProvider):
 
     def download_model(self, model_name: str) -> str:
         try:
-            payload = {"name": model_name, "stream": False}
-            self._post_json(f"{self.host}/api/pull", payload, timeout=20.0)
-            return f"Download requested for {model_name}"
+            # Prefer the Ollama CLI pull when available, otherwise fall back to HTTP pull
+            try:
+                # run_ollama_command is provided by the service helper
+                ollama_service.run_ollama_command(
+                    "pull", model_name, host=self.host.replace("http://", "").replace("https://", ""))
+                return f"Download requested for {model_name} (via CLI)"
+            except FileNotFoundError:
+                payload = {"name": model_name, "stream": False}
+                self._post_json(f"{self.host}/api/pull", payload, timeout=20.0)
+                return f"Download requested for {model_name} (via HTTP)"
         except (OSError, json.JSONDecodeError) as exc:
             raise ModelDownloadError(f"Failed to request model download: {exc}") from exc
 
@@ -84,36 +95,74 @@ class OllamaProvider(LLMProvider):
         if self._is_running():
             return f"Ollama already running at {self.host}"
         try:
-            import os
-            env = os.environ.copy()
-            env["OLLAMA_HOST"] = self.host.replace("http://", "").replace("https://", "")
+            # Delegate to the consolidated ollama service helper when possible
+            parsed = urlparse(self.host)
+            scheme = parsed.scheme or "http"
+            netloc = parsed.netloc or parsed.path
+            if ":" in netloc:
+                host, port_s = netloc.split(":", 1)
+                port = int(port_s)
+            else:
+                host = netloc
+                port = 11434
+            base_url = f"{scheme}://{host}"
+            # start a detached serve process
             with _ollama_lock:
-                subprocess.Popen([
-                    "ollama", "serve"
-                ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True, env=env)
+                ollama_service.start_detached_ollama_serve(host=f"{base_url}:{port}")
+            # wait briefly for readiness
+            try:
+                ollama_service.wait_until_ready(base_url, port, timeout_seconds=20.0)
+            except Exception:
+                pass
             return f"Ollama started at {self.host}"
         except (OSError, subprocess.SubprocessError) as exc:
             raise ProviderUnavailableError(f"Failed to start Ollama: {exc}") from exc
 
     def stop(self) -> str:
-        # Not implemented: stopping Ollama is environment-specific
-        return "Stop not implemented in library. Use system tools."
+        # Attempt a graceful stop via the service helper
+        try:
+            parsed = urlparse(self.host)
+            scheme = parsed.scheme or "http"
+            netloc = parsed.netloc or parsed.path
+            if ":" in netloc:
+                host, port_s = netloc.split(":", 1)
+                port = int(port_s)
+            else:
+                host = netloc
+                port = 11434
+            base_url = f"{scheme}://{host}"
+            rc = ollama_service.stop_service(base_url, port, verbose=False)
+            if rc == 0:
+                return f"Ollama stopped at {self.host}"
+            return f"Stop returned code {rc} for {self.host}"
+        except Exception as exc:
+            raise ProviderUnavailableError(f"Failed to stop Ollama: {exc}") from exc
 
     def get_runtime_status(self) -> Dict[str, Any]:
         return {"running": self._is_running(), "host": self.host}
 
     def _is_running(self) -> bool:
         try:
-            self._get_json(f"{self.host}/api/version", timeout=1.2)
-            return True
-        except (OSError, json.JSONDecodeError):
+            # prefer service helper check
+            parsed = urlparse(self.host)
+            scheme = parsed.scheme or "http"
+            netloc = parsed.netloc or parsed.path
+            if ":" in netloc:
+                host, port_s = netloc.split(":", 1)
+                port = int(port_s)
+            else:
+                host = netloc
+                port = 11434
+            base_url = f"{scheme}://{host}"
+            return ollama_service.server_is_up(base_url, port)
+        except Exception:
             return False
 
-    def _get_json(self, url: str, timeout: float = 2.0) -> dict:
+    def _get_json(self, url: str, timeout: float = 2.0) -> dict[str, Any]:
         with urlopen(url, timeout=timeout) as response:
-            return json.loads(response.read().decode("utf-8"))
+            return cast(Dict[str, Any], json.loads(response.read().decode("utf-8")))
 
-    def _post_json(self, url: str, payload: dict, timeout: float = 15.0) -> dict:
+    def _post_json(self, url: str, payload: dict, timeout: float = 15.0) -> dict[str, Any]:
         body = json.dumps(payload).encode("utf-8")
         req = Request(url=url, data=body, headers={
                       "Content-Type": "application/json"}, method="POST")
@@ -121,13 +170,23 @@ class OllamaProvider(LLMProvider):
             raw = response.read().decode("utf-8")
             if not raw.strip():
                 return {}
-            return json.loads(raw)
+            return cast(Dict[str, Any], json.loads(raw))
 
-    def _call_post_json(self, url: str, payload: dict, timeout: float = 15.0, settings: Optional[Dict[str, Any]] = None) -> dict:
+    def _call_post_json(self, url: str, payload: dict, timeout: float = 15.0, settings: Optional[Dict[str, Any]] = None) -> dict[str, Any]:
         hook = (settings or {}).get("_post_json")
         if callable(hook):
-            return hook(url, payload)
-        return self._post_json(url, payload, timeout)
+            return cast(Dict[str, Any], hook(url, payload))
+        # Determine timeout: explicit setting -> estimator -> default
+        t = None
+        if settings:
+            t = settings.get("timeout_seconds")
+        if t is None:
+            model = (settings or {}).get("modelName") or (payload or {}).get("model")
+            try:
+                t = estimate_remote_timeout(model)
+            except Exception:
+                t = timeout
+        return self._post_json(url, payload, timeout=float(t))
 
     def _build_prompt(self, messages: List[Dict[str, Any]], _settings: Optional[Dict[str, Any]]) -> str:
         # _settings argument is unused but kept for interface compatibility
@@ -138,6 +197,34 @@ class AsyncOllamaProvider(AsyncLLMProvider):
         self._sync = OllamaProvider(host=host)
 
     async def summarize(self, messages: List[Dict[str, Any]], settings: Optional[Dict[str, Any]] = None) -> str:
+        # Prefer an async HTTP client where available for lower latency.
+        httpx_mod = None
+        try:
+            import importlib
+
+            httpx_mod = importlib.import_module("httpx")
+        except Exception:
+            httpx_mod = None
+
+        if httpx_mod is not None:
+            try:
+                model = (settings or {}).get("modelName", None)
+                payload = {
+                    "model": model or "llama3.2:latest",
+                    "system": (settings or {}).get("ollamaSystemMessage", ""),
+                    "prompt": (settings or {}).get("prompt") or "\n".join(m.get("content", "") for m in messages),
+                    "stream": False,
+                }
+                timeout = estimate_remote_timeout(payload.get("model"))
+                async with httpx_mod.AsyncClient() as client:
+                    r = await client.post(f"{self._sync.host}/api/generate", json=payload, timeout=timeout)
+                    r.raise_for_status()
+                    data = r.json()
+                    return str(data.get("response", "")).strip()
+            except Exception:
+                # Fall back to the sync provider on any async/httpx error
+                pass
+
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self._sync.summarize, messages, settings)
 

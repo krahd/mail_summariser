@@ -25,7 +25,9 @@ def insert_job(job_id: str, created_at: str, criteria: dict[str, Any], summary_l
     }
 
 
-def get_job(job_id: str) -> dict[str, Any] | None:
+def get_job(job_id: str | None) -> dict[str, Any] | None:
+    if job_id is None:
+        return None
     job = _dummy_jobs.get(job_id)
     return deepcopy(job) if job is not None else None
 

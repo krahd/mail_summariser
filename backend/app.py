@@ -62,10 +62,8 @@ if TYPE_CHECKING:
     # Provide imports for static type checkers. These modules are often
     # test-patched at runtime which confuses static analysis; the
     # TYPE_CHECKING block makes their attributes available to tools.
-    from backend import db as _db  # type: ignore  # pylint: disable=reimported
-    from backend import dummy_state as _dummy_state  # type: ignore  # pylint: disable=reimported
-    # type: ignore  # pylint: disable=reimported
-    from backend import model_provider_service as _model_provider_service
+    from backend import db as _db  # pylint: disable=reimported
+    from backend import dummy_state as _dummy_state  # pylint: disable=reimported
 
 
 @contextlib.asynccontextmanager
@@ -215,11 +213,11 @@ def _schedule_backend_shutdown(delay_seconds: float = 0.1) -> None:
 
 
 
-def _merged_settings() -> dict[str, object]:
+def _merged_settings() -> dict[str, Any]:
     return DEFAULT_SETTINGS | list_settings()
 
 
-def _masked_settings_payload() -> dict[str, object]:
+def _masked_settings_payload() -> dict[str, Any]:
     merged = _merged_settings()
     legacy_key = str(merged.get('llmApiKey', ''))
     if legacy_key:
@@ -243,10 +241,12 @@ def _get_db() -> Any:
     Uses a dynamic import at runtime but provides a static name for
     type-checkers via the TYPE_CHECKING imports above.
     """
-    return __import__('backend').db  # type: ignore[attr-defined]
+    import importlib
+    module = importlib.import_module("backend")
+    return getattr(module, "db")
 
 
-def _record_log(action: str, status: str, details: str, *, job_id: str | None = None, settings: dict[str, object] | None = None) -> str:
+def _record_log(action: str, status: str, details: str, *, job_id: str | None = None, settings: dict[str, Any] | None = None) -> str:
     if settings is not None and is_dummy_mode(settings):
         log_id = _new_log_id()
         dummy_state.insert_log(log_id=log_id, timestamp=datetime.now().isoformat(
@@ -415,14 +415,13 @@ def actions_email_summary(payload: dict) -> dict:
         job = dummy_state.get_job(job_id) if is_dummy_mode(settings) else get_job(job_id)
         if job is None:
             raise HTTPException(status_code=404, detail='Job not found')
-        summary_text = job.get('summary_text') if job is not None else ''
+        summary_text = str(job.get('summary_text') or '')
+        recipient = str(settings.get('recipientEmail') or '')
         if is_dummy_mode(settings):
-            send_summary_email(settings.get('recipientEmail', ''),
-                               'Mail summary', summary_text, settings)
+            send_summary_email(recipient, 'Mail summary', summary_text, settings)
         else:
             # Use unified helper which handles fake SMTP environments as well as real SMTP
-            send_summary_email(settings.get('recipientEmail', ''),
-                               'Mail summary', summary_text, settings)
+            send_summary_email(recipient, 'Mail summary', summary_text, settings)
         details = 'email_summary_sent'
         _record_log('email_summary', 'ok', details, job_id=job_id, settings=settings)
         return {'status': 'ok'}

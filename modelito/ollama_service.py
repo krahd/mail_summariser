@@ -13,24 +13,61 @@ Ollama instances when available.
 from __future__ import annotations
 
 import os
-import shlex
 import shutil
 import subprocess
 import sys
 import time
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Set
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+from .config import parse_host_port
 
+psutil = None
 try:
-    import psutil
+    import importlib
+
+    psutil = importlib.import_module("psutil")
 except Exception:  # pragma: no cover - optional
     psutil = None
 
 
+# Safe constant for the psutil LISTEN state; keeps static checkers happy
+CONN_LISTEN = getattr(psutil, "CONN_LISTEN", None) if psutil is not None else None
+
+
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _get_laddr_port(laddr: Any) -> Optional[int]:
+    """Return the port number for a psutil/laddr value.
+
+    laddr may be a namedtuple/object with a ``port`` attribute, a
+    tuple/list like ``(ip, port)``, or a string like ``ip:port``.
+    """
+    if laddr is None:
+        return None
+    # object with .port attribute (psutil on some platforms)
+    port = getattr(laddr, "port", None)
+    if port is not None:
+        try:
+            return int(port)
+        except Exception:
+            return None
+    # tuple/list like (ip, port)
+    if isinstance(laddr, (tuple, list)) and len(laddr) >= 2:
+        try:
+            return int(laddr[1])
+        except Exception:
+            return None
+    # string like '127.0.0.1:11434'
+    if isinstance(laddr, str) and ":" in laddr:
+        try:
+            return int(laddr.rsplit(":", 1)[1])
+        except Exception:
+            return None
+    return None
 
 
 def endpoint_url(url: str, port: int, path: str) -> str:
@@ -95,12 +132,12 @@ def ollama_installed() -> bool:
     return True
 
 
-def run_ollama_command(*args: str, host: Optional[str] = None, cwd: Optional[Path] = None, timeout: Optional[float] = None) -> subprocess.CompletedProcess:
+def run_ollama_command(*cmd_args: str, host: Optional[str] = None, cwd: Optional[Path] = None, timeout: Optional[float] = None) -> subprocess.CompletedProcess:
     env = os.environ.copy()
     if host:
         env["OLLAMA_HOST"] = host
     command = resolve_ollama_command()
-    return subprocess.run([command, *args], cwd=str(cwd) if cwd is not None else None, text=True, capture_output=True, check=False, env=env, timeout=timeout)
+    return subprocess.run([command, *cmd_args], cwd=str(cwd) if cwd is not None else None, text=True, capture_output=True, check=False, env=env, timeout=timeout)
 
 
 def start_detached_ollama_serve(host: str, cwd: Optional[Path] = None) -> subprocess.Popen:
@@ -155,13 +192,38 @@ def running_model_names(host: str) -> List[str]:
 
 
 def _listener_pids_from_connections(connections, port: int) -> List[int]:
-    pids: set[int] = set()
+    # If psutil or its CONN_LISTEN constant isn't available, fall back to
+    # checking a connection's status string value and attribute presence.
+    if CONN_LISTEN is None:
+        pids: Set[int] = set()
+        for conn in connections:
+            status = getattr(conn, "status", None)
+            if status is None:
+                continue
+            # psutil may expose status as an int constant or a string; accept both
+            if status != "LISTEN":
+                continue
+            laddr = getattr(conn, "laddr", None)
+            if not laddr:
+                continue
+            lport = _get_laddr_port(laddr)
+            if lport != port:
+                continue
+            pid = getattr(conn, "pid", None)
+            if pid is None:
+                continue
+            pids.add(pid)
+        return sorted(pids)
+
+    pids: Set[int] = set()
     for conn in connections:
-        if conn.status != psutil.CONN_LISTEN or not getattr(conn, "laddr", None):
+        if getattr(conn, "status", None) != CONN_LISTEN or not getattr(conn, "laddr", None):
             continue
-        if getattr(conn.laddr, "port", None) != port or conn.pid is None:
+        lport = _get_laddr_port(getattr(conn, "laddr", None))
+        pid = getattr(conn, "pid", None)
+        if lport != port or pid is None:
             continue
-        pids.add(conn.pid)
+        pids.add(pid)
     return sorted(pids)
 
 
@@ -173,7 +235,7 @@ def find_ollama_listener_pids(port: int) -> List[int]:
     except psutil.AccessDenied:
         pass
 
-    pids: set[int] = set()
+    pids: Set[int] = set()
     for proc in psutil.process_iter(["pid", "name"]):
         try:
             name = str((proc.info or {}).get("name") or proc.name()).lower()
@@ -186,12 +248,69 @@ def find_ollama_listener_pids(port: int) -> List[int]:
         except psutil.Error:
             continue
         for conn in connections:
-            if conn.status != psutil.CONN_LISTEN or not getattr(conn, "laddr", None):
+            # prefer psutil constants but be tolerant of tuple/list laddr shapes
+            if getattr(conn, "status", None) != CONN_LISTEN or not getattr(conn, "laddr", None):
                 continue
-            if getattr(conn.laddr, "port", None) != port:
+            lport = _get_laddr_port(getattr(conn, "laddr", None))
+            if lport != port:
                 continue
-            pids.add(getattr(conn, "pid", None) or proc.pid)
+            pid = getattr(conn, "pid", None) or proc.pid
+            if pid is None:
+                continue
+            pids.add(pid)
     return sorted(pids)
+
+
+def ensure_ollama_running(host_url: str, auto_start: bool) -> Tuple[bool, str]:
+    """Compatibility shim for existing callers.
+
+    Returns (running: bool, message: str). Attempts to start and warm Ollama
+    when `auto_start` is True. This is intentionally conservative and
+    non-fatal for model warm-ups.
+    """
+    host, port = parse_host_port(host_url)
+    host_binding = f"{host}:{port}"
+    base_url = f"http://{host}"
+
+    if not ollama_installed():
+        return False, "Install Ollama"
+
+    if server_is_up(base_url, port):
+        return True, f"Ollama already running at {host_binding}"
+
+    if not auto_start:
+        return False, "Ollama not running"
+
+    try:
+        start_detached_ollama_serve(host=host_binding)
+    except Exception as exc:
+        return False, f"Failed to start Ollama: {exc}"
+
+    # Wait a short while for the server to become available
+    deadline = time.monotonic() + 20.0
+    while time.monotonic() < deadline:
+        if server_is_up(base_url, port):
+            break
+        time.sleep(0.5)
+
+    if not server_is_up(base_url, port):
+        return False, "Failed to start Ollama"
+
+    # Check for running models and attempt a light warm-up for the first model
+    try:
+        models = running_model_names(host_binding)
+    except Exception:
+        models = []
+
+    if not models:
+        return True, "running (models not installed)"
+
+    try:
+        # best-effort warm the first model (non-fatal)
+        preload_model(base_url, port, models[0], timeout=30.0)
+        return True, f"ready with model {models[0]}"
+    except Exception:
+        return True, f"running (model warm-up failed for {models[0]})"
 
 
 def start_service(url: str, port: int, model: str, preload_timeout: float = 120.0) -> Tuple[int, str]:
@@ -199,7 +318,8 @@ def start_service(url: str, port: int, model: str, preload_timeout: float = 120.
     if not model:
         return 1, "No model specified"
     try:
-        version_proc = run_ollama_command("--version", host=url + f":{port}")
+        # Ensure the ollama CLI exists; result not used beyond detecting FileNotFoundError
+        run_ollama_command("--version", host=host)
     except FileNotFoundError:
         return 1, "ollama: command not found"
 
@@ -208,14 +328,14 @@ def start_service(url: str, port: int, model: str, preload_timeout: float = 120.
         msg = f"Ollama already serving at {host}"
     else:
         try:
-            start_detached_ollama_serve(host=url + f":{port}")
+            start_detached_ollama_serve(host=host)
             wait_until_ready(url, port)
             started = True
             msg = f"Started ollama serve at {host}"
         except Exception as exc:
             return 1, f"Failed to start ollama: {exc}"
 
-    pull_proc = run_ollama_command("pull", model, host=url + f":{port}")
+    pull_proc = run_ollama_command("pull", model, host=host)
     if pull_proc.returncode != 0:
         details = (pull_proc.stdout or "") + (pull_proc.stderr or "")
         return pull_proc.returncode, details
@@ -232,13 +352,14 @@ def start_service(url: str, port: int, model: str, preload_timeout: float = 120.
 
 
 def stop_service(url: str, port: int, verbose: bool = False) -> int:
+    host = f"{url.rstrip(':/')}:{port}"
     try:
-        run_ollama_command("--version", host=f"{url}:{port}")
-        models = running_model_names(f"{url}:{port}")
+        run_ollama_command("--version", host=host)
+        models = running_model_names(host)
         if models and verbose:
             print(f"Stopping running models: {' '.join(models)}")
         for model in models:
-            run_ollama_command("stop", model, host=f"{url}:{port}")
+            run_ollama_command("stop", model, host=host)
     except FileNotFoundError:
         if verbose:
             print("ollama CLI not found; skipping model stop.")
@@ -246,7 +367,7 @@ def stop_service(url: str, port: int, verbose: bool = False) -> int:
     pids = find_ollama_listener_pids(port)
     if not pids:
         if verbose:
-            print(f"No process is listening on port {port} (already stopped?).")
+            print(f"No process is listening on {host} (already stopped?).")
         return 0
 
     killed = False
@@ -280,11 +401,11 @@ def stop_service(url: str, port: int, verbose: bool = False) -> int:
         except Exception:
             pass
 
-    if verbose:
-        if killed:
-            print(f"Ollama server on {url}:{port} stopped.")
-        else:
-            print(f"No ollama serve process found on {url}:{port}.")
+        if verbose:
+            if killed:
+                print(f"Ollama server on {host} stopped.")
+            else:
+                print(f"No ollama serve process found on {host}.")
     return 0
 
 

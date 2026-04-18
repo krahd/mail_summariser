@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     # Types imported here are only for static analysis (Pylance/pyright).
     # The fake mail environment is runtime-injected in tests so importing
     # it unconditionally can confuse test-time patches.
-    from backend.fake_mail_server import FakeMailEnvironment  # type: ignore
+    from backend.fake_mail_server import FakeMailEnvironment
 
 
 class MailServiceError(RuntimeError):
@@ -105,7 +105,9 @@ def _find_dummy_messages(message_ids: list[str]) -> list[dict[str, Any]]:
     return [message for message in _dummy_mailbox if message['id'] in wanted]
 
 
-def _get_fake_env_for_host_port(host: str, port: int) -> Any | None:
+def _get_fake_env_for_host_port(host: str | None, port: int) -> Any | None:
+    if host is None:
+        return None
     try:
         from backend.fake_mail_server import REGISTRY as _REG  # pylint: disable=import-outside-toplevel
         return _REG.get((host, port))
@@ -174,8 +176,10 @@ def _imap_message_from_uid(imap, uid: str) -> dict[str, Any] | None:
     }
 
 
-def _collect_imap_messages(host: str, port: int, use_ssl: bool, username: str | None, password: str | None) -> list[dict[str, Any]]:
+def _collect_imap_messages(host: str | None, port: int, use_ssl: bool, username: str | None, password: str | None) -> list[dict[str, Any]]:
     msgs: list[dict[str, Any]] = []
+    if host is None:
+        return msgs
     with _imap_connection(host, port, use_ssl, username, password) as imap:
         typ, data = imap.uid('search', None, 'ALL')
         if typ != 'OK' or not data or not data[0]:
@@ -189,7 +193,9 @@ def _collect_imap_messages(host: str, port: int, use_ssl: bool, username: str | 
     return msgs
 
 
-def _check_imap_connection(host: str, port: int, use_ssl: bool, username: str | None, password: str | None) -> tuple[bool, str]:
+def _check_imap_connection(host: str | None, port: int, use_ssl: bool, username: str | None, password: str | None) -> tuple[bool, str]:
+    if host is None:
+        return False, 'No IMAP host configured'
     try:
         _env = _get_fake_env_for_host_port(host, port)
         if _env is not None:
@@ -211,7 +217,9 @@ def _check_imap_connection(host: str, port: int, use_ssl: bool, username: str | 
         return False, str(exc)
 
 
-def _check_smtp_connection(host: str, port: int, use_ssl: bool) -> tuple[bool, str]:
+def _check_smtp_connection(host: str | None, port: int, use_ssl: bool) -> tuple[bool, str]:
+    if host is None:
+        return False, 'No SMTP host configured'
     try:
         _env = _get_fake_env_for_host_port(host, port)
         if _env is not None:
@@ -254,8 +262,10 @@ def _remove_tag_from_env(env: Any, normalized_tag: str, message_ids: list[str]) 
                     m['flags'].discard(kw)
 
 
-def _imap_add_flag(host: str, port: int, use_ssl: bool, username: str | None, password: str | None, message_ids: list[str], normalized_tag: str) -> list[str]:
+def _imap_add_flag(host: str | None, port: int, use_ssl: bool, username: str | None, password: str | None, message_ids: list[str], normalized_tag: str) -> list[str]:
     added: list[str] = []
+    if host is None:
+        return added
     with _imap_connection(host, port, use_ssl, username, password) as imap:
         for uid in message_ids:
             try:
@@ -266,7 +276,9 @@ def _imap_add_flag(host: str, port: int, use_ssl: bool, username: str | None, pa
     return added
 
 
-def _imap_remove_flag(host: str, port: int, use_ssl: bool, username: str | None, password: str | None, message_ids: list[str], normalized_tag: str) -> None:
+def _imap_remove_flag(host: str | None, port: int, use_ssl: bool, username: str | None, password: str | None, message_ids: list[str], normalized_tag: str) -> None:
+    if host is None:
+        return
     with _imap_connection(host, port, use_ssl, username, password) as imap:
         for uid in message_ids:
             try:
@@ -364,6 +376,9 @@ def mark_messages_read(message_ids: list[str], settings: dict[str, Any]) -> dict
                         changed_ids.append(str(m.get('id')))
         return {'restore_unread_ids': changed_ids}
 
+    if host is None:
+        raise MailServiceError('IMAP host not configured')
+
     try:
         with _imap_connection(host, port, use_ssl, username, password) as imap:
             for uid in message_ids:
@@ -395,6 +410,9 @@ def restore_messages_unread(message_ids: list[str], settings: dict[str, Any]) ->
                     if '\\Seen' in m['flags']:
                         m['flags'].discard('\\Seen')
         return
+
+    if host is None:
+        raise MailServiceError('IMAP host not configured')
 
     try:
         with _imap_connection(host, port, use_ssl, username, password) as imap:
@@ -471,17 +489,15 @@ def send_summary_email(recipient: str, subject: str, body: str, settings: dict[s
     use_ssl = bool(settings.get('smtpUseSSL'))
     username = settings.get('username')
     password = settings.get('smtpPassword') or settings.get('imapPassword')
+    if host is None:
+        raise MailServiceError('SMTP host not configured')
     msg = EmailMessage()
     msg['Subject'] = subject
     msg['From'] = username or ''
     msg['To'] = recipient
     msg.set_content(body or '')
     # Check for fake mail environment for SMTP
-    try:
-        from backend.fake_mail_server import REGISTRY as _REG
-        _env = _REG.get((host, port))
-    except (ImportError, AttributeError):
-        _env = None
+    _env = _get_fake_env_for_host_port(host, port)
     if _env is not None:
         _env.sent_messages.append({'recipient': recipient, 'subject': subject, 'body': body})
         return
