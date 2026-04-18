@@ -351,4 +351,131 @@ final class BackendBridgeTests: XCTestCase {
                     }
                 }
             }
+
+    func testServerErrorFormats() async throws {
+        // errors array -> first.message
+        MockURLProtocol.requestHandler = { request in
+            let payload = "{ \"errors\": [{ \"message\": \"Token expired\" }] }".data(using: .utf8)!
+            let response = HTTPURLResponse(url: request.url!, statusCode: 401, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!
+            return (response, payload)
+        }
+
+        var bridge = makeBridge()
+        do {
+            let _: RuntimeStatusResponse = try await bridge.get(path: "runtime/status")
+            XCTFail("Expected HTTP error")
+        } catch {
+            if let be = error as? BackendError {
+                switch be {
+                case .httpError(let status, let msg):
+                    XCTAssertEqual(status, 401)
+                    XCTAssertEqual(msg, "Token expired")
+                default:
+                    XCTFail("Expected httpError, got \(be)")
+                }
+            } else {
+                XCTFail("Expected BackendError, got \(error)")
+            }
+        }
+
+        // message object with nested detail
+        MockURLProtocol.requestHandler = { request in
+            let payload = "{ \"message\": { \"detail\": \"Invalid token detail\" } }".data(using: .utf8)!
+            let response = HTTPURLResponse(url: request.url!, statusCode: 403, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!
+            return (response, payload)
+        }
+
+        do {
+            let _: RuntimeStatusResponse = try await bridge.get(path: "runtime/status")
+            XCTFail("Expected HTTP error")
+        } catch {
+            if let be = error as? BackendError {
+                switch be {
+                case .httpError(let status, let msg):
+                    XCTAssertEqual(status, 403)
+                    XCTAssertEqual(msg, "Invalid token detail")
+                default:
+                    XCTFail("Expected httpError, got \(be)")
+                }
+            } else {
+                XCTFail("Expected BackendError, got \(error)")
+            }
+        }
+
+        // top-level array error payload
+        MockURLProtocol.requestHandler = { request in
+            let payload = "[\"Array error message\"]".data(using: .utf8)!
+            let response = HTTPURLResponse(url: request.url!, statusCode: 500, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!
+            return (response, payload)
+        }
+
+        do {
+            let _: RuntimeStatusResponse = try await bridge.get(path: "runtime/status")
+            XCTFail("Expected HTTP error")
+        } catch {
+            if let be = error as? BackendError {
+                switch be {
+                case .httpError(let status, let msg):
+                    XCTAssertEqual(status, 500)
+                    XCTAssertTrue(msg.contains("Array error message"))
+                default:
+                    XCTFail("Expected httpError, got \(be)")
+                }
+            } else {
+                XCTFail("Expected BackendError, got \(error)")
+            }
+        }
+    }
+
+    func testRandomizedJitterBounds() async throws {
+        var callCount = 0
+        var delays: [UInt64] = []
+        var jitterValues: [Double] = [-0.45, 0.12]
+
+        MockURLProtocol.requestHandler = { request in
+            callCount += 1
+            if callCount < 3 {
+                throw URLError(.timedOut)
+            }
+                        let payload = """
+                        {
+                            "backend": { "running": true, "canShutdown": true },
+                            "ollama": {
+                                "installed": true,
+                                "running": false,
+                                "startedByApp": false,
+                                "host": "http://127.0.0.1:11434",
+                                "modelName": "llama3.2:latest",
+                                "startupAction": "start",
+                                "message": "Ollama is installed but not running.",
+                                "installUrl": "https://ollama.com/download"
+                            }
+                        }
+                        """.data(using: .utf8)!
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: ["Content-Type": "application/json"])!
+            return (response, payload)
+        }
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+
+        let jitterProvider: () -> Double = {
+            return jitterValues.removeFirst()
+        }
+
+        let bridge = BackendBridge(baseURLString: "http://127.0.0.1:8766", session: session, sleepProvider: { nanos in
+            delays.append(nanos)
+        }, jitterFactor: 0.5, jitterProvider: jitterProvider)
+
+        let runtime: RuntimeStatusResponse = try await bridge.get(path: "runtime/status")
+
+        XCTAssertEqual(callCount, 3)
+        XCTAssertEqual(delays.count, 2)
+        let expected0 = UInt64(Double(200_000_000) * (1.0 + (-0.45)))
+        let expected1 = UInt64(Double(400_000_000) * (1.0 + 0.12))
+        XCTAssertEqual(delays[0], expected0)
+        XCTAssertEqual(delays[1], expected1)
+        XCTAssertTrue(runtime.backend.running)
+    }
 }

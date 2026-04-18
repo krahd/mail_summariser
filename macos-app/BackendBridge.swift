@@ -104,6 +104,36 @@ final class BackendBridge: ObservableObject {
         return false
     }
 
+    private func parseErrorMessage(from data: Data, statusCode: Int) -> String {
+        let raw = String(data: data, encoding: .utf8) ?? HTTPURLResponse.localizedString(forStatusCode: statusCode)
+        do {
+            let obj = try JSONSerialization.jsonObject(with: data, options: [])
+            if let dict = obj as? [String: Any] {
+                if let m = dict["error"] as? String { return m }
+                if let m = dict["message"] as? String { return m }
+                if let msgObj = dict["message"] as? [String: Any], let detail = msgObj["detail"] as? String { return detail }
+                if let detail = dict["detail"] as? String { return detail }
+                if let errors = dict["errors"] as? [[String: Any]], let first = errors.first {
+                    if let m = first["message"] as? String { return m }
+                    if let d = first["detail"] as? String { return d }
+                }
+                if let errorsArr = dict["errors"] as? [String], let first = errorsArr.first { return first }
+                if let errorObj = dict["error"] as? [String: Any], let msg = errorObj["message"] as? String { return msg }
+                if let pretty = try? JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted]), let s = String(data: pretty, encoding: .utf8) {
+                    return s
+                }
+            } else if let arr = obj as? [Any] {
+                if let first = arr.first as? String { return first }
+                if let pretty = try? JSONSerialization.data(withJSONObject: arr, options: [.prettyPrinted]), let s = String(data: pretty, encoding: .utf8) {
+                    return s
+                }
+            }
+        } catch {
+            // fall back to raw
+        }
+        return raw
+    }
+
     private func retry<T>(attempts: Int = 3, initialDelayNanos: UInt64 = 200_000_000, operation: () async throws -> T) async throws -> T {
         var delay = initialDelayNanos
         for attempt in 0..<attempts {
@@ -151,15 +181,7 @@ final class BackendBridge: ObservableObject {
                 throw BackendError.badServerResponse
             }
             guard (200..<300).contains(http.statusCode) else {
-                let raw = String(data: data, encoding: .utf8) ?? HTTPURLResponse.localizedString(forStatusCode: http.statusCode)
-                var parsedMessage = raw
-                if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-                    if let m = (json["error"] as? String) ?? (json["message"] as? String) ?? (json["detail"] as? String) {
-                        parsedMessage = m
-                    } else if let pretty = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted]), let s = String(data: pretty, encoding: .utf8) {
-                        parsedMessage = s
-                    }
-                }
+                let parsedMessage = parseErrorMessage(from: data, statusCode: http.statusCode)
                 throw BackendError.httpError(statusCode: http.statusCode, message: parsedMessage)
             }
             do {
@@ -184,15 +206,7 @@ final class BackendBridge: ObservableObject {
                 throw BackendError.badServerResponse
             }
             guard (200..<300).contains(http.statusCode) else {
-                let raw = String(data: data, encoding: .utf8) ?? HTTPURLResponse.localizedString(forStatusCode: http.statusCode)
-                var parsedMessage = raw
-                if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-                    if let m = (json["error"] as? String) ?? (json["message"] as? String) ?? (json["detail"] as? String) {
-                        parsedMessage = m
-                    } else if let pretty = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted]), let s = String(data: pretty, encoding: .utf8) {
-                        parsedMessage = s
-                    }
-                }
+                let parsedMessage = parseErrorMessage(from: data, statusCode: http.statusCode)
                 throw BackendError.httpError(statusCode: http.statusCode, message: parsedMessage)
             }
             do {
@@ -227,15 +241,7 @@ final class BackendBridge: ObservableObject {
                 throw BackendError.badServerResponse
             }
             guard (200..<300).contains(http.statusCode) else {
-                let raw = String(data: data, encoding: .utf8) ?? HTTPURLResponse.localizedString(forStatusCode: http.statusCode)
-                var parsedMessage = raw
-                if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-                    if let m = (json["error"] as? String) ?? (json["message"] as? String) ?? (json["detail"] as? String) {
-                        parsedMessage = m
-                    } else if let pretty = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted]), let s = String(data: pretty, encoding: .utf8) {
-                        parsedMessage = s
-                    }
-                }
+                let parsedMessage = parseErrorMessage(from: data, statusCode: http.statusCode)
                 throw BackendError.httpError(statusCode: http.statusCode, message: parsedMessage)
             }
             do {

@@ -101,6 +101,13 @@ struct LogView: View {
                                     .buttonStyle(.bordered)
 
                                     Button(action: {
+                                        copyWithTimestamp(detail)
+                                    }) {
+                                        Label("Copy+Time", systemImage: "clock")
+                                    }
+                                    .buttonStyle(.bordered)
+
+                                    Button(action: {
                                         copyWithMetadata(detail)
                                     }) {
                                         Label("Copy+Meta", systemImage: "doc.on.clipboard")
@@ -243,7 +250,16 @@ struct LogView: View {
         let panel = NSSavePanel()
         panel.canCreateDirectories = true
         panel.allowedFileTypes = ["json", "txt"]
-        panel.nameFieldStringValue = "mail_summariser_error.json"
+        // Default filename and directory: prefer Downloads and include timestamp
+        let fm = FileManager.default
+        let formatter = ISO8601DateFormatter()
+        let stamp = formatter.string(from: Date()).replacingOccurrences(of: ":", with: "-")
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let isJSON = trimmed.first == "{" || trimmed.first == "["
+        panel.nameFieldStringValue = isJSON ? "mail_summariser_error_\(stamp).json" : "mail_summariser_error_\(stamp).txt"
+        if let downloads = try? fm.url(for: .downloadsDirectory, in: .userDomainMask, appropriateFor: nil, create: false) {
+            panel.directoryURL = downloads
+        }
         if panel.runModal() == .OK, let url = panel.url {
             do {
                 try text.write(to: url, atomically: true, encoding: .utf8)
@@ -252,6 +268,14 @@ struct LogView: View {
                 appState.statusText = "Failed to save error: \(error.localizedDescription)"
             }
         }
+    }
+
+    private func copyWithTimestamp(_ raw: String) {
+        let formatter = ISO8601DateFormatter()
+        let stamp = formatter.string(from: Date())
+        let text = "Timestamp: \(stamp)\n\n\(raw)"
+        copyToPasteboard(text)
+        appState.statusText = "Copied error with timestamp"
     }
 
     private func exportErrorAsJSON(_ raw: String) {
