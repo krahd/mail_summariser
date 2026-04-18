@@ -1,32 +1,15 @@
 #!/usr/bin/env bash
-# Run mail_summariser tests with the local `modelito-repo` package on PYTHONPATH.
+# Run mail_summariser tests and ensure `modelito` dependency is installed.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-MODELITO_REPO="${ROOT_DIR}/../modelito-repo"
-
-if [ ! -d "$MODELITO_REPO" ]; then
-  echo "modelito-repo not found at $MODELITO_REPO"
-  exit 2
+PYTHON_BIN="$(command -v python || true)"
+if [ -z "$PYTHON_BIN" ]; then
+  PYTHON_BIN=python
 fi
 
-export PYTHONPATH="$MODELITO_REPO:$PYTHONPATH"
-echo "PYTHONPATH set to: $PYTHONPATH"
+echo "Ensuring modelito (v0.1.1) is installed (TestPyPI fallback)..."
+"$PYTHON_BIN" -m pip install -U "modelito==0.1.1" --extra-index-url https://test.pypi.org/simple || true
 
-pytest -q
-#!/usr/bin/env bash
-# Run mail_summariser tests with the local `modelito-repo` package on PYTHONPATH.
-set -euo pipefail
-
-ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-MODELITO_REPO="${ROOT_DIR}/../modelito-repo"
-
-if [ ! -d "$MODELITO_REPO" ]; then
-  echo "modelito-repo not found at $MODELITO_REPO"
-  exit 2
-fi
-
-export PYTHONPATH="$MODELITO_REPO:$PYTHONPATH"
-echo "PYTHONPATH set to: $PYTHONPATH"
-
-pytest -q
+echo "Running test suite..."
+"$PYTHON_BIN" -m pytest -q
