@@ -41,6 +41,22 @@ uvicorn backend.app:app --reload --port 8766
 
 The API masks stored secrets on reads. When saving settings, masked values are ignored so existing secrets remain stored.
 
+## External LLM helper: modelito
+
+This project now consumes the external `modelito` package (v0.1.1+) for lightweight LLM helpers — token counting, small Ollama HTTP helpers, and timeout/catalog utilities.
+
+Install the published package (preferred) or use the dev environment which pulls it in automatically:
+
+```bash
+# Preferred: install the released package
+pip install modelito==0.1.1 --extra-index-url https://test.pypi.org/simple || true
+
+# Or install the project in development mode (pulls modelito as a dependency)
+pip install -e '.[dev]'
+```
+
+See the `modelito` release notes for details and compatibility shims: https://github.com/krahd/modelito/releases
+
 ## Test coverage
 
 The test suite covers:

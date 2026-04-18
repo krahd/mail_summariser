@@ -21,13 +21,16 @@ Example CI snippet (GitHub Actions) to run tests with an installed package from 
 - name: Install modelito
   run: |
     python -m pip install --upgrade pip
-    pip install modelito==0.1.0 --extra-index-url https://test.pypi.org/simple || true
+    # Prefer the released modelito (v0.1.1+) so downstream CI can resolve the dependency
+    pip install modelito==0.1.1 --extra-index-url https://test.pypi.org/simple || true
 ```
 
 Local validation (without publishing):
 
 ```bash
 # from repository root
+# The `./scripts/run_with_local_modelito.sh` helper now prefers installing modelito from TestPyPI
+# before running tests; use it when you want to validate the repository against a released modelito wheel.
 ./scripts/run_with_local_modelito.sh
 ```
 
