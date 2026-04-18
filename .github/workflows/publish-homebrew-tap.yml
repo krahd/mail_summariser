@@ -47,7 +47,7 @@ jobs:
         id: release-assets
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ steps.release.outputs.release_tag }}
           REPOSITORY: ${{ github.repository }}
         run: |
