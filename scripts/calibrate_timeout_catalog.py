@@ -22,48 +22,59 @@ from modelito import tokenizer
 from modelito import ollama_service
 
 
+def _measure_single_prompt(endpoint: str, model: str, prompt_text: str, max_tokens: int, timeout: int):
+    req = Request(
+        endpoint,
+        data=json.dumps({"model": model, "prompt": prompt_text,
+                        "max_tokens": max_tokens}).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    start = time.monotonic()
+    with urlopen(req, timeout=timeout) as resp:
+        resp.read()
+    end = time.monotonic()
+    latency = end - start
+    input_tokens = tokenizer.count_tokens(prompt_text)
+    return latency, input_tokens
+
+
+def _measure_prompt_runs(endpoint: str, model: str, prompt_text: str, iterations: int, max_tokens: int, timeout: int):
+    samples: List[Dict[str, Any]] = []
+    errors: List[str] = []
+    for _ in range(iterations):
+        try:
+            latency, input_tokens = _measure_single_prompt(
+                endpoint, model, prompt_text, max_tokens, timeout)
+        except Exception as exc:
+            errors.append(str(exc))
+            continue
+        samples.append({"prompt_len": len(prompt_text),
+                       "input_tokens": input_tokens, "latency": latency})
+    return samples, errors
+
+
 def measure_model(url: str, port: int, model: str, prompts: List[str], iterations: int, max_tokens: int, timeout: int) -> Dict[str, Any]:
-    results: Dict[str, Any] = {"model": model, "samples": []}
-    endpoint = ollama_service.endpoint_url(url, port, "/api/generate")
-    total_latency = 0.0
-    total_input_tokens = 0
-    runs = 0
+    samples: List[Dict[str, Any]] = []
+    errors: List[str] = []
+
     for prompt in prompts:
-        for _ in range(iterations):
-            payload = {"model": model, "prompt": prompt, "max_tokens": max_tokens}
-            data = json.dumps(payload).encode("utf-8")
-            req = Request(endpoint, data=data, headers={
-                          "Content-Type": "application/json"}, method="POST")
-            start = time.monotonic()
-            try:
-                # Read the raw response fully; Ollama may emit streaming NDJSON so
-                # avoid strict JSON parsing here and just measure latency.
-                with urlopen(req, timeout=timeout) as resp:
-                    _ = resp.read()
-            except Exception as exc:
-                results.setdefault("errors", []).append(str(exc))
-                continue
-            end = time.monotonic()
-            latency = end - start
-            input_tokens = tokenizer.count_tokens(prompt)
-            results["samples"].append(
-                {"prompt_len": len(prompt), "input_tokens": input_tokens, "latency": latency})
-            total_latency += latency
-            total_input_tokens += input_tokens
-            runs += 1
+        endpoint = ollama_service.endpoint_url(url, port, "/api/generate")
+        s, e = _measure_prompt_runs(endpoint, model, prompt, iterations, max_tokens, timeout)
+        samples.extend(s)
+        errors.extend(e)
 
-    if runs:
-        avg_latency = total_latency / runs
-        # normalize to seconds per 1000 input tokens (conservative)
-        avg_per_1k = (total_latency / total_input_tokens) * \
-            1000 if total_input_tokens else avg_latency
-    else:
-        avg_latency = 0.0
-        avg_per_1k = 0.0
-
-    results["runs"] = runs
-    results["avg_latency_seconds"] = avg_latency
-    results["avg_seconds_per_1000_input_tokens"] = avg_per_1k
+    results: Dict[str, Any] = {
+        "model": model,
+        "samples": samples,
+        "runs": len(samples),
+        "avg_latency_seconds": (sum(s["latency"] for s in samples) / len(samples)) if samples else 0.0,
+        "avg_seconds_per_1000_input_tokens": (
+            (sum(s["latency"] for s in samples) / sum(s["input_tokens"] for s in samples)) * 1000
+        ) if any(s["input_tokens"] for s in samples) else ((sum(s["latency"] for s in samples) / len(samples)) if samples else 0.0),
+    }
+    if errors:
+        results["errors"] = errors
     return results
 
 

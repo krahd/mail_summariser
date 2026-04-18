@@ -4,6 +4,7 @@ import socket
 import time
 
 from typing import Any
+from modelito import ollama_service
 
 pytest: Any = None
 try:
@@ -18,7 +19,6 @@ except Exception:
         skip=lambda *a, **k: None,
     )
 
-from modelito import ollama_service
 
 
 def _find_free_port() -> int:

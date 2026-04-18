@@ -1,25 +1,32 @@
 from __future__ import annotations
-
-import sqlite3
 import sys
+import sqlite3
 import tempfile
 import unittest
+from typing import Any
 from pathlib import Path
-
 from fastapi.testclient import TestClient
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-BACKEND_DIR = REPO_ROOT / "backend"
-if str(BACKEND_DIR) not in sys.path:
-    sys.path.insert(0, str(BACKEND_DIR))
 
-import app as backend_app
-import db
-import dummy_state
+# Module-level placeholders for dynamically-imported backend modules
+backend_app: Any = None
+db: Any = None
+dummy_state: Any = None
 
 
 class DatabaseResetTests(unittest.TestCase):
     def setUp(self) -> None:
+        # ensure backend path is on sys.path then import backend modules
+        REPO_ROOT = Path(__file__).resolve().parents[1]
+        BACKEND_DIR = REPO_ROOT / "backend"
+        if str(BACKEND_DIR) not in sys.path:
+            sys.path.insert(0, str(BACKEND_DIR))
+
+        import importlib
+        globals()["backend_app"] = importlib.import_module("app")
+        globals()["db"] = importlib.import_module("db")
+        globals()["dummy_state"] = importlib.import_module("dummy_state")
+
         self.temp_dir = tempfile.TemporaryDirectory()
         self.original_defaults = backend_app.DEFAULT_SETTINGS.copy()
         self.original_dev_tools_enabled = backend_app.ENABLE_DEV_TOOLS
@@ -67,9 +74,11 @@ class DatabaseResetTests(unittest.TestCase):
             {"mailContext": {"dummyMode": True}},
             5,
             "Dummy summary",
-            [{"id": "msg-001", "subject": "Project update", "sender": "alice@example.com", "date": "2026-03-10T09:00:00"}],
+            [{"id": "msg-001", "subject": "Project update",
+                "sender": "alice@example.com", "date": "2026-03-10T09:00:00"}],
         )
-        dummy_state.insert_log("dummy-log", "2026-04-04T12:01:01", "create_summary", "ok", "Dummy log", "dummy-job")
+        dummy_state.insert_log("dummy-log", "2026-04-04T12:01:01",
+                               "create_summary", "ok", "Dummy log", "dummy-job")
         dummy_state.push_undo({"type": "mark_read", "log_id": "dummy-log"}, "2026-04-04T12:01:02")
 
         with self._client() as client:
@@ -89,7 +98,8 @@ class DatabaseResetTests(unittest.TestCase):
         self.assertEqual(dummy_state.dummy_store_counts()["jobs"], 0)
         self.assertEqual(dummy_state.dummy_store_counts()["logs"], 0)
         self.assertEqual(dummy_state.dummy_store_counts()["undo"], 0)
-        self.assertEqual(payload["settings"]["dummyMode"], backend_app.DEFAULT_SETTINGS["dummyMode"])
+        self.assertEqual(payload["settings"]["dummyMode"],
+                         backend_app.DEFAULT_SETTINGS["dummyMode"])
 
     def test_admin_database_reset_requires_confirmation_phrase(self) -> None:
         with self._client() as client:
