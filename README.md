@@ -66,3 +66,5 @@ The test suite covers:
 - dummy-mode mail flow, undo, and job isolation
 - live IMAP/SMTP flow against a controllable fake local server
 - developer fake-mail endpoints
+
+CI test run test/ci-run-20260419003626 Sun Apr 19 00:36:26 UTC 2026 -- automated
