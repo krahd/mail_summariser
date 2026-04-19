@@ -1,0 +1,16 @@
+[1/14] Health check
+[2/14] Read settings
+[3/15] System message defaults
+[4/15] Save settings
+[5/15] Runtime status
+[6/15] Connection test
+[7/15] Create summary
+[8/15] Mark read action
+[9/15] Tag summarised action
+[10/15] Undo action
+[11/15] Logs available
+[12/15] Model options endpoint
+[13/15] Model catalog endpoint
+[14/15] Fake mail status endpoint
+[15/15] Database reset endpoint
+Smoke test passed for http://127.0.0.1:8766 (jobId=job-30847f64-2751-48b8-974e-3df92474a2ad)
