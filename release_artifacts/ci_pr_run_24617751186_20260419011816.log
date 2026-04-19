@@ -1,0 +1,590 @@
+test (3.11)	Set up job	﻿2026-04-19T01:01:52.3208541Z Current runner version: '2.333.1'
+test (3.11)	Set up job	2026-04-19T01:01:52.3243390Z ##[group]Runner Image Provisioner
+test (3.11)	Set up job	2026-04-19T01:01:52.3244535Z Hosted Compute Agent
+test (3.11)	Set up job	2026-04-19T01:01:52.3245400Z Version: 20260213.493
+test (3.11)	Set up job	2026-04-19T01:01:52.3246265Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+test (3.11)	Set up job	2026-04-19T01:01:52.3247494Z Build Date: 2026-02-13T00:28:41Z
+test (3.11)	Set up job	2026-04-19T01:01:52.3248502Z Worker ID: {26188ec9-3602-4e0c-bb2b-923a4b7e0eaa}
+test (3.11)	Set up job	2026-04-19T01:01:52.3249901Z Azure Region: eastus2
+test (3.11)	Set up job	2026-04-19T01:01:52.3250770Z ##[endgroup]
+test (3.11)	Set up job	2026-04-19T01:01:52.3252868Z ##[group]Operating System
+test (3.11)	Set up job	2026-04-19T01:01:52.3253848Z Ubuntu
+test (3.11)	Set up job	2026-04-19T01:01:52.3254624Z 24.04.4
+test (3.11)	Set up job	2026-04-19T01:01:52.3255336Z LTS
+test (3.11)	Set up job	2026-04-19T01:01:52.3255963Z ##[endgroup]
+test (3.11)	Set up job	2026-04-19T01:01:52.3256803Z ##[group]Runner Image
+test (3.11)	Set up job	2026-04-19T01:01:52.3257623Z Image: ubuntu-24.04
+test (3.11)	Set up job	2026-04-19T01:01:52.3258511Z Version: 20260413.86.1
+test (3.11)	Set up job	2026-04-19T01:01:52.3260483Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260413.86/images/ubuntu/Ubuntu2404-Readme.md
+test (3.11)	Set up job	2026-04-19T01:01:52.3263227Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260413.86
+test (3.11)	Set up job	2026-04-19T01:01:52.3264706Z ##[endgroup]
+test (3.11)	Set up job	2026-04-19T01:01:52.3266372Z ##[group]GITHUB_TOKEN Permissions
+test (3.11)	Set up job	2026-04-19T01:01:52.3268922Z Contents: read
+test (3.11)	Set up job	2026-04-19T01:01:52.3270059Z Metadata: read
+test (3.11)	Set up job	2026-04-19T01:01:52.3270914Z Packages: read
+test (3.11)	Set up job	2026-04-19T01:01:52.3271736Z ##[endgroup]
+test (3.11)	Set up job	2026-04-19T01:01:52.3274492Z Secret source: Actions
+test (3.11)	Set up job	2026-04-19T01:01:52.3275607Z Prepare workflow directory
+test (3.11)	Set up job	2026-04-19T01:01:52.3730336Z Prepare all required actions
+test (3.11)	Set up job	2026-04-19T01:01:52.3786038Z Getting action download info
+test (3.11)	Set up job	2026-04-19T01:01:52.6787460Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+test (3.11)	Set up job	2026-04-19T01:01:52.7904684Z Download action repository 'actions/setup-python@v4' (SHA:7f4fc3e22c37d6ff65e88745f38bd3157c663f7c)
+test (3.11)	Set up job	2026-04-19T01:01:52.9694055Z Complete job name: test (3.11)
+test (3.11)	Run actions/checkout@v4	﻿2026-04-19T01:01:53.0385379Z ##[group]Run actions/checkout@v4
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.0386313Z with:
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.0386757Z   repository: krahd/mail_summariser
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.0387414Z   token: ***
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.0387798Z   ssh-strict: true
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.0388176Z   ssh-user: git
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.0388565Z   persist-credentials: true
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.0389038Z   clean: true
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.0389645Z   sparse-checkout-cone-mode: true
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.0390130Z   fetch-depth: 1
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.0390506Z   fetch-tags: false
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.0390899Z   show-progress: true
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.0391290Z   lfs: false
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.0391649Z   submodules: false
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.0392045Z   set-safe-directory: true
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.0392764Z ##[endgroup]
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1452642Z Syncing repository: krahd/mail_summariser
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1454337Z ##[group]Getting Git version info
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1455085Z Working directory is '/home/runner/work/mail_summariser/mail_summariser'
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1456135Z [command]/usr/bin/git version
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1497069Z git version 2.53.0
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1522251Z ##[endgroup]
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1535717Z Temporarily overriding HOME='/home/runner/work/_temp/a3a8dabe-0992-4ccd-9a88-90f670daf34c' before making global git config changes
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1537885Z Adding repository directory to the temporary git global config as a safe directory
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1540835Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/mail_summariser/mail_summariser
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1571096Z Deleting the contents of '/home/runner/work/mail_summariser/mail_summariser'
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1574369Z ##[group]Initializing the repository
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1578206Z [command]/usr/bin/git init /home/runner/work/mail_summariser/mail_summariser
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1694837Z hint: Using 'master' as the name for the initial branch. This default branch name
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1696389Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1697366Z hint: to use in all of your new repositories, which will suppress this warning,
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1698306Z hint: call:
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1698658Z hint:
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1699268Z hint: 	git config --global init.defaultBranch <name>
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1700218Z hint:
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1700950Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1702121Z hint: 'development'. The just-created branch can be renamed via this command:
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1702787Z hint:
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1703159Z hint: 	git branch -m <name>
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1703587Z hint:
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1704273Z hint: Disable this message with "git config set advice.defaultBranchName false"
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1705359Z Initialized empty Git repository in /home/runner/work/mail_summariser/mail_summariser/.git/
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1707344Z [command]/usr/bin/git remote add origin https://github.com/krahd/mail_summariser
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1735495Z ##[endgroup]
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1736243Z ##[group]Disabling automatic garbage collection
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1739074Z [command]/usr/bin/git config --local gc.auto 0
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1766035Z ##[endgroup]
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1766714Z ##[group]Setting up auth
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1772579Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.1801036Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.2083733Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.2111027Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.2320051Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.2356913Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.2568330Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.2600642Z ##[endgroup]
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.2601421Z ##[group]Fetching the repository
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.2608332Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +675c645087c049cc238b98dafed73502102b1d6c:refs/remotes/pull/4/merge
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.6721024Z From https://github.com/krahd/mail_summariser
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.6722552Z  * [new ref]         675c645087c049cc238b98dafed73502102b1d6c -> pull/4/merge
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.6750276Z ##[endgroup]
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.6751980Z ##[group]Determining the checkout info
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.6753865Z ##[endgroup]
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.6756431Z [command]/usr/bin/git sparse-checkout disable
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.6791402Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.6815748Z ##[group]Checking out the ref
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.6818499Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/4/merge
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.7796000Z Note: switching to 'refs/remotes/pull/4/merge'.
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.7797378Z 
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.7798451Z You are in 'detached HEAD' state. You can look around, make experimental
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.7801300Z changes and commit them, and you can discard any commits you make in this
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.7803865Z state without impacting any branches by switching back to a branch.
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.7805437Z 
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.7806394Z If you want to create a new branch to retain commits you create, you may
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.7808284Z do so (now or later) by using -c with the switch command. Example:
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.7809168Z 
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.7809750Z   git switch -c <new-branch-name>
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.7810640Z 
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.7811181Z Or undo this operation with:
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.7812113Z 
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.7812451Z   git switch -
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.7812927Z 
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.7813630Z Turn off this advice by setting config variable advice.detachedHead to false
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.7814888Z 
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.7816365Z HEAD is now at 675c645 Merge c9cbfaa9b90df6ebe07145e35486fedcf46e3de3 into c1a7f2fa3a2a6e71bdada51b7799ce6f87f02774
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.7820868Z ##[endgroup]
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.7849548Z [command]/usr/bin/git log -1 --format=%H
+test (3.11)	Run actions/checkout@v4	2026-04-19T01:01:53.7871148Z 675c645087c049cc238b98dafed73502102b1d6c
+test (3.11)	Set up Python	﻿2026-04-19T01:01:53.8205036Z ##[group]Run actions/setup-python@v4
+test (3.11)	Set up Python	2026-04-19T01:01:53.8206250Z with:
+test (3.11)	Set up Python	2026-04-19T01:01:53.8207080Z   python-version: 3.11
+test (3.11)	Set up Python	2026-04-19T01:01:53.8208061Z   check-latest: false
+test (3.11)	Set up Python	2026-04-19T01:01:53.8209261Z   token: ***
+test (3.11)	Set up Python	2026-04-19T01:01:53.8210392Z   update-environment: true
+test (3.11)	Set up Python	2026-04-19T01:01:53.8211449Z   allow-prereleases: false
+test (3.11)	Set up Python	2026-04-19T01:01:53.8212484Z ##[endgroup]
+test (3.11)	Set up Python	2026-04-19T01:01:53.9876847Z ##[group]Installed versions
+test (3.11)	Set up Python	2026-04-19T01:01:53.9995306Z Successfully set up CPython (3.11.15)
+test (3.11)	Set up Python	2026-04-19T01:01:53.9997869Z ##[endgroup]
+test (3.11)	Install deps	﻿2026-04-19T01:01:54.0155107Z ##[group]Run python -m pip install --upgrade pip
+test (3.11)	Install deps	2026-04-19T01:01:54.0156746Z [36;1mpython -m pip install --upgrade pip[0m
+test (3.11)	Install deps	2026-04-19T01:01:54.0158547Z [36;1m# Install pinned modelito from TestPyPI to satisfy dependency during CI[0m
+test (3.11)	Install deps	2026-04-19T01:01:54.0161432Z [36;1mpython -m pip install -U "modelito==0.1.1" --extra-index-url https://test.pypi.org/simple || true[0m
+test (3.11)	Install deps	2026-04-19T01:01:54.0163499Z [36;1mpip install -e .[0m
+test (3.11)	Install deps	2026-04-19T01:01:54.0164579Z [36;1m# Install development/test dependencies[0m
+test (3.11)	Install deps	2026-04-19T01:01:54.0165935Z [36;1mpip install -r dev-requirements.txt[0m
+test (3.11)	Install deps	2026-04-19T01:01:54.0205505Z shell: /usr/bin/bash -e {0}
+test (3.11)	Install deps	2026-04-19T01:01:54.0206512Z env:
+test (3.11)	Install deps	2026-04-19T01:01:54.0207513Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.15/x64
+test (3.11)	Install deps	2026-04-19T01:01:54.0209602Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.15/x64/lib/pkgconfig
+test (3.11)	Install deps	2026-04-19T01:01:54.0211459Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+test (3.11)	Install deps	2026-04-19T01:01:54.0213055Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+test (3.11)	Install deps	2026-04-19T01:01:54.0214716Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+test (3.11)	Install deps	2026-04-19T01:01:54.0216348Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.15/x64/lib
+test (3.11)	Install deps	2026-04-19T01:01:54.0217692Z ##[endgroup]
+test (3.11)	Install deps	2026-04-19T01:01:54.6556291Z Requirement already satisfied: pip in /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages (26.0.1)
+test (3.11)	Install deps	2026-04-19T01:01:55.1726571Z Looking in indexes: https://pypi.org/simple, https://test.pypi.org/simple
+test (3.11)	Install deps	2026-04-19T01:01:55.5097024Z Collecting modelito==0.1.1
+test (3.11)	Install deps	2026-04-19T01:01:55.6103231Z   Downloading https://test-files.pythonhosted.org/packages/91/e1/7ae7cab9e2882a93dc3951bfe2e488226c59091a01eba109c6cfa047d358/modelito-0.1.1-py3-none-any.whl.metadata (909 bytes)
+test (3.11)	Install deps	2026-04-19T01:01:55.6234879Z Downloading https://test-files.pythonhosted.org/packages/91/e1/7ae7cab9e2882a93dc3951bfe2e488226c59091a01eba109c6cfa047d358/modelito-0.1.1-py3-none-any.whl (9.0 kB)
+test (3.11)	Install deps	2026-04-19T01:01:55.6388415Z Installing collected packages: modelito
+test (3.11)	Install deps	2026-04-19T01:01:55.6496681Z Successfully installed modelito-0.1.1
+test (3.11)	Install deps	2026-04-19T01:01:55.9615649Z Obtaining file:///home/runner/work/mail_summariser/mail_summariser
+test (3.11)	Install deps	2026-04-19T01:01:55.9631804Z   Installing build dependencies: started
+test (3.11)	Install deps	2026-04-19T01:01:56.8515850Z   Installing build dependencies: finished with status 'done'
+test (3.11)	Install deps	2026-04-19T01:01:56.8522283Z   Checking if build backend supports build_editable: started
+test (3.11)	Install deps	2026-04-19T01:01:57.1385634Z   Checking if build backend supports build_editable: finished with status 'done'
+test (3.11)	Install deps	2026-04-19T01:01:57.1392944Z   Getting requirements to build editable: started
+test (3.11)	Install deps	2026-04-19T01:01:57.4235364Z   Getting requirements to build editable: finished with status 'done'
+test (3.11)	Install deps	2026-04-19T01:01:57.4244043Z   Preparing editable metadata (pyproject.toml): started
+test (3.11)	Install deps	2026-04-19T01:01:57.5928503Z   Preparing editable metadata (pyproject.toml): finished with status 'done'
+test (3.11)	Install deps	2026-04-19T01:01:57.7232252Z Collecting fastapi<1,>=0.115 (from mail-summariser==0.1.1)
+test (3.11)	Install deps	2026-04-19T01:01:57.7879438Z   Downloading fastapi-0.136.0-py3-none-any.whl.metadata (28 kB)
+test (3.11)	Install deps	2026-04-19T01:01:57.9324733Z Collecting pydantic<3,>=2.8 (from mail-summariser==0.1.1)
+test (3.11)	Install deps	2026-04-19T01:01:57.9400625Z   Downloading pydantic-2.13.2-py3-none-any.whl.metadata (108 kB)
+test (3.11)	Install deps	2026-04-19T01:01:57.9851052Z Collecting uvicorn<1,>=0.30 (from mail-summariser==0.1.1)
+test (3.11)	Install deps	2026-04-19T01:01:57.9924583Z   Downloading uvicorn-0.44.0-py3-none-any.whl.metadata (6.7 kB)
+test (3.11)	Install deps	2026-04-19T01:01:57.9981880Z Requirement already satisfied: modelito==0.1.1 in /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages (from mail-summariser==0.1.1) (0.1.1)
+test (3.11)	Install deps	2026-04-19T01:01:58.0222531Z Collecting starlette>=0.46.0 (from fastapi<1,>=0.115->mail-summariser==0.1.1)
+test (3.11)	Install deps	2026-04-19T01:01:58.0299839Z   Downloading starlette-1.0.0-py3-none-any.whl.metadata (6.3 kB)
+test (3.11)	Install deps	2026-04-19T01:01:58.0530657Z Collecting typing-extensions>=4.8.0 (from fastapi<1,>=0.115->mail-summariser==0.1.1)
+test (3.11)	Install deps	2026-04-19T01:01:58.0606916Z   Downloading typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+test (3.11)	Install deps	2026-04-19T01:01:58.0758151Z Collecting typing-inspection>=0.4.2 (from fastapi<1,>=0.115->mail-summariser==0.1.1)
+test (3.11)	Install deps	2026-04-19T01:01:58.0835507Z   Downloading typing_inspection-0.4.2-py3-none-any.whl.metadata (2.6 kB)
+test (3.11)	Install deps	2026-04-19T01:01:58.0982943Z Collecting annotated-doc>=0.0.2 (from fastapi<1,>=0.115->mail-summariser==0.1.1)
+test (3.11)	Install deps	2026-04-19T01:01:58.1055982Z   Downloading annotated_doc-0.0.4-py3-none-any.whl.metadata (6.6 kB)
+test (3.11)	Install deps	2026-04-19T01:01:58.1251463Z Collecting annotated-types>=0.6.0 (from pydantic<3,>=2.8->mail-summariser==0.1.1)
+test (3.11)	Install deps	2026-04-19T01:01:58.1334740Z   Downloading annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+test (3.11)	Install deps	2026-04-19T01:01:58.7975904Z Collecting pydantic-core==2.46.2 (from pydantic<3,>=2.8->mail-summariser==0.1.1)
+test (3.11)	Install deps	2026-04-19T01:01:58.8050695Z   Downloading pydantic_core-2.46.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.6 kB)
+test (3.11)	Install deps	2026-04-19T01:01:58.8284768Z Collecting click>=7.0 (from uvicorn<1,>=0.30->mail-summariser==0.1.1)
+test (3.11)	Install deps	2026-04-19T01:01:58.8371173Z   Downloading click-8.3.2-py3-none-any.whl.metadata (2.6 kB)
+test (3.11)	Install deps	2026-04-19T01:01:58.8544033Z Collecting h11>=0.8 (from uvicorn<1,>=0.30->mail-summariser==0.1.1)
+test (3.11)	Install deps	2026-04-19T01:01:58.8618374Z   Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+test (3.11)	Install deps	2026-04-19T01:01:58.8843186Z Collecting anyio<5,>=3.6.2 (from starlette>=0.46.0->fastapi<1,>=0.115->mail-summariser==0.1.1)
+test (3.11)	Install deps	2026-04-19T01:01:58.8916696Z   Downloading anyio-4.13.0-py3-none-any.whl.metadata (4.5 kB)
+test (3.11)	Install deps	2026-04-19T01:01:58.9098846Z Collecting idna>=2.8 (from anyio<5,>=3.6.2->starlette>=0.46.0->fastapi<1,>=0.115->mail-summariser==0.1.1)
+test (3.11)	Install deps	2026-04-19T01:01:58.9185495Z   Downloading idna-3.11-py3-none-any.whl.metadata (8.4 kB)
+test (3.11)	Install deps	2026-04-19T01:01:58.9325322Z Downloading fastapi-0.136.0-py3-none-any.whl (117 kB)
+test (3.11)	Install deps	2026-04-19T01:01:58.9544633Z Downloading pydantic-2.13.2-py3-none-any.whl (471 kB)
+test (3.11)	Install deps	2026-04-19T01:01:58.9996930Z Downloading pydantic_core-2.46.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+test (3.11)	Install deps	2026-04-19T01:01:59.0933745Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 24.0 MB/s  0:00:00
+test (3.11)	Install deps	2026-04-19T01:01:59.1007941Z Downloading uvicorn-0.44.0-py3-none-any.whl (69 kB)
+test (3.11)	Install deps	2026-04-19T01:01:59.1112343Z Downloading annotated_doc-0.0.4-py3-none-any.whl (5.3 kB)
+test (3.11)	Install deps	2026-04-19T01:01:59.1221921Z Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+test (3.11)	Install deps	2026-04-19T01:01:59.1337751Z Downloading click-8.3.2-py3-none-any.whl (108 kB)
+test (3.11)	Install deps	2026-04-19T01:01:59.1452769Z Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+test (3.11)	Install deps	2026-04-19T01:01:59.1564490Z Downloading starlette-1.0.0-py3-none-any.whl (72 kB)
+test (3.11)	Install deps	2026-04-19T01:01:59.1667329Z Downloading anyio-4.13.0-py3-none-any.whl (114 kB)
+test (3.11)	Install deps	2026-04-19T01:01:59.1789084Z Downloading idna-3.11-py3-none-any.whl (71 kB)
+test (3.11)	Install deps	2026-04-19T01:01:59.1892377Z Downloading typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+test (3.11)	Install deps	2026-04-19T01:01:59.1984532Z Downloading typing_inspection-0.4.2-py3-none-any.whl (14 kB)
+test (3.11)	Install deps	2026-04-19T01:01:59.2426359Z Building wheels for collected packages: mail-summariser
+test (3.11)	Install deps	2026-04-19T01:01:59.2433797Z   Building editable for mail-summariser (pyproject.toml): started
+test (3.11)	Install deps	2026-04-19T01:01:59.4245810Z   Building editable for mail-summariser (pyproject.toml): finished with status 'done'
+test (3.11)	Install deps	2026-04-19T01:01:59.4251364Z   Created wheel for mail-summariser: filename=mail_summariser-0.1.1-0.editable-py3-none-any.whl size=3802 sha256=2d9de301bd85e669e9e30ddd5474f605af3b29111795899126cfae575448bcc6
+test (3.11)	Install deps	2026-04-19T01:01:59.4252852Z   Stored in directory: /tmp/pip-ephem-wheel-cache-xh0tiu13/wheels/4d/90/09/9a11a24ce7e3f8d8629fd94094cf4c903bed689a1368569695
+test (3.11)	Install deps	2026-04-19T01:01:59.4266336Z Successfully built mail-summariser
+test (3.11)	Install deps	2026-04-19T01:01:59.4493511Z Installing collected packages: typing-extensions, idna, h11, click, annotated-types, annotated-doc, uvicorn, typing-inspection, pydantic-core, anyio, starlette, pydantic, fastapi, mail-summariser
+test (3.11)	Install deps	2026-04-19T01:02:00.2245846Z 
+test (3.11)	Install deps	2026-04-19T01:02:00.2260220Z Successfully installed annotated-doc-0.0.4 annotated-types-0.7.0 anyio-4.13.0 click-8.3.2 fastapi-0.136.0 h11-0.16.0 idna-3.11 mail-summariser-0.1.1 pydantic-2.13.2 pydantic-core-2.46.2 starlette-1.0.0 typing-extensions-4.15.0 typing-inspection-0.4.2 uvicorn-0.44.0
+test (3.11)	Install deps	2026-04-19T01:02:00.7429808Z Collecting pytest<9,>=8.3 (from -r dev-requirements.txt (line 2))
+test (3.11)	Install deps	2026-04-19T01:02:00.8170278Z   Downloading pytest-8.4.2-py3-none-any.whl.metadata (7.7 kB)
+test (3.11)	Install deps	2026-04-19T01:02:00.9256918Z Collecting psutil>=5.9.0 (from -r dev-requirements.txt (line 3))
+test (3.11)	Install deps	2026-04-19T01:02:00.9334458Z   Downloading psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl.metadata (22 kB)
+test (3.11)	Install deps	2026-04-19T01:02:00.9642439Z Collecting httpx<1,>=0.27 (from -r dev-requirements.txt (line 4))
+test (3.11)	Install deps	2026-04-19T01:02:00.9724945Z   Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+test (3.11)	Install deps	2026-04-19T01:02:01.0141230Z Collecting tiktoken (from -r dev-requirements.txt (line 5))
+test (3.11)	Install deps	2026-04-19T01:02:01.0240894Z   Downloading tiktoken-0.12.0-cp311-cp311-manylinux_2_28_x86_64.whl.metadata (6.7 kB)
+test (3.11)	Install deps	2026-04-19T01:02:01.0397885Z Collecting iniconfig>=1 (from pytest<9,>=8.3->-r dev-requirements.txt (line 2))
+test (3.11)	Install deps	2026-04-19T01:02:01.0497871Z   Downloading iniconfig-2.3.0-py3-none-any.whl.metadata (2.5 kB)
+test (3.11)	Install deps	2026-04-19T01:02:01.0708811Z Collecting packaging>=20 (from pytest<9,>=8.3->-r dev-requirements.txt (line 2))
+test (3.11)	Install deps	2026-04-19T01:02:01.0722079Z   Using cached packaging-26.1-py3-none-any.whl.metadata (3.5 kB)
+test (3.11)	Install deps	2026-04-19T01:02:01.0871329Z Collecting pluggy<2,>=1.5 (from pytest<9,>=8.3->-r dev-requirements.txt (line 2))
+test (3.11)	Install deps	2026-04-19T01:02:01.0940630Z   Downloading pluggy-1.6.0-py3-none-any.whl.metadata (4.8 kB)
+test (3.11)	Install deps	2026-04-19T01:02:01.1168667Z Collecting pygments>=2.7.2 (from pytest<9,>=8.3->-r dev-requirements.txt (line 2))
+test (3.11)	Install deps	2026-04-19T01:02:01.1251961Z   Downloading pygments-2.20.0-py3-none-any.whl.metadata (2.5 kB)
+test (3.11)	Install deps	2026-04-19T01:02:01.1298851Z Requirement already satisfied: anyio in /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages (from httpx<1,>=0.27->-r dev-requirements.txt (line 4)) (4.13.0)
+test (3.11)	Install deps	2026-04-19T01:02:01.1492487Z Collecting certifi (from httpx<1,>=0.27->-r dev-requirements.txt (line 4))
+test (3.11)	Install deps	2026-04-19T01:02:01.1563783Z   Downloading certifi-2026.2.25-py3-none-any.whl.metadata (2.5 kB)
+test (3.11)	Install deps	2026-04-19T01:02:01.1778054Z Collecting httpcore==1.* (from httpx<1,>=0.27->-r dev-requirements.txt (line 4))
+test (3.11)	Install deps	2026-04-19T01:02:01.1848580Z   Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+test (3.11)	Install deps	2026-04-19T01:02:01.1917006Z Requirement already satisfied: idna in /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages (from httpx<1,>=0.27->-r dev-requirements.txt (line 4)) (3.11)
+test (3.11)	Install deps	2026-04-19T01:02:01.1924766Z Requirement already satisfied: h11>=0.16 in /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages (from httpcore==1.*->httpx<1,>=0.27->-r dev-requirements.txt (line 4)) (0.16.0)
+test (3.11)	Install deps	2026-04-19T01:02:01.5858406Z Collecting regex>=2022.1.18 (from tiktoken->-r dev-requirements.txt (line 5))
+test (3.11)	Install deps	2026-04-19T01:02:01.5945952Z   Downloading regex-2026.4.4-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (40 kB)
+test (3.11)	Install deps	2026-04-19T01:02:01.6256259Z Collecting requests>=2.26.0 (from tiktoken->-r dev-requirements.txt (line 5))
+test (3.11)	Install deps	2026-04-19T01:02:01.6330939Z   Downloading requests-2.33.1-py3-none-any.whl.metadata (4.8 kB)
+test (3.11)	Install deps	2026-04-19T01:02:01.7313478Z Collecting charset_normalizer<4,>=2 (from requests>=2.26.0->tiktoken->-r dev-requirements.txt (line 5))
+test (3.11)	Install deps	2026-04-19T01:02:01.7388122Z   Downloading charset_normalizer-3.4.7-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (40 kB)
+test (3.11)	Install deps	2026-04-19T01:02:01.7666807Z Collecting urllib3<3,>=1.26 (from requests>=2.26.0->tiktoken->-r dev-requirements.txt (line 5))
+test (3.11)	Install deps	2026-04-19T01:02:01.7739238Z   Downloading urllib3-2.6.3-py3-none-any.whl.metadata (6.9 kB)
+test (3.11)	Install deps	2026-04-19T01:02:01.7839986Z Requirement already satisfied: typing_extensions>=4.5 in /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages (from anyio->httpx<1,>=0.27->-r dev-requirements.txt (line 4)) (4.15.0)
+test (3.11)	Install deps	2026-04-19T01:02:01.7931888Z Downloading pytest-8.4.2-py3-none-any.whl (365 kB)
+test (3.11)	Install deps	2026-04-19T01:02:01.8359797Z Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+test (3.11)	Install deps	2026-04-19T01:02:01.8539361Z Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+test (3.11)	Install deps	2026-04-19T01:02:01.8694877Z Downloading pluggy-1.6.0-py3-none-any.whl (20 kB)
+test (3.11)	Install deps	2026-04-19T01:02:01.8791892Z Downloading psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl (155 kB)
+test (3.11)	Install deps	2026-04-19T01:02:01.8998163Z Downloading tiktoken-0.12.0-cp311-cp311-manylinux_2_28_x86_64.whl (1.2 MB)
+test (3.11)	Install deps	2026-04-19T01:02:01.9628843Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 19.7 MB/s  0:00:00
+test (3.11)	Install deps	2026-04-19T01:02:01.9727123Z Downloading iniconfig-2.3.0-py3-none-any.whl (7.5 kB)
+test (3.11)	Install deps	2026-04-19T01:02:01.9764791Z Using cached packaging-26.1-py3-none-any.whl (95 kB)
+test (3.11)	Install deps	2026-04-19T01:02:01.9840579Z Downloading pygments-2.20.0-py3-none-any.whl (1.2 MB)
+test (3.11)	Install deps	2026-04-19T01:02:02.0284573Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 28.3 MB/s  0:00:00
+test (3.11)	Install deps	2026-04-19T01:02:02.0362399Z Downloading regex-2026.4.4-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (799 kB)
+test (3.11)	Install deps	2026-04-19T01:02:02.0619760Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 799.8/799.8 kB 30.0 MB/s  0:00:00
+test (3.11)	Install deps	2026-04-19T01:02:02.0698769Z Downloading requests-2.33.1-py3-none-any.whl (64 kB)
+test (3.11)	Install deps	2026-04-19T01:02:02.0804429Z Downloading charset_normalizer-3.4.7-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (214 kB)
+test (3.11)	Install deps	2026-04-19T01:02:02.0946605Z Downloading urllib3-2.6.3-py3-none-any.whl (131 kB)
+test (3.11)	Install deps	2026-04-19T01:02:02.1062222Z Downloading certifi-2026.2.25-py3-none-any.whl (153 kB)
+test (3.11)	Install deps	2026-04-19T01:02:02.1614131Z Installing collected packages: urllib3, regex, pygments, psutil, pluggy, packaging, iniconfig, charset_normalizer, certifi, requests, pytest, httpcore, tiktoken, httpx
+test (3.11)	Install deps	2026-04-19T01:02:03.4815515Z 
+test (3.11)	Install deps	2026-04-19T01:02:03.4833765Z Successfully installed certifi-2026.2.25 charset_normalizer-3.4.7 httpcore-1.0.9 httpx-0.28.1 iniconfig-2.3.0 packaging-26.1 pluggy-1.6.0 psutil-7.2.2 pygments-2.20.0 pytest-8.4.2 regex-2026.4.4 requests-2.33.1 tiktoken-0.12.0 urllib3-2.6.3
+test (3.11)	Run tests	﻿2026-04-19T01:02:03.5861844Z ##[group]Run pytest -q
+test (3.11)	Run tests	2026-04-19T01:02:03.5862109Z [36;1mpytest -q[0m
+test (3.11)	Run tests	2026-04-19T01:02:03.5884435Z shell: /usr/bin/bash -e {0}
+test (3.11)	Run tests	2026-04-19T01:02:03.5884664Z env:
+test (3.11)	Run tests	2026-04-19T01:02:03.5884905Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.15/x64
+test (3.11)	Run tests	2026-04-19T01:02:03.5885326Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.15/x64/lib/pkgconfig
+test (3.11)	Run tests	2026-04-19T01:02:03.5885747Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+test (3.11)	Run tests	2026-04-19T01:02:03.5886093Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+test (3.11)	Run tests	2026-04-19T01:02:03.5886444Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+test (3.11)	Run tests	2026-04-19T01:02:03.5886794Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.15/x64/lib
+test (3.11)	Run tests	2026-04-19T01:02:03.5887086Z ##[endgroup]
+test (3.11)	Run tests	2026-04-19T01:02:07.1119530Z ......s....s.......................                                      [100%]
+test (3.11)	Run tests	2026-04-19T01:02:07.1120810Z 33 passed, 2 skipped in 2.66s
+test (3.11)	Post Set up Python	﻿2026-04-19T01:02:07.2100229Z Post job cleanup.
+test (3.11)	Post Run actions/checkout@v4	﻿2026-04-19T01:02:07.3724578Z Post job cleanup.
+test (3.11)	Post Run actions/checkout@v4	2026-04-19T01:02:07.4652265Z [command]/usr/bin/git version
+test (3.11)	Post Run actions/checkout@v4	2026-04-19T01:02:07.4688623Z git version 2.53.0
+test (3.11)	Post Run actions/checkout@v4	2026-04-19T01:02:07.4736507Z Temporarily overriding HOME='/home/runner/work/_temp/28f60e91-5b8d-4241-ad0a-95c40c1b2dfc' before making global git config changes
+test (3.11)	Post Run actions/checkout@v4	2026-04-19T01:02:07.4737809Z Adding repository directory to the temporary git global config as a safe directory
+test (3.11)	Post Run actions/checkout@v4	2026-04-19T01:02:07.4742005Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/mail_summariser/mail_summariser
+test (3.11)	Post Run actions/checkout@v4	2026-04-19T01:02:07.4776234Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+test (3.11)	Post Run actions/checkout@v4	2026-04-19T01:02:07.4807803Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+test (3.11)	Post Run actions/checkout@v4	2026-04-19T01:02:07.5025872Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+test (3.11)	Post Run actions/checkout@v4	2026-04-19T01:02:07.5045359Z http.https://github.com/.extraheader
+test (3.11)	Post Run actions/checkout@v4	2026-04-19T01:02:07.5056845Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+test (3.11)	Post Run actions/checkout@v4	2026-04-19T01:02:07.5085235Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+test (3.11)	Post Run actions/checkout@v4	2026-04-19T01:02:07.5300203Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+test (3.11)	Post Run actions/checkout@v4	2026-04-19T01:02:07.5328600Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+test (3.11)	Complete job	﻿2026-04-19T01:02:07.5661617Z Cleaning up orphan processes
+test (3.11)	Complete job	2026-04-19T01:02:07.5948510Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/setup-python@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+test (3.12)	Set up job	﻿2026-04-19T01:01:52.3231540Z Current runner version: '2.333.1'
+test (3.12)	Set up job	2026-04-19T01:01:52.3266024Z ##[group]Runner Image Provisioner
+test (3.12)	Set up job	2026-04-19T01:01:52.3267219Z Hosted Compute Agent
+test (3.12)	Set up job	2026-04-19T01:01:52.3268014Z Version: 20260213.493
+test (3.12)	Set up job	2026-04-19T01:01:52.3269405Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+test (3.12)	Set up job	2026-04-19T01:01:52.3270487Z Build Date: 2026-02-13T00:28:41Z
+test (3.12)	Set up job	2026-04-19T01:01:52.3271641Z Worker ID: {55097be9-6128-40f5-b95f-7b1fae911b19}
+test (3.12)	Set up job	2026-04-19T01:01:52.3272709Z Azure Region: eastus
+test (3.12)	Set up job	2026-04-19T01:01:52.3273532Z ##[endgroup]
+test (3.12)	Set up job	2026-04-19T01:01:52.3275599Z ##[group]Operating System
+test (3.12)	Set up job	2026-04-19T01:01:52.3276716Z Ubuntu
+test (3.12)	Set up job	2026-04-19T01:01:52.3277439Z 24.04.4
+test (3.12)	Set up job	2026-04-19T01:01:52.3278158Z LTS
+test (3.12)	Set up job	2026-04-19T01:01:52.3279241Z ##[endgroup]
+test (3.12)	Set up job	2026-04-19T01:01:52.3279981Z ##[group]Runner Image
+test (3.12)	Set up job	2026-04-19T01:01:52.3280857Z Image: ubuntu-24.04
+test (3.12)	Set up job	2026-04-19T01:01:52.3281781Z Version: 20260413.86.1
+test (3.12)	Set up job	2026-04-19T01:01:52.3283417Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260413.86/images/ubuntu/Ubuntu2404-Readme.md
+test (3.12)	Set up job	2026-04-19T01:01:52.3286245Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260413.86
+test (3.12)	Set up job	2026-04-19T01:01:52.3287775Z ##[endgroup]
+test (3.12)	Set up job	2026-04-19T01:01:52.3289991Z ##[group]GITHUB_TOKEN Permissions
+test (3.12)	Set up job	2026-04-19T01:01:52.3292652Z Contents: read
+test (3.12)	Set up job	2026-04-19T01:01:52.3293613Z Metadata: read
+test (3.12)	Set up job	2026-04-19T01:01:52.3294470Z Packages: read
+test (3.12)	Set up job	2026-04-19T01:01:52.3295193Z ##[endgroup]
+test (3.12)	Set up job	2026-04-19T01:01:52.3298048Z Secret source: Actions
+test (3.12)	Set up job	2026-04-19T01:01:52.3299394Z Prepare workflow directory
+test (3.12)	Set up job	2026-04-19T01:01:52.3758064Z Prepare all required actions
+test (3.12)	Set up job	2026-04-19T01:01:52.3806771Z Getting action download info
+test (3.12)	Set up job	2026-04-19T01:01:52.6844030Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+test (3.12)	Set up job	2026-04-19T01:01:52.8059993Z Download action repository 'actions/setup-python@v4' (SHA:7f4fc3e22c37d6ff65e88745f38bd3157c663f7c)
+test (3.12)	Set up job	2026-04-19T01:01:52.9898320Z Complete job name: test (3.12)
+test (3.12)	Run actions/checkout@v4	﻿2026-04-19T01:01:53.0599129Z ##[group]Run actions/checkout@v4
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.0600221Z with:
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.0600698Z   repository: krahd/mail_summariser
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.0601434Z   token: ***
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.0601824Z   ssh-strict: true
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.0602232Z   ssh-user: git
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.0602643Z   persist-credentials: true
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.0603094Z   clean: true
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.0603500Z   sparse-checkout-cone-mode: true
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.0603990Z   fetch-depth: 1
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.0604384Z   fetch-tags: false
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.0604790Z   show-progress: true
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.0605196Z   lfs: false
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.0605580Z   submodules: false
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.0605998Z   set-safe-directory: true
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.0606678Z ##[endgroup]
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1670649Z Syncing repository: krahd/mail_summariser
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1672356Z ##[group]Getting Git version info
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1673110Z Working directory is '/home/runner/work/mail_summariser/mail_summariser'
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1674246Z [command]/usr/bin/git version
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1717684Z git version 2.53.0
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1743975Z ##[endgroup]
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1758890Z Temporarily overriding HOME='/home/runner/work/_temp/aa6afbfe-0767-4612-acb6-27de15038a9e' before making global git config changes
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1760303Z Adding repository directory to the temporary git global config as a safe directory
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1765944Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/mail_summariser/mail_summariser
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1798262Z Deleting the contents of '/home/runner/work/mail_summariser/mail_summariser'
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1802148Z ##[group]Initializing the repository
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1806076Z [command]/usr/bin/git init /home/runner/work/mail_summariser/mail_summariser
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1909060Z hint: Using 'master' as the name for the initial branch. This default branch name
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1910315Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1911793Z hint: to use in all of your new repositories, which will suppress this warning,
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1912829Z hint: call:
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1913210Z hint:
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1913848Z hint: 	git config --global init.defaultBranch <name>
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1914451Z hint:
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1915021Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1916388Z hint: 'development'. The just-created branch can be renamed via this command:
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1917247Z hint:
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1917631Z hint: 	git branch -m <name>
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1918081Z hint:
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1918997Z hint: Disable this message with "git config set advice.defaultBranchName false"
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1920171Z Initialized empty Git repository in /home/runner/work/mail_summariser/mail_summariser/.git/
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1922418Z [command]/usr/bin/git remote add origin https://github.com/krahd/mail_summariser
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1949271Z ##[endgroup]
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1950013Z ##[group]Disabling automatic garbage collection
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1953264Z [command]/usr/bin/git config --local gc.auto 0
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1980742Z ##[endgroup]
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1981530Z ##[group]Setting up auth
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.1987142Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.2015652Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.2297729Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.2325039Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.2535671Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.2572312Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.2789755Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.2822562Z ##[endgroup]
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.2831151Z ##[group]Fetching the repository
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.2832567Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +675c645087c049cc238b98dafed73502102b1d6c:refs/remotes/pull/4/merge
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.6527354Z From https://github.com/krahd/mail_summariser
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.6528932Z  * [new ref]         675c645087c049cc238b98dafed73502102b1d6c -> pull/4/merge
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.6559437Z ##[endgroup]
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.6560772Z ##[group]Determining the checkout info
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.6562950Z ##[endgroup]
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.6567621Z [command]/usr/bin/git sparse-checkout disable
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.6604749Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.6632478Z ##[group]Checking out the ref
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.6634920Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/4/merge
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.7615277Z Note: switching to 'refs/remotes/pull/4/merge'.
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.7616475Z 
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.7617228Z You are in 'detached HEAD' state. You can look around, make experimental
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.7619459Z changes and commit them, and you can discard any commits you make in this
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.7621208Z state without impacting any branches by switching back to a branch.
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.7622233Z 
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.7622897Z If you want to create a new branch to retain commits you create, you may
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.7624237Z do so (now or later) by using -c with the switch command. Example:
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.7625069Z 
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.7625424Z   git switch -c <new-branch-name>
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.7626440Z 
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.7627008Z Or undo this operation with:
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.7628128Z 
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.7628449Z   git switch -
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.7629064Z 
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.7629794Z Turn off this advice by setting config variable advice.detachedHead to false
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.7630869Z 
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.7632194Z HEAD is now at 675c645 Merge c9cbfaa9b90df6ebe07145e35486fedcf46e3de3 into c1a7f2fa3a2a6e71bdada51b7799ce6f87f02774
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.7635737Z ##[endgroup]
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.7665280Z [command]/usr/bin/git log -1 --format=%H
+test (3.12)	Run actions/checkout@v4	2026-04-19T01:01:53.7686612Z 675c645087c049cc238b98dafed73502102b1d6c
+test (3.12)	Set up Python	﻿2026-04-19T01:01:53.8014788Z ##[group]Run actions/setup-python@v4
+test (3.12)	Set up Python	2026-04-19T01:01:53.8015996Z with:
+test (3.12)	Set up Python	2026-04-19T01:01:53.8016842Z   python-version: 3.12
+test (3.12)	Set up Python	2026-04-19T01:01:53.8017819Z   check-latest: false
+test (3.12)	Set up Python	2026-04-19T01:01:53.8019206Z   token: ***
+test (3.12)	Set up Python	2026-04-19T01:01:53.8020105Z   update-environment: true
+test (3.12)	Set up Python	2026-04-19T01:01:53.8021177Z   allow-prereleases: false
+test (3.12)	Set up Python	2026-04-19T01:01:53.8022186Z ##[endgroup]
+test (3.12)	Set up Python	2026-04-19T01:01:53.9716631Z ##[group]Installed versions
+test (3.12)	Set up Python	2026-04-19T01:01:53.9823988Z Successfully set up CPython (3.12.13)
+test (3.12)	Set up Python	2026-04-19T01:01:53.9826450Z ##[endgroup]
+test (3.12)	Install deps	﻿2026-04-19T01:01:53.9973311Z ##[group]Run python -m pip install --upgrade pip
+test (3.12)	Install deps	2026-04-19T01:01:53.9974792Z [36;1mpython -m pip install --upgrade pip[0m
+test (3.12)	Install deps	2026-04-19T01:01:53.9976529Z [36;1m# Install pinned modelito from TestPyPI to satisfy dependency during CI[0m
+test (3.12)	Install deps	2026-04-19T01:01:53.9979246Z [36;1mpython -m pip install -U "modelito==0.1.1" --extra-index-url https://test.pypi.org/simple || true[0m
+test (3.12)	Install deps	2026-04-19T01:01:53.9981262Z [36;1mpip install -e .[0m
+test (3.12)	Install deps	2026-04-19T01:01:53.9982317Z [36;1m# Install development/test dependencies[0m
+test (3.12)	Install deps	2026-04-19T01:01:53.9983636Z [36;1mpip install -r dev-requirements.txt[0m
+test (3.12)	Install deps	2026-04-19T01:01:54.0025236Z shell: /usr/bin/bash -e {0}
+test (3.12)	Install deps	2026-04-19T01:01:54.0026202Z env:
+test (3.12)	Install deps	2026-04-19T01:01:54.0027177Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+test (3.12)	Install deps	2026-04-19T01:01:54.0029272Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+test (3.12)	Install deps	2026-04-19T01:01:54.0031056Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+test (3.12)	Install deps	2026-04-19T01:01:54.0032593Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+test (3.12)	Install deps	2026-04-19T01:01:54.0034192Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+test (3.12)	Install deps	2026-04-19T01:01:54.0035777Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+test (3.12)	Install deps	2026-04-19T01:01:54.0037103Z ##[endgroup]
+test (3.12)	Install deps	2026-04-19T01:01:54.6772963Z Requirement already satisfied: pip in /opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages (26.0.1)
+test (3.12)	Install deps	2026-04-19T01:01:55.2170463Z Looking in indexes: https://pypi.org/simple, https://test.pypi.org/simple
+test (3.12)	Install deps	2026-04-19T01:01:55.6748944Z Collecting modelito==0.1.1
+test (3.12)	Install deps	2026-04-19T01:01:55.7642688Z   Downloading https://test-files.pythonhosted.org/packages/91/e1/7ae7cab9e2882a93dc3951bfe2e488226c59091a01eba109c6cfa047d358/modelito-0.1.1-py3-none-any.whl.metadata (909 bytes)
+test (3.12)	Install deps	2026-04-19T01:01:55.7775234Z Downloading https://test-files.pythonhosted.org/packages/91/e1/7ae7cab9e2882a93dc3951bfe2e488226c59091a01eba109c6cfa047d358/modelito-0.1.1-py3-none-any.whl (9.0 kB)
+test (3.12)	Install deps	2026-04-19T01:01:55.7881121Z Installing collected packages: modelito
+test (3.12)	Install deps	2026-04-19T01:01:55.7996721Z Successfully installed modelito-0.1.1
+test (3.12)	Install deps	2026-04-19T01:01:56.1474191Z Obtaining file:///home/runner/work/mail_summariser/mail_summariser
+test (3.12)	Install deps	2026-04-19T01:01:56.1489435Z   Installing build dependencies: started
+test (3.12)	Install deps	2026-04-19T01:01:56.9635554Z   Installing build dependencies: finished with status 'done'
+test (3.12)	Install deps	2026-04-19T01:01:56.9641349Z   Checking if build backend supports build_editable: started
+test (3.12)	Install deps	2026-04-19T01:01:57.3384426Z   Checking if build backend supports build_editable: finished with status 'done'
+test (3.12)	Install deps	2026-04-19T01:01:57.3392579Z   Getting requirements to build editable: started
+test (3.12)	Install deps	2026-04-19T01:01:57.6912434Z   Getting requirements to build editable: finished with status 'done'
+test (3.12)	Install deps	2026-04-19T01:01:57.6923988Z   Preparing editable metadata (pyproject.toml): started
+test (3.12)	Install deps	2026-04-19T01:01:57.8841481Z   Preparing editable metadata (pyproject.toml): finished with status 'done'
+test (3.12)	Install deps	2026-04-19T01:01:58.0050073Z Collecting fastapi<1,>=0.115 (from mail-summariser==0.1.1)
+test (3.12)	Install deps	2026-04-19T01:01:58.0603653Z   Downloading fastapi-0.136.0-py3-none-any.whl.metadata (28 kB)
+test (3.12)	Install deps	2026-04-19T01:01:58.1874487Z Collecting pydantic<3,>=2.8 (from mail-summariser==0.1.1)
+test (3.12)	Install deps	2026-04-19T01:01:58.1907372Z   Downloading pydantic-2.13.2-py3-none-any.whl.metadata (108 kB)
+test (3.12)	Install deps	2026-04-19T01:01:58.2282538Z Collecting uvicorn<1,>=0.30 (from mail-summariser==0.1.1)
+test (3.12)	Install deps	2026-04-19T01:01:58.2311349Z   Downloading uvicorn-0.44.0-py3-none-any.whl.metadata (6.7 kB)
+test (3.12)	Install deps	2026-04-19T01:01:58.2362558Z Requirement already satisfied: modelito==0.1.1 in /opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages (from mail-summariser==0.1.1) (0.1.1)
+test (3.12)	Install deps	2026-04-19T01:01:58.2561298Z Collecting starlette>=0.46.0 (from fastapi<1,>=0.115->mail-summariser==0.1.1)
+test (3.12)	Install deps	2026-04-19T01:01:58.2593628Z   Downloading starlette-1.0.0-py3-none-any.whl.metadata (6.3 kB)
+test (3.12)	Install deps	2026-04-19T01:01:58.2792040Z Collecting typing-extensions>=4.8.0 (from fastapi<1,>=0.115->mail-summariser==0.1.1)
+test (3.12)	Install deps	2026-04-19T01:01:58.2843983Z   Downloading typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+test (3.12)	Install deps	2026-04-19T01:01:58.2949613Z Collecting typing-inspection>=0.4.2 (from fastapi<1,>=0.115->mail-summariser==0.1.1)
+test (3.12)	Install deps	2026-04-19T01:01:58.2992552Z   Downloading typing_inspection-0.4.2-py3-none-any.whl.metadata (2.6 kB)
+test (3.12)	Install deps	2026-04-19T01:01:58.3133147Z Collecting annotated-doc>=0.0.2 (from fastapi<1,>=0.115->mail-summariser==0.1.1)
+test (3.12)	Install deps	2026-04-19T01:01:58.3172377Z   Downloading annotated_doc-0.0.4-py3-none-any.whl.metadata (6.6 kB)
+test (3.12)	Install deps	2026-04-19T01:01:58.3317968Z Collecting annotated-types>=0.6.0 (from pydantic<3,>=2.8->mail-summariser==0.1.1)
+test (3.12)	Install deps	2026-04-19T01:01:58.3365199Z   Downloading annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+test (3.12)	Install deps	2026-04-19T01:01:58.9994669Z Collecting pydantic-core==2.46.2 (from pydantic<3,>=2.8->mail-summariser==0.1.1)
+test (3.12)	Install deps	2026-04-19T01:01:59.0041700Z   Downloading pydantic_core-2.46.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.6 kB)
+test (3.12)	Install deps	2026-04-19T01:01:59.0237382Z Collecting click>=7.0 (from uvicorn<1,>=0.30->mail-summariser==0.1.1)
+test (3.12)	Install deps	2026-04-19T01:01:59.0272980Z   Downloading click-8.3.2-py3-none-any.whl.metadata (2.6 kB)
+test (3.12)	Install deps	2026-04-19T01:01:59.0392409Z Collecting h11>=0.8 (from uvicorn<1,>=0.30->mail-summariser==0.1.1)
+test (3.12)	Install deps	2026-04-19T01:01:59.0427204Z   Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+test (3.12)	Install deps	2026-04-19T01:01:59.0625333Z Collecting anyio<5,>=3.6.2 (from starlette>=0.46.0->fastapi<1,>=0.115->mail-summariser==0.1.1)
+test (3.12)	Install deps	2026-04-19T01:01:59.0655107Z   Downloading anyio-4.13.0-py3-none-any.whl.metadata (4.5 kB)
+test (3.12)	Install deps	2026-04-19T01:01:59.0807319Z Collecting idna>=2.8 (from anyio<5,>=3.6.2->starlette>=0.46.0->fastapi<1,>=0.115->mail-summariser==0.1.1)
+test (3.12)	Install deps	2026-04-19T01:01:59.0853941Z   Downloading idna-3.11-py3-none-any.whl.metadata (8.4 kB)
+test (3.12)	Install deps	2026-04-19T01:01:59.0960509Z Downloading fastapi-0.136.0-py3-none-any.whl (117 kB)
+test (3.12)	Install deps	2026-04-19T01:01:59.1022861Z Downloading pydantic-2.13.2-py3-none-any.whl (471 kB)
+test (3.12)	Install deps	2026-04-19T01:01:59.1101137Z Downloading pydantic_core-2.46.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+test (3.12)	Install deps	2026-04-19T01:01:59.1209188Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 226.3 MB/s  0:00:00
+test (3.12)	Install deps	2026-04-19T01:01:59.1238040Z Downloading uvicorn-0.44.0-py3-none-any.whl (69 kB)
+test (3.12)	Install deps	2026-04-19T01:01:59.1307889Z Downloading annotated_doc-0.0.4-py3-none-any.whl (5.3 kB)
+test (3.12)	Install deps	2026-04-19T01:01:59.1363947Z Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+test (3.12)	Install deps	2026-04-19T01:01:59.1425966Z Downloading click-8.3.2-py3-none-any.whl (108 kB)
+test (3.12)	Install deps	2026-04-19T01:01:59.1481959Z Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+test (3.12)	Install deps	2026-04-19T01:01:59.1541238Z Downloading starlette-1.0.0-py3-none-any.whl (72 kB)
+test (3.12)	Install deps	2026-04-19T01:01:59.1606702Z Downloading anyio-4.13.0-py3-none-any.whl (114 kB)
+test (3.12)	Install deps	2026-04-19T01:01:59.1665466Z Downloading idna-3.11-py3-none-any.whl (71 kB)
+test (3.12)	Install deps	2026-04-19T01:01:59.1721955Z Downloading typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+test (3.12)	Install deps	2026-04-19T01:01:59.1774389Z Downloading typing_inspection-0.4.2-py3-none-any.whl (14 kB)
+test (3.12)	Install deps	2026-04-19T01:01:59.1953305Z Building wheels for collected packages: mail-summariser
+test (3.12)	Install deps	2026-04-19T01:01:59.1961923Z   Building editable for mail-summariser (pyproject.toml): started
+test (3.12)	Install deps	2026-04-19T01:01:59.4058867Z   Building editable for mail-summariser (pyproject.toml): finished with status 'done'
+test (3.12)	Install deps	2026-04-19T01:01:59.4065069Z   Created wheel for mail-summariser: filename=mail_summariser-0.1.1-0.editable-py3-none-any.whl size=3802 sha256=2d9de301bd85e669e9e30ddd5474f605af3b29111795899126cfae575448bcc6
+test (3.12)	Install deps	2026-04-19T01:01:59.4067410Z   Stored in directory: /tmp/pip-ephem-wheel-cache-bk8ww75l/wheels/c7/af/d3/ecffb35b78e5c4a08a131af8f45440a74deaadd3fb14eb1900
+test (3.12)	Install deps	2026-04-19T01:01:59.4083090Z Successfully built mail-summariser
+test (3.12)	Install deps	2026-04-19T01:01:59.4314767Z Installing collected packages: typing-extensions, idna, h11, click, annotated-types, annotated-doc, uvicorn, typing-inspection, pydantic-core, anyio, starlette, pydantic, fastapi, mail-summariser
+test (3.12)	Install deps	2026-04-19T01:02:00.3341796Z 
+test (3.12)	Install deps	2026-04-19T01:02:00.3362485Z Successfully installed annotated-doc-0.0.4 annotated-types-0.7.0 anyio-4.13.0 click-8.3.2 fastapi-0.136.0 h11-0.16.0 idna-3.11 mail-summariser-0.1.1 pydantic-2.13.2 pydantic-core-2.46.2 starlette-1.0.0 typing-extensions-4.15.0 typing-inspection-0.4.2 uvicorn-0.44.0
+test (3.12)	Install deps	2026-04-19T01:02:00.9954203Z Collecting pytest<9,>=8.3 (from -r dev-requirements.txt (line 2))
+test (3.12)	Install deps	2026-04-19T01:02:01.0483799Z   Downloading pytest-8.4.2-py3-none-any.whl.metadata (7.7 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.1361714Z Collecting psutil>=5.9.0 (from -r dev-requirements.txt (line 3))
+test (3.12)	Install deps	2026-04-19T01:02:01.1398921Z   Downloading psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl.metadata (22 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.1681532Z Collecting httpx<1,>=0.27 (from -r dev-requirements.txt (line 4))
+test (3.12)	Install deps	2026-04-19T01:02:01.1715124Z   Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.2080946Z Collecting tiktoken (from -r dev-requirements.txt (line 5))
+test (3.12)	Install deps	2026-04-19T01:02:01.2123343Z   Downloading tiktoken-0.12.0-cp312-cp312-manylinux_2_28_x86_64.whl.metadata (6.7 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.2277875Z Collecting iniconfig>=1 (from pytest<9,>=8.3->-r dev-requirements.txt (line 2))
+test (3.12)	Install deps	2026-04-19T01:02:01.2315262Z   Downloading iniconfig-2.3.0-py3-none-any.whl.metadata (2.5 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.2564949Z Collecting packaging>=20 (from pytest<9,>=8.3->-r dev-requirements.txt (line 2))
+test (3.12)	Install deps	2026-04-19T01:02:01.2577265Z   Using cached packaging-26.1-py3-none-any.whl.metadata (3.5 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.2675781Z Collecting pluggy<2,>=1.5 (from pytest<9,>=8.3->-r dev-requirements.txt (line 2))
+test (3.12)	Install deps	2026-04-19T01:02:01.2710019Z   Downloading pluggy-1.6.0-py3-none-any.whl.metadata (4.8 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.2903655Z Collecting pygments>=2.7.2 (from pytest<9,>=8.3->-r dev-requirements.txt (line 2))
+test (3.12)	Install deps	2026-04-19T01:02:01.3087273Z   Downloading pygments-2.20.0-py3-none-any.whl.metadata (2.5 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.3137516Z Requirement already satisfied: anyio in /opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages (from httpx<1,>=0.27->-r dev-requirements.txt (line 4)) (4.13.0)
+test (3.12)	Install deps	2026-04-19T01:02:01.3292628Z Collecting certifi (from httpx<1,>=0.27->-r dev-requirements.txt (line 4))
+test (3.12)	Install deps	2026-04-19T01:02:01.3361757Z   Downloading certifi-2026.2.25-py3-none-any.whl.metadata (2.5 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.3535399Z Collecting httpcore==1.* (from httpx<1,>=0.27->-r dev-requirements.txt (line 4))
+test (3.12)	Install deps	2026-04-19T01:02:01.3567556Z   Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.3623281Z Requirement already satisfied: idna in /opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages (from httpx<1,>=0.27->-r dev-requirements.txt (line 4)) (3.11)
+test (3.12)	Install deps	2026-04-19T01:02:01.3633205Z Requirement already satisfied: h11>=0.16 in /opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages (from httpcore==1.*->httpx<1,>=0.27->-r dev-requirements.txt (line 4)) (0.16.0)
+test (3.12)	Install deps	2026-04-19T01:02:01.7041563Z Collecting regex>=2022.1.18 (from tiktoken->-r dev-requirements.txt (line 5))
+test (3.12)	Install deps	2026-04-19T01:02:01.7079067Z   Downloading regex-2026.4.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (40 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.7309152Z Collecting requests>=2.26.0 (from tiktoken->-r dev-requirements.txt (line 5))
+test (3.12)	Install deps	2026-04-19T01:02:01.7343086Z   Downloading requests-2.33.1-py3-none-any.whl.metadata (4.8 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.8290741Z Collecting charset_normalizer<4,>=2 (from requests>=2.26.0->tiktoken->-r dev-requirements.txt (line 5))
+test (3.12)	Install deps	2026-04-19T01:02:01.8329300Z   Downloading charset_normalizer-3.4.7-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (40 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.8591215Z Collecting urllib3<3,>=1.26 (from requests>=2.26.0->tiktoken->-r dev-requirements.txt (line 5))
+test (3.12)	Install deps	2026-04-19T01:02:01.8624018Z   Downloading urllib3-2.6.3-py3-none-any.whl.metadata (6.9 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.8719468Z Requirement already satisfied: typing_extensions>=4.5 in /opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages (from anyio->httpx<1,>=0.27->-r dev-requirements.txt (line 4)) (4.15.0)
+test (3.12)	Install deps	2026-04-19T01:02:01.8767834Z Downloading pytest-8.4.2-py3-none-any.whl (365 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.8871081Z Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.8927073Z Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.8983698Z Downloading pluggy-1.6.0-py3-none-any.whl (20 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.9039014Z Downloading psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl (155 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.9098844Z Downloading tiktoken-0.12.0-cp312-cp312-manylinux_2_28_x86_64.whl (1.2 MB)
+test (3.12)	Install deps	2026-04-19T01:02:01.9201690Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 119.0 MB/s  0:00:00
+test (3.12)	Install deps	2026-04-19T01:02:01.9235577Z Downloading iniconfig-2.3.0-py3-none-any.whl (7.5 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.9269264Z Using cached packaging-26.1-py3-none-any.whl (95 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.9301191Z Downloading pygments-2.20.0-py3-none-any.whl (1.2 MB)
+test (3.12)	Install deps	2026-04-19T01:02:01.9381576Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 167.3 MB/s  0:00:00
+test (3.12)	Install deps	2026-04-19T01:02:01.9421597Z Downloading regex-2026.4.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (801 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.9490477Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 801.1/801.1 kB 137.6 MB/s  0:00:00
+test (3.12)	Install deps	2026-04-19T01:02:01.9531458Z Downloading requests-2.33.1-py3-none-any.whl (64 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.9609728Z Downloading charset_normalizer-3.4.7-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (216 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.9668102Z Downloading urllib3-2.6.3-py3-none-any.whl (131 kB)
+test (3.12)	Install deps	2026-04-19T01:02:01.9752181Z Downloading certifi-2026.2.25-py3-none-any.whl (153 kB)
+test (3.12)	Install deps	2026-04-19T01:02:02.0323624Z Installing collected packages: urllib3, regex, pygments, psutil, pluggy, packaging, iniconfig, charset_normalizer, certifi, requests, pytest, httpcore, tiktoken, httpx
+test (3.12)	Install deps	2026-04-19T01:02:03.5692986Z 
+test (3.12)	Install deps	2026-04-19T01:02:03.5722284Z Successfully installed certifi-2026.2.25 charset_normalizer-3.4.7 httpcore-1.0.9 httpx-0.28.1 iniconfig-2.3.0 packaging-26.1 pluggy-1.6.0 psutil-7.2.2 pygments-2.20.0 pytest-8.4.2 regex-2026.4.4 requests-2.33.1 tiktoken-0.12.0 urllib3-2.6.3
+test (3.12)	Run tests	﻿2026-04-19T01:02:03.6716461Z ##[group]Run pytest -q
+test (3.12)	Run tests	2026-04-19T01:02:03.6716741Z [36;1mpytest -q[0m
+test (3.12)	Run tests	2026-04-19T01:02:03.6739987Z shell: /usr/bin/bash -e {0}
+test (3.12)	Run tests	2026-04-19T01:02:03.6740206Z env:
+test (3.12)	Run tests	2026-04-19T01:02:03.6740446Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+test (3.12)	Run tests	2026-04-19T01:02:03.6740857Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+test (3.12)	Run tests	2026-04-19T01:02:03.6741253Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+test (3.12)	Run tests	2026-04-19T01:02:03.6741604Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+test (3.12)	Run tests	2026-04-19T01:02:03.6741948Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+test (3.12)	Run tests	2026-04-19T01:02:03.6742299Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+test (3.12)	Run tests	2026-04-19T01:02:03.6742585Z ##[endgroup]
+test (3.12)	Run tests	2026-04-19T01:02:07.5252194Z ......s....s.......................                                      [100%]
+test (3.12)	Run tests	2026-04-19T01:02:07.5254739Z 33 passed, 2 skipped in 2.97s
+test (3.12)	Post Set up Python	﻿2026-04-19T01:02:07.6330909Z Post job cleanup.
+test (3.12)	Post Run actions/checkout@v4	﻿2026-04-19T01:02:07.7974714Z Post job cleanup.
+test (3.12)	Post Run actions/checkout@v4	2026-04-19T01:02:07.8917815Z [command]/usr/bin/git version
+test (3.12)	Post Run actions/checkout@v4	2026-04-19T01:02:07.8954068Z git version 2.53.0
+test (3.12)	Post Run actions/checkout@v4	2026-04-19T01:02:07.9006743Z Temporarily overriding HOME='/home/runner/work/_temp/f1e4e512-4b38-4ed7-bb98-3f0247f6a3fe' before making global git config changes
+test (3.12)	Post Run actions/checkout@v4	2026-04-19T01:02:07.9007781Z Adding repository directory to the temporary git global config as a safe directory
+test (3.12)	Post Run actions/checkout@v4	2026-04-19T01:02:07.9014501Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/mail_summariser/mail_summariser
+test (3.12)	Post Run actions/checkout@v4	2026-04-19T01:02:07.9048709Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+test (3.12)	Post Run actions/checkout@v4	2026-04-19T01:02:07.9081327Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+test (3.12)	Post Run actions/checkout@v4	2026-04-19T01:02:07.9307431Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+test (3.12)	Post Run actions/checkout@v4	2026-04-19T01:02:07.9328740Z http.https://github.com/.extraheader
+test (3.12)	Post Run actions/checkout@v4	2026-04-19T01:02:07.9341285Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+test (3.12)	Post Run actions/checkout@v4	2026-04-19T01:02:07.9371466Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+test (3.12)	Post Run actions/checkout@v4	2026-04-19T01:02:07.9587009Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+test (3.12)	Post Run actions/checkout@v4	2026-04-19T01:02:07.9617390Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+test (3.12)	Complete job	﻿2026-04-19T01:02:07.9946805Z Cleaning up orphan processes
+test (3.12)	Complete job	2026-04-19T01:02:08.0222828Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/setup-python@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
