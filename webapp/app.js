@@ -1,4 +1,4 @@
-import { createApiClient } from "/web/api.js";
+import { createApiClient } from "./api.js";
 
 const storageKeys = {
   baseUrl: "mail_summariser-base-url",
