@@ -249,7 +249,11 @@ struct LogView: View {
     private func saveErrorViaSavePanel(_ text: String) {
         let panel = NSSavePanel()
         panel.canCreateDirectories = true
-        panel.allowedFileTypes = ["json", "txt"]
+        if #available(macOS 12.0, *) {
+            panel.allowedContentTypes = [.json, .plainText]
+        } else {
+            panel.allowedFileTypes = ["json", "txt"]
+        }
         // Default filename and directory: prefer Downloads and include timestamp
         let fm = FileManager.default
         let formatter = ISO8601DateFormatter()
