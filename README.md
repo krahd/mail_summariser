@@ -1,70 +1,64 @@
 # mail_summariser
 
-This branch extracts provider-specific LLM access behind a small client layer and hardens the backend mail flow around three modes:
+mail_summariser is a local-first email workflow with a FastAPI backend, a browser client, and a macOS SwiftUI client.
 
-- dummy mode for local/demo use
-- real IMAP/SMTP mode
-- developer fake-mail mode for end-to-end tests
+It supports:
 
-## What changed
+- dummy mode for local onboarding and fast validation
+- live IMAP/SMTP mode for real inbox workflows
+- provider-backed summaries via Ollama, OpenAI, or Anthropic
+- deterministic fallback summaries when providers are unavailable or return invalid output
 
-- cleaned up provider abstractions for OpenAI, Anthropic, and Ollama
-- made summary generation validate responses with a sentinel and fall back safely
-- fixed connection testing so it exercises the actual configured mail path
-- fixed tagging/undo behaviour to use the saved `summarisedTag` setting rather than a hard-coded default
-- simplified app startup and state handling so tests can isolate their own database file cleanly
-- documented the backend flow and test strategy
+## Project layout
 
-## Development
+- `backend/`: FastAPI app, mail services, provider integration, SQLite persistence
+- `webapp/`: static browser UI (`index.html`, `app.js`, `api.js`)
+- `macos-app/`: SwiftUI desktop client
+- `tests/`: pytest suite for backend behavior and integration boundaries
+- `scripts/`: build, release packaging, hygiene checks, and full-stack validation
 
-Create a virtual environment and install the project with dev dependencies:
+## Quick start
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e '.[dev]'
-```
-
-Run tests:
+### Backend
 
 ```bash
-pytest
+./start_backend.sh
 ```
 
-Run the API locally:
+Backend defaults to `http://127.0.0.1:8766`.
+
+### Web app
+
+Serve the `webapp/` folder with any static server, for example:
 
 ```bash
-uvicorn backend.app:app --reload --port 8766
+python -m http.server 8000 --directory webapp
 ```
 
-## Notes on provider credentials
-
-The API masks stored secrets on reads. When saving settings, masked values are ignored so existing secrets remain stored.
-
-## External LLM helper: modelito
-
-This project now consumes the external `modelito` package (v0.1.1+) for lightweight LLM helpers — token counting, small Ollama HTTP helpers, and timeout/catalog utilities.
-
-Install the published package (preferred) or use the dev environment which pulls it in automatically:
+### Tests
 
 ```bash
-# Preferred: install the released package
-pip install modelito==0.1.1 --extra-index-url https://test.pypi.org/simple || true
-
-# Or install the project in development mode (pulls modelito as a dependency)
-pip install -e '.[dev]'
+pytest -q
 ```
 
-See the `modelito` release notes for details and compatibility shims: https://github.com/krahd/modelito/releases
+### Full-stack validation
 
-## Test coverage
+```bash
+./scripts/validate_full_stack.sh
+```
 
-The test suite covers:
+### Repository hygiene guard
 
-- provider-library integration and fallbacks
-- provider-specific system messages
-- dummy-mode mail flow, undo, and job isolation
-- live IMAP/SMTP flow against a controllable fake local server
-- developer fake-mail endpoints
+```bash
+./scripts/check_repo_hygiene.sh
+```
 
-CI test run test/ci-run-20260419003626 Sun Apr 19 00:36:26 UTC 2026 -- automated
+## Configuration notes
+
+- Runtime settings are persisted in SQLite (`backend/data/mail_summariser.sqlite3` by default).
+- Secrets are masked on reads from `/settings`.
+- Writing masked sentinel values (`__MASKED__`) does not overwrite stored secrets.
+
+## Dependency note
+
+The project depends on the external `modelito` package for LLM helper utilities.

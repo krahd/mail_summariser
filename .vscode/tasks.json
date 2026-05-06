@@ -74,6 +74,12 @@
       "type": "shell",
       "command": "./scripts/build_macos_app.sh",
       "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "Validate Full Stack",
+      "type": "shell",
+      "command": "./scripts/validate_full_stack.sh",
+      "presentation": { "reveal": "always", "panel": "shared" }
     }
   ]
 }
