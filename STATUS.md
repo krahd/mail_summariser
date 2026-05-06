@@ -1,6 +1,6 @@
-# Repository Report
+# mail_summariser status report
 
-Last updated: 2026-05-06
+Last updated: 2026-05-06 
 
 ## Current state
 
@@ -91,8 +91,12 @@ Ignore rules strengthened in `.gitignore` for these artifact classes.
 9. Router error-path behavior coverage: implemented via
   - `tests/test_router_error_paths.py` for settings, summaries, actions, and
     dev-tools failure/404 paths.
+10. Property-based parser/validation fuzzing: implemented via
+  - `tests/test_fuzz_summary_payloads.py` using Hypothesis to stress malformed
+    `/summaries` payload shapes and assert handled outcomes (`200`, `400`, `422`)
+    without server crashes.
 
 ## Remaining opportunities
 
-1. Add property-based fuzzing for search criteria payload shapes to stress parser
-  and validation behavior under malformed request combinations.
+1. Expand fuzzing scope to include settings and action payload contracts for
+  cross-endpoint malformed input hardening.
