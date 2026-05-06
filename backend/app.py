@@ -9,6 +9,7 @@ dynamic import and callable detection patterns used for test patching.
 # pylint: disable=not-callable
 
 import contextlib
+import logging
 from datetime import datetime
 from typing import Callable, Optional, TYPE_CHECKING, Any
 from uuid import uuid4
@@ -57,6 +58,7 @@ from backend.schemas import (
 )
 from backend.summary_service import summarize_messages
 from backend import model_provider_service
+from backend.routers_runtime_models import router as runtime_models_router
 
 if TYPE_CHECKING:
     # Provide imports for static type checkers. These modules are often
@@ -64,6 +66,9 @@ if TYPE_CHECKING:
     # TYPE_CHECKING block makes their attributes available to tools.
     from backend import db as _db  # pylint: disable=reimported
     from backend import dummy_state as _dummy_state  # pylint: disable=reimported
+
+
+logger = logging.getLogger(__name__)
 
 
 @contextlib.asynccontextmanager
@@ -95,14 +100,13 @@ async def lifespan(_: FastAPI):
         except (ImportError, AttributeError):
             pass
     # Ensure database contains the known defaults at startup (add missing defaults only)
-    # Debug: show DB path and seeded settings
     try:
         from backend import db as _db  # pylint: disable=import-outside-toplevel
-        print(f"[DEBUG-lifespan] seeded DB_PATH={_db.DB_PATH}")
+        logger.info("seeded_db_path=%s", _db.DB_PATH)
     except (ImportError, AttributeError):
         pass
     current = list_settings()
-    print(f"[DEBUG-lifespan] seeded settings at lifespan start: {current}")
+    logger.debug("seeded_settings=%s", current)
     for key, value in DEFAULT_SETTINGS.items():
         if key not in current:
             set_setting(key, value)
@@ -131,6 +135,7 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*'],
 )
+app.include_router(runtime_models_router)
 
 SECRET_SETTING_KEYS = ('openaiApiKey', 'anthropicApiKey', 'imapPassword', 'smtpPassword')
 
@@ -272,13 +277,15 @@ def health() -> dict[str, str]:
 
 @app.get('/settings', response_model=AppSettings)
 def get_settings() -> AppSettings:
-    # Debug: show effective defaults and persisted settings when running tests
     try:
         current = list_settings()
     except Exception:  # pylint: disable=broad-except
         current = {}
-    print(
-        f"[DEBUG] DEFAULT_SETTINGS dummyMode={DEFAULT_SETTINGS.get('dummyMode')} persisted={current.get('dummyMode')}")
+    logger.debug(
+        "settings_read dummy_default=%s dummy_persisted=%s",
+        DEFAULT_SETTINGS.get('dummyMode'),
+        current.get('dummyMode'),
+    )
     return AppSettings(**_masked_settings_payload())
 
 
@@ -578,119 +585,8 @@ def dev_fake_mail_stop() -> dict:
     return {'enabled': True, 'running': False, 'message': 'stopped', 'suggestedSettings': None}
 
 
-# Runtime endpoints -----------------------------------------------------------
-def _build_runtime_status() -> dict:
-    backend = {'running': True, 'canShutdown': True}
-    host = str(DEFAULT_SETTINGS.get('ollamaHost', 'http://127.0.0.1:11434'))
-    installed = False
-    running = False
-    model_name = DEFAULT_SETTINGS.get('modelName', '')
-    started_by_app = False
-    message = ''
-
-    try:
-        installed = bool(getattr(model_provider_service, 'is_ollama_installed')(host))
-    except (AttributeError, TypeError, OSError):
-        installed = False
-    try:
-        running = bool(getattr(model_provider_service, 'is_ollama_running')(host))
-    except (AttributeError, TypeError, OSError):
-        running = False
-    try:
-        # Determine whether the running process was started by this app
-        started_by_app = getattr(model_provider_service, '_managed_process_host', None) == host
-    except (AttributeError, TypeError):
-        started_by_app = False
-
-    if not installed:
-        startup_action = 'install'
-        message = 'Install Ollama'
-    elif not running:
-        # Auto-start behavior may have warmed the model
-        startup_action = 'start'
-        message = 'Ollama not running'
-    else:
-        startup_action = 'none'
-        message = 'Ollama running'
-
-    # Prefer any detailed runtime message produced by the provider (e.g. warm-up)
-    try:
-        rt = getattr(model_provider_service, '_runtime_state', None)
-        if rt and getattr(rt, 'last_message_host', '') == host and getattr(rt, 'last_message', ''):
-            message = rt.last_message
-    except (AttributeError, TypeError):
-        pass
-
-    # Expose current runtime structure
-    ollama = {
-        'installed': installed,
-        'running': running,
-        'startedByApp': started_by_app,
-        'host': host,
-        'modelName': model_name,
-        'startupAction': startup_action,
-        'message': message,
-        'installUrl': 'https://ollama.com',
-    }
-
-    return {'backend': backend, 'ollama': ollama}
-
-
-@app.get('/runtime/status')
-def runtime_status() -> dict:
-    return _build_runtime_status()
-
-
-@app.post('/runtime/ollama/start')
-def runtime_start_ollama() -> dict:
-    host = str(DEFAULT_SETTINGS.get('ollamaHost', 'http://127.0.0.1:11434'))
-    started, message = model_provider_service.ensure_ollama_running(host, auto_start=True)
-    runtime = _build_runtime_status()
-    # If models are missing, return a warning
-    try:
-        models = model_provider_service.list_ollama_models(host)
-    except (AttributeError, TypeError, OSError):
-        models = []
-    status = 'ok' if models else 'warning'
-    return {'status': status, 'message': message, 'runtime': runtime}
-
-
 @app.post('/runtime/shutdown')
 def runtime_shutdown() -> dict:
     # Schedule backend shutdown
     _schedule_backend_shutdown()
     return {'status': 'ok'}
-
-
-@app.get('/models/options')
-def models_options(provider: str | None = None) -> dict:
-    prov = (provider or 'openai').lower()
-    # Minimal response shape used by the webapp and smoke tests
-    if prov == 'openai':
-        return {'provider': 'openai', 'models': []}
-    if prov == 'ollama':
-        host = str(DEFAULT_SETTINGS.get('ollamaHost', 'http://127.0.0.1:11434'))
-        try:
-            models = model_provider_service.list_ollama_models(host)
-        except (AttributeError, TypeError, OSError):
-            models = []
-        running = model_provider_service.is_ollama_running(host)
-        rt = getattr(model_provider_service, '_runtime_state', None)
-        last_message = getattr(rt, 'last_message', '') if rt is not None else ''
-        return {
-            'provider': 'ollama',
-            'models': models,
-            'ollama': {'running': running, 'host': host, 'message': last_message},
-        }
-    return {'provider': prov, 'models': []}
-
-
-@app.get('/models/catalog')
-def models_catalog(query: str | None = None, limit: int | None = 20) -> dict:
-    # For the smoke test we return an Ollama-oriented catalog response
-    host = str(DEFAULT_SETTINGS.get('ollamaHost', 'http://127.0.0.1:11434'))
-    try:
-        models = model_provider_service.list_ollama_models(host)
-    except (AttributeError, TypeError, OSError):
-        models = []
-    return {'provider': 'ollama', 'models': models, 'count': len(models)}

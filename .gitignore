@@ -1,7 +1,13 @@
 .venv/
+backend/.venv/
 __pycache__/
 *.pyc
 .DS_Store
 temp.txt
 backend/data/*.sqlite3
 backend/data/*.sqlite3-*
+.pytest_cache/
+dist/
+release_artifacts/
+*.egg-info/
+*.xcarchive/

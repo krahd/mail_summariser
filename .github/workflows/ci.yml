@@ -29,6 +29,14 @@ jobs:
           pip install -e .
           # Install development/test dependencies
           pip install -r dev-requirements.txt
+      - name: Repository hygiene guard
+        run: |
+          chmod +x scripts/check_repo_hygiene.sh
+          ./scripts/check_repo_hygiene.sh
       - name: Run tests
         run: |
           pytest -q
+      - name: Full-stack startup validation
+        run: |
+          chmod +x scripts/validate_full_stack.sh
+          ./scripts/validate_full_stack.sh

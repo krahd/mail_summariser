@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="960" viewBox="0 0 1280 960" role="img" aria-label="Summary request flow chart">
+  <defs>
+    <style>
+      .bg{fill:#f7faf8}
+      .title{font:700 28px 'Helvetica Neue',Arial,sans-serif;fill:#0f3d34}
+      .step{fill:#fff;stroke:#1f6f5f;stroke-width:2;rx:14;ry:14}
+      .decision{fill:#ecf7f3;stroke:#1f6f5f;stroke-width:2}
+      .txt{font:600 16px 'Helvetica Neue',Arial,sans-serif;fill:#0b2f29}
+      .edge{stroke:#2d6f62;stroke-width:2.4;fill:none;marker-end:url(#arrow)}
+      .tag{font:600 13px 'Helvetica Neue',Arial,sans-serif;fill:#2b5c52}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L10,3 L0,6 z" fill="#2d6f62"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1280" height="960"/>
+  <text class="title" x="40" y="56">Summary Flow - POST /summaries</text>
+
+  <rect class="step" x="460" y="90" width="360" height="70"/>
+  <text class="txt" x="545" y="133">Client sends summary request</text>
+
+  <rect class="step" x="460" y="200" width="360" height="70"/>
+  <text class="txt" x="556" y="243">Load merged settings</text>
+
+  <polygon class="decision" points="640,320 820,390 640,460 460,390"/>
+  <text class="txt" x="580" y="395">dummy mode?</text>
+
+  <rect class="step" x="170" y="510" width="320" height="80"/>
+  <text class="txt" x="232" y="557">Search in-memory mailbox</text>
+
+  <rect class="step" x="790" y="510" width="320" height="80"/>
+  <text class="txt" x="857" y="557">Search IMAP / fake-mail</text>
+
+  <rect class="step" x="460" y="640" width="360" height="80"/>
+  <text class="txt" x="530" y="686">Provider summarization attempt</text>
+
+  <polygon class="decision" points="640,760 820,830 640,900 460,830"/>
+  <text class="txt" x="532" y="834">response valid + sentinel?</text>
+
+  <rect class="step" x="120" y="790" width="280" height="80"/>
+  <text class="txt" x="165" y="837">Use provider summary</text>
+
+  <rect class="step" x="880" y="790" width="280" height="80"/>
+  <text class="txt" x="905" y="837">Fallback deterministic summary</text>
+
+  <rect class="step" x="460" y="920" width="360" height="32"/>
+  <text class="txt" x="520" y="944">Persist job + logs and return</text>
+
+  <path class="edge" d="M640 160 L640 200"/>
+  <path class="edge" d="M640 270 L640 320"/>
+  <path class="edge" d="M520 420 L330 510"/>
+  <path class="edge" d="M760 420 L950 510"/>
+  <path class="edge" d="M330 590 L560 640"/>
+  <path class="edge" d="M950 590 L720 640"/>
+  <path class="edge" d="M640 720 L640 760"/>
+  <path class="edge" d="M500 845 L400 845"/>
+  <path class="edge" d="M780 845 L880 845"/>
+  <path class="edge" d="M260 870 L560 936"/>
+  <path class="edge" d="M1020 870 L720 936"/>
+
+  <text class="tag" x="430" y="475">yes</text>
+  <text class="tag" x="835" y="475">no</text>
+  <text class="tag" x="405" y="814">yes</text>
+  <text class="tag" x="840" y="814">no</text>
+</svg>
