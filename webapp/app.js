@@ -13,6 +13,8 @@ let latestMessageDetailRequest = 0;
 let currentRuntimeStatus = null;
 let currentFakeMailStatus = null;
 let currentSystemMessageDefaults = null;
+let currentLogs = [];
+let activeQuickFilter = "today-unread";
 let backendStopping = false;
 let activeDummyMode = true;
 
@@ -44,9 +46,26 @@ const markReadBtn = document.getElementById("mark-read");
 const tagSummaryBtn = document.getElementById("tag-summary");
 const emailSummaryBtn = document.getElementById("email-summary");
 const undoActionBtn = document.getElementById("undo-action");
+const quickFilterButtons = Array.from(document.querySelectorAll(".quick-filter"));
+const applyScopeActionsBtn = document.getElementById("apply-scope-actions");
+const actionScopePreview = document.getElementById("action-scope-preview");
+const scopeActionMarkRead = document.getElementById("scope-action-mark-read");
+const scopeActionTag = document.getElementById("scope-action-tag");
+const scopeActionEmail = document.getElementById("scope-action-email");
+const healthMode = document.getElementById("health-mode");
+const healthProvider = document.getElementById("health-provider");
+const healthRuntime = document.getElementById("health-runtime");
+const healthSync = document.getElementById("health-sync");
+const digestMetricMessages = document.getElementById("digest-metric-messages");
+const digestMetricSelected = document.getElementById("digest-metric-selected");
+const digestMetricFilter = document.getElementById("digest-metric-filter");
 
 const logsBody = document.getElementById("logs-body");
 const refreshLogsBtn = document.getElementById("refresh-logs");
+const logsCountLabel = document.getElementById("logs-count");
+const logSearchInput = document.getElementById("log-search");
+const logStatusFilter = document.getElementById("log-status-filter");
+const logUndoOnlyToggle = document.getElementById("log-undo-only");
 
 const settingsForm = document.getElementById("settings-form");
 const settingsBasicScreen = document.getElementById("settings-basic-screen");
@@ -91,6 +110,9 @@ const fakeMailCredentialsLine = document.getElementById("fake-mail-credentials")
 const startFakeMailBtn = document.getElementById("start-fake-mail");
 const stopFakeMailBtn = document.getElementById("stop-fake-mail");
 const useFakeMailSettingsBtn = document.getElementById("use-fake-mail-settings");
+const diagnosticsProviderState = document.getElementById("diag-provider-state");
+const diagnosticsRuntimeState = document.getElementById("diag-runtime-state");
+const diagnosticsFakeMailState = document.getElementById("diag-fakemail-state");
 
 const api = createApiClient({
   getBaseUrl,
@@ -121,6 +143,178 @@ function setActionButtons(enabled) {
   markReadBtn.disabled = !enabled;
   tagSummaryBtn.disabled = !enabled;
   emailSummaryBtn.disabled = !enabled;
+  if (applyScopeActionsBtn) {
+    applyScopeActionsBtn.disabled = !enabled;
+  }
+}
+
+function updateActionScopePreview() {
+  if (!actionScopePreview) {
+    return;
+  }
+  if (!currentJobId) {
+    actionScopePreview.textContent = "No active job. Generate a digest first.";
+    return;
+  }
+
+  const actionNames = [];
+  if (scopeActionMarkRead?.checked) actionNames.push("mark read");
+  if (scopeActionTag?.checked) actionNames.push("tag");
+  if (scopeActionEmail?.checked) actionNames.push("email summary");
+
+  if (actionNames.length === 0) {
+    actionScopePreview.textContent = `Job ${currentJobId}: select at least one action.`;
+    return;
+  }
+
+  actionScopePreview.textContent = `Job ${currentJobId}: ${actionNames.join(", ")}.`;
+}
+
+function updateHealthStrip() {
+  if (healthMode) {
+    healthMode.textContent = `Mode: ${activeDummyMode ? "Dummy" : "Live"}`;
+  }
+  if (healthProvider) {
+    healthProvider.textContent = `Provider: ${providerDisplayName(selectedProvider())}`;
+  }
+  if (healthRuntime) {
+    healthRuntime.textContent = currentRuntimeStatus?.ollama?.message
+      ? `Runtime: ${currentRuntimeStatus.ollama.message}`
+      : "Runtime: Status unavailable";
+  }
+  if (healthSync) {
+    const stamp = new Date();
+    healthSync.textContent = `Last sync: ${stamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+  }
+}
+
+function updateDiagnosticsSummary() {
+  if (diagnosticsProviderState) {
+    const provider = providerDisplayName(selectedProvider());
+    diagnosticsProviderState.textContent = `Provider: ${provider}`;
+  }
+
+  if (diagnosticsRuntimeState) {
+    const runtimeMessage = currentRuntimeStatus?.ollama?.message || "not loaded";
+    diagnosticsRuntimeState.textContent = `Runtime: ${runtimeMessage}`;
+  }
+
+  if (diagnosticsFakeMailState) {
+    if (!currentFakeMailStatus || !currentFakeMailStatus.enabled) {
+      diagnosticsFakeMailState.textContent = "Fake mail: unavailable";
+    } else if (currentFakeMailStatus.running) {
+      diagnosticsFakeMailState.textContent = "Fake mail: running";
+    } else {
+      diagnosticsFakeMailState.textContent = "Fake mail: available (stopped)";
+    }
+  }
+}
+
+function filteredLogs(logs) {
+  const searchQuery = String(logSearchInput?.value || "").trim().toLowerCase();
+  const statusFilterValue = String(logStatusFilter?.value || "").trim().toLowerCase();
+  const undoOnly = Boolean(logUndoOnlyToggle?.checked);
+
+  return (Array.isArray(logs) ? logs : []).filter((item) => {
+    if (undoOnly && !item.undoable) {
+      return false;
+    }
+
+    const itemStatus = String(item.status || "").toLowerCase();
+    if (statusFilterValue && itemStatus !== statusFilterValue) {
+      return false;
+    }
+
+    if (!searchQuery) {
+      return true;
+    }
+
+    const haystack = [item.action, item.status, item.details, item.job_id, item.timestamp]
+      .map((value) => String(value || "").toLowerCase())
+      .join(" ");
+    return haystack.includes(searchQuery);
+  });
+}
+
+function renderLogsCount(visibleCount, totalCount) {
+  if (!logsCountLabel) {
+    return;
+  }
+  if (totalCount <= 0) {
+    logsCountLabel.textContent = "0 items";
+    return;
+  }
+  logsCountLabel.textContent = `${visibleCount} of ${totalCount} items`;
+}
+
+function refreshLogTimeline() {
+  renderLogs(currentLogs);
+}
+
+function setQuickFilterState(activeFilter) {
+  activeQuickFilter = activeFilter;
+  quickFilterButtons.forEach((button) => {
+    button.classList.toggle("active", button.dataset.filter === activeFilter);
+  });
+  updateDigestMetrics();
+}
+
+function formatQuickFilterLabel(filter) {
+  const normalized = String(filter || "clear").replace(/-/g, " ").trim();
+  if (!normalized) {
+    return "All messages";
+  }
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
+function updateDigestMetrics() {
+  if (digestMetricMessages) {
+    digestMetricMessages.textContent = String(currentMessages.length || 0);
+  }
+  if (digestMetricSelected) {
+    const selectedMessage = getMessageListItem(selectedMessageId);
+    digestMetricSelected.textContent = selectedMessage?.subject || "None";
+  }
+  if (digestMetricFilter) {
+    digestMetricFilter.textContent = formatQuickFilterLabel(activeQuickFilter);
+  }
+}
+
+function applyQuickFilter(filter) {
+  if (!searchForm) {
+    return;
+  }
+
+  const keyword = searchForm.elements.namedItem("keyword");
+  const sender = searchForm.elements.namedItem("sender");
+  const tag = searchForm.elements.namedItem("tag");
+  const unreadOnly = searchForm.elements.namedItem("unreadOnly");
+  const readOnly = searchForm.elements.namedItem("readOnly");
+  const replied = searchForm.elements.namedItem("replied");
+
+  if (keyword) keyword.value = "";
+  if (sender) sender.value = "";
+  if (tag) tag.value = "";
+  if (unreadOnly) unreadOnly.checked = true;
+  if (readOnly) readOnly.checked = false;
+  if (replied) replied.value = "";
+
+  if (filter === "pending-replies") {
+    if (replied) replied.value = "false";
+    if (keyword) keyword.value = "follow up";
+  } else if (filter === "finance") {
+    if (tag) tag.value = "finance";
+    if (keyword) keyword.value = "invoice";
+  } else if (filter === "today-unread") {
+    if (keyword) keyword.value = "today";
+  } else if (filter === "clear") {
+    if (keyword) keyword.value = "";
+    if (sender) sender.value = "";
+    if (tag) tag.value = "";
+  }
+
+  setQuickFilterState(filter);
+  setStatus(`Applied quick filter: ${filter.replace(/-/g, " ")}.`);
 }
 
 function clearCurrentWorkspaceState() {
@@ -142,6 +336,8 @@ function clearCurrentWorkspaceState() {
     body: "",
   });
   setActionButtons(false);
+  updateActionScopePreview();
+  updateDigestMetrics();
 }
 
 function renderMessages(messages) {
@@ -155,6 +351,7 @@ function renderMessages(messages) {
 
   if (!Array.isArray(messages) || messages.length === 0) {
     messagesBody.innerHTML = "<tr><td colspan='3'>No messages returned.</td></tr>";
+    updateDigestMetrics();
     return;
   }
 
@@ -170,6 +367,8 @@ function renderMessages(messages) {
       }
     )
     .join("");
+
+  updateDigestMetrics();
 }
 
 function getMessageListItem(messageId) {
@@ -262,6 +461,7 @@ async function selectMessage(messageId) {
   selectedMessageId = messageId;
   currentMessageDetail = null;
   renderMessages(currentMessages);
+  updateDigestMetrics();
 
   const listItem = getMessageListItem(messageId);
   renderMessageDetail(null, {
@@ -285,6 +485,7 @@ async function selectMessage(messageId) {
 
     currentMessageDetail = detail;
     renderMessageDetail(detail);
+    updateDigestMetrics();
   } catch (error) {
     if (requestId !== latestMessageDetailRequest || selectedMessageId !== messageId) {
       return;
@@ -302,16 +503,21 @@ async function selectMessage(messageId) {
       body: `Could not load this message: ${error.message}`,
     });
     setStatus(`Message load failed: ${error.message}`, true);
+    updateDigestMetrics();
   }
 }
 
 function renderLogs(logs) {
-  if (!Array.isArray(logs) || logs.length === 0) {
-    logsBody.innerHTML = "<tr><td colspan='6'>No logs available.</td></tr>";
+  currentLogs = Array.isArray(logs) ? logs : [];
+  const visibleLogs = filteredLogs(currentLogs);
+  renderLogsCount(visibleLogs.length, currentLogs.length);
+
+  if (!Array.isArray(visibleLogs) || visibleLogs.length === 0) {
+    logsBody.innerHTML = "<article class='log-entry log-entry-empty'><p>No logs available.</p></article>";
     return;
   }
 
-  logsBody.innerHTML = logs
+  logsBody.innerHTML = visibleLogs
     .map(
       (item) => {
         let undoCell = '<span class="log-badge log-badge-final">Final</span>';
@@ -322,11 +528,18 @@ function renderLogs(logs) {
         }
 
         return (
-        `<tr><td>${escapeHtml(item.timestamp || "")}</td><td>${escapeHtml(
-          item.action || ""
-        )}</td><td>${escapeHtml(item.status || "")}</td><td>${escapeHtml(
-          item.details || ""
-        )}</td><td>${escapeHtml(item.job_id || "")}</td><td>${undoCell}</td></tr>`
+        `<article class="log-entry">` +
+          `<div class="log-entry-head">` +
+            `<span class="log-entry-time">${escapeHtml(item.timestamp || "")}</span>` +
+            `<strong class="log-entry-action">${escapeHtml(item.action || "")}</strong>` +
+            `<span class="log-badge log-badge-status">${escapeHtml(item.status || "")}</span>` +
+          `</div>` +
+          `<p class="log-entry-details">${escapeHtml(item.details || "")}</p>` +
+          `<div class="log-entry-meta">` +
+            `<span class="log-badge log-badge-muted">Job: ${escapeHtml(item.job_id || "-")}</span>` +
+            `${undoCell}` +
+          `</div>` +
+        `</article>`
         );
       }
     )
@@ -363,6 +576,8 @@ function fillSettings(settings, options = {}) {
   refreshProviderKeyWarning();
   refreshProviderKeyFieldVisibility();
   refreshProviderSystemMessageEditor();
+  updateHealthStrip();
+  updateDiagnosticsSummary();
 }
 
 function syncDummyModeUI(enabled) {
@@ -378,6 +593,7 @@ function syncDummyModeUI(enabled) {
       ? "Dummy mode is on. Searches and actions use the built-in test mailbox."
       : "Dummy mode is off. Searches and actions use the configured IMAP and SMTP servers.";
   }
+  updateHealthStrip();
 }
 
 function setOllamaStatus(message, isError = false) {
@@ -459,6 +675,8 @@ function renderRuntimeStatus(runtime) {
   setOllamaRuntimeStatus(message, needsAttention);
   configureRuntimeActionButton(runtimeOllamaActionBtn, runtime);
   updateRuntimeStartupBanner(runtime);
+  updateHealthStrip();
+  updateDiagnosticsSummary();
 }
 
 async function refreshRuntimeStatus() {
@@ -471,11 +689,13 @@ function renderFakeMailStatus(status) {
   currentFakeMailStatus = status;
 
   if (!fakeMailCard || !fakeMailStatusLine || !fakeMailCredentialsLine) {
+    updateDiagnosticsSummary();
     return;
   }
 
   if (!status?.enabled) {
     fakeMailCard.classList.add("is-hidden");
+    updateDiagnosticsSummary();
     return;
   }
 
@@ -501,6 +721,7 @@ function renderFakeMailStatus(status) {
   if (useFakeMailSettingsBtn) {
     useFakeMailSettingsBtn.disabled = !status.running || !status.suggestedSettings;
   }
+  updateDiagnosticsSummary();
 }
 
 async function refreshFakeMailStatus() {
@@ -960,6 +1181,7 @@ async function runJobAction(action) {
     await action(currentJobId);
     setStatus("Action completed.");
     renderLogs(await api.getLogs());
+    updateActionScopePreview();
   } catch (error) {
     setStatus(`Action failed: ${error.message}`, true);
   }
@@ -1008,6 +1230,7 @@ function wireEvents() {
       summaryText.textContent = result.summary;
       renderMessages(result.messages || []);
       setActionButtons(true);
+      updateActionScopePreview();
       setStatus(`Summary created for ${result.messages.length} messages.`);
       if (result.messages?.length) {
         await selectMessage(result.messages[0].id);
@@ -1026,6 +1249,44 @@ function wireEvents() {
     } catch (error) {
       setStatus(`Summary request failed: ${error.message}`, true);
     }
+  });
+
+  quickFilterButtons.forEach((button) => {
+    button.addEventListener("click", () => applyQuickFilter(button.dataset.filter || "clear"));
+  });
+
+  [scopeActionMarkRead, scopeActionTag, scopeActionEmail].forEach((field) => {
+    field?.addEventListener("change", updateActionScopePreview);
+  });
+
+  applyScopeActionsBtn?.addEventListener("click", async () => {
+    if (!currentJobId) {
+      setStatus("No active job selected.", true);
+      return;
+    }
+
+    const selectedActions = [];
+    if (scopeActionMarkRead?.checked) selectedActions.push(api.markRead);
+    if (scopeActionTag?.checked) selectedActions.push(api.tagSummarised);
+    if (scopeActionEmail?.checked) selectedActions.push(api.emailSummary);
+
+    if (selectedActions.length === 0) {
+      setStatus("Select at least one action to apply.", true);
+      return;
+    }
+
+    for (const action of selectedActions) {
+      try {
+        await action(currentJobId);
+      } catch (error) {
+        setStatus(`Scoped action failed: ${error.message}`, true);
+        return;
+      }
+    }
+
+    renderLogs(await api.getLogs());
+    setStatus("Scoped actions applied.");
+    updateActionScopePreview();
   });
 
   messagesBody.addEventListener("click", async (event) => {
@@ -1094,6 +1355,10 @@ function wireEvents() {
     }
   });
 
+  logSearchInput?.addEventListener("input", refreshLogTimeline);
+  logStatusFilter?.addEventListener("change", refreshLogTimeline);
+  logUndoOnlyToggle?.addEventListener("change", refreshLogTimeline);
+
   logsBody.addEventListener("click", async (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) {
@@ -1138,6 +1403,8 @@ function wireEvents() {
     refreshProviderKeyWarning();
     refreshProviderKeyFieldVisibility();
     refreshProviderSystemMessageEditor();
+    updateHealthStrip();
+    updateDiagnosticsSummary();
   });
   providerSystemMessageEditor?.addEventListener("input", saveVisibleProviderSystemMessage);
   resetSystemMessageBtn?.addEventListener("click", async () => {
@@ -1330,6 +1597,12 @@ function init() {
   wireEvents();
   refreshProviderKeyWarning();
   refreshProviderKeyFieldVisibility();
+  updateActionScopePreview();
+  updateHealthStrip();
+  updateDiagnosticsSummary();
+  setQuickFilterState("today-unread");
+  applyQuickFilter("today-unread");
+  updateDigestMetrics();
   loadInitialData();
 }
 

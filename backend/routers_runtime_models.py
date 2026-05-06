@@ -6,6 +6,7 @@ from typing import Any
 from fastapi import APIRouter
 
 from backend.config import DEFAULT_SETTINGS
+from backend.router_context import get_app_module
 
 
 router = APIRouter()
@@ -91,6 +92,13 @@ def runtime_start_ollama() -> dict:
         models = []
     status = 'ok' if models else 'warning'
     return {'status': status, 'message': message, 'runtime': runtime}
+
+
+@router.post('/runtime/shutdown')
+def runtime_shutdown() -> dict:
+    app_module = get_app_module()
+    app_module._schedule_backend_shutdown()
+    return {'status': 'ok'}
 
 
 @router.get('/models/options')

@@ -47,6 +47,14 @@ pytest -q
 ./scripts/validate_full_stack.sh
 ```
 
+Cross-platform equivalent:
+
+```bash
+python scripts/validate_full_stack.py
+```
+
+CI runs startup validation in a matrix on Linux, macOS, and Windows.
+
 ### Repository hygiene guard
 
 ```bash
