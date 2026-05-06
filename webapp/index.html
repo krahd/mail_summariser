@@ -47,115 +47,180 @@
   </nav>
 
   <main>
-    <section id="tab-search" class="tab-panel active">
-      <form id="search-form" class="card grid-form workspace-sidebar" autocomplete="off">
+    <section id="tab-search" class="tab-panel active studio-tab">
+      <aside class="card studio-sidebar">
         <div class="panel-heading">
           <div>
-            <h2>Search Criteria</h2>
+            <p class="panel-kicker">Views</p>
+            <h2>Quick Filters</h2>
           </div>
         </div>
-        <label>Keyword <input name="keyword" /></label>
-        <label>Raw Search <input name="rawSearch" /></label>
-        <label>Sender <input name="sender" /></label>
-        <label>Recipient <input name="recipient" /></label>
-        <label>Tag <input name="tag" /></label>
-        <label>Summary Length
-          <input name="summaryLength" type="number" min="1" value="5" />
-        </label>
-        <label class="checkbox"><input name="unreadOnly" type="checkbox" checked /> Unread Only</label>
-        <label class="checkbox"><input name="readOnly" type="checkbox" /> Read Only</label>
-        <label class="checkbox"><input name="useAnd" type="checkbox" checked /> Use AND</label>
-        <label>Replied
-          <select name="replied">
-            <option value="">Any</option>
-            <option value="true">Yes</option>
-            <option value="false">No</option>
-          </select>
-        </label>
-        <button type="submit">Create Summary</button>
-      </form>
+        <div class="quick-filters" id="quick-filters">
+          <button type="button" class="quick-filter active" data-filter="today-unread">Today Unread</button>
+          <button type="button" class="quick-filter" data-filter="pending-replies">Pending Replies</button>
+          <button type="button" class="quick-filter" data-filter="finance">Finance</button>
+          <button type="button" class="quick-filter" data-filter="clear">All Messages</button>
+        </div>
 
-      <section class="card workspace-primary" id="summary-card">
-        <div class="panel-heading panel-heading-spread">
-          <div>
-            <h2>Summary</h2>
-          </div>
-          <p id="job-id" class="summary-meta">No job yet</p>
+        <details class="advanced-query" open>
+          <summary>Advanced Query</summary>
+          <form id="search-form" class="grid-form" autocomplete="off">
+            <label>Keyword <input name="keyword" /></label>
+            <label>Raw Search <input name="rawSearch" /></label>
+            <label>Sender <input name="sender" /></label>
+            <label>Recipient <input name="recipient" /></label>
+            <label>Tag <input name="tag" /></label>
+            <label>Summary Length
+              <input name="summaryLength" type="number" min="1" value="5" />
+            </label>
+            <label class="checkbox"><input name="unreadOnly" type="checkbox" checked /> Unread Only</label>
+            <label class="checkbox"><input name="readOnly" type="checkbox" /> Read Only</label>
+            <label class="checkbox"><input name="useAnd" type="checkbox" checked /> Use AND</label>
+            <label>Replied
+              <select name="replied">
+                <option value="">Any</option>
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </select>
+            </label>
+            <button type="submit">Generate Digest</button>
+          </form>
+        </details>
+      </aside>
+
+      <section class="studio-main">
+        <div class="card health-strip" id="workspace-health-strip">
+          <span class="health-chip" id="health-mode">Mode: Dummy</span>
+          <span class="health-chip" id="health-provider">Provider: Ollama</span>
+          <span class="health-chip" id="health-runtime">Runtime: Checking</span>
+          <span class="health-chip" id="health-sync">Last sync: --</span>
         </div>
-        <pre id="summary-text">Run a summary to see output here.</pre>
-        <div class="actions-row toolbar-row">
-          <button id="mark-read" type="button" class="secondary" disabled>Mark Read</button>
-          <button id="tag-summary" type="button" class="secondary" disabled>Tag Summarised</button>
-          <button id="email-summary" type="button" class="secondary" disabled>Email Summary</button>
+
+        <section class="card workspace-primary" id="summary-card">
+          <div class="panel-heading panel-heading-spread">
+            <div>
+              <p class="panel-kicker">Digest</p>
+              <h2>Summary Canvas</h2>
+            </div>
+            <p id="job-id" class="summary-meta">No job yet</p>
+          </div>
+          <div class="digest-metrics" aria-label="Digest at a glance">
+            <article class="digest-metric-card">
+              <p class="digest-metric-label">Messages</p>
+              <p id="digest-metric-messages" class="digest-metric-value">0</p>
+            </article>
+            <article class="digest-metric-card">
+              <p class="digest-metric-label">Selected</p>
+              <p id="digest-metric-selected" class="digest-metric-value">None</p>
+            </article>
+            <article class="digest-metric-card">
+              <p class="digest-metric-label">Filter</p>
+              <p id="digest-metric-filter" class="digest-metric-value">Today unread</p>
+            </article>
+          </div>
+          <pre id="summary-text">Run a summary to see output here.</pre>
+          <div class="actions-row toolbar-row legacy-actions is-hidden" aria-hidden="true">
+            <button id="mark-read" type="button" class="secondary" disabled>Mark Read</button>
+            <button id="tag-summary" type="button" class="secondary" disabled>Tag Summarised</button>
+            <button id="email-summary" type="button" class="secondary" disabled>Email Summary</button>
+          </div>
+        </section>
+
+        <section class="card workspace-table workspace-review">
+          <div class="panel-heading panel-heading-spread">
+            <div>
+              <p class="panel-kicker">Review</p>
+              <h2>Messages</h2>
+              <p id="messages-summary" class="panel-copy"></p>
+            </div>
+          </div>
+          <div class="review-split">
+            <div class="message-list-pane">
+              <div class="table-wrapper message-table-wrapper">
+                <table>
+                  <thead>
+                    <tr><th>Date</th><th>Sender</th><th>Subject</th></tr>
+                  </thead>
+                  <tbody id="messages-body">
+                    <tr><td colspan="3">No messages yet.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <article id="message-detail-shell" class="message-detail-shell" data-state="empty" aria-live="polite">
+              <div class="message-detail-header">
+                <div>
+                  <p class="message-detail-eyebrow">Selected Mail</p>
+                  <h3 id="message-detail-subject">No mail selected</h3>
+                </div>
+                <p id="message-detail-date" class="message-detail-date"></p>
+              </div>
+              <div class="message-detail-meta">
+                <div class="message-party-card">
+                  <p class="message-party-label">From</p>
+                  <p id="message-detail-sender-name" class="message-party-name">Select a message</p>
+                  <p id="message-detail-sender-address" class="message-party-address">Select a message from the list.</p>
+                </div>
+                <div class="message-party-card">
+                  <p class="message-party-label">To</p>
+                  <p id="message-detail-recipient-name" class="message-party-name">Mail preview</p>
+                  <p id="message-detail-recipient-address" class="message-party-address">The selected mail body appears here.</p>
+                </div>
+              </div>
+              <pre id="message-detail-body" class="message-detail-body">Select a message from the list to load its contents.</pre>
+            </article>
+          </div>
+        </section>
+      </section>
+
+      <aside class="card studio-actions">
+        <div class="panel-heading">
+          <div>
+            <p class="panel-kicker">Actions</p>
+            <h2>Apply to Current Job</h2>
+          </div>
+        </div>
+        <p id="action-scope-preview" class="panel-copy">No active job. Generate a digest first.</p>
+        <label class="checkbox"><input type="checkbox" id="scope-action-mark-read" checked /> Mark messages read</label>
+        <label class="checkbox"><input type="checkbox" id="scope-action-tag" checked /> Tag as summarised</label>
+        <label class="checkbox"><input type="checkbox" id="scope-action-email" /> Email summary</label>
+        <div class="inline-actions">
+          <button id="apply-scope-actions" type="button" disabled>Apply Selected Actions</button>
           <button id="undo-action" type="button" class="secondary">Undo Last</button>
         </div>
-      </section>
-
-      <section class="card workspace-table workspace-review">
-        <div class="panel-heading panel-heading-spread">
-          <div>
-            <h2>Messages</h2>
-            <p id="messages-summary" class="panel-copy"></p>
-          </div>
-        </div>
-        <div class="review-split">
-          <div class="message-list-pane">
-            <div class="table-wrapper message-table-wrapper">
-              <table>
-                <thead>
-                  <tr><th>Date</th><th>Sender</th><th>Subject</th></tr>
-                </thead>
-                <tbody id="messages-body">
-                  <tr><td colspan="3">No messages yet.</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <article id="message-detail-shell" class="message-detail-shell" data-state="empty" aria-live="polite">
-            <div class="message-detail-header">
-              <div>
-                <p class="message-detail-eyebrow">Selected Mail</p>
-                <h3 id="message-detail-subject">No mail selected</h3>
-              </div>
-              <p id="message-detail-date" class="message-detail-date"></p>
-            </div>
-            <div class="message-detail-meta">
-              <div class="message-party-card">
-                <p class="message-party-label">From</p>
-                <p id="message-detail-sender-name" class="message-party-name">Select a message</p>
-                <p id="message-detail-sender-address" class="message-party-address">Select a message from the list.</p>
-              </div>
-              <div class="message-party-card">
-                <p class="message-party-label">To</p>
-                <p id="message-detail-recipient-name" class="message-party-name">Mail preview</p>
-                <p id="message-detail-recipient-address" class="message-party-address">The selected mail body appears here.</p>
-              </div>
-            </div>
-            <pre id="message-detail-body" class="message-detail-body">Select a message from the list to load its contents.</pre>
-          </article>
-        </div>
-      </section>
+      </aside>
     </section>
 
     <section id="tab-logs" class="tab-panel">
-      <section class="card workspace-table">
+      <section class="card workspace-table logs-panel">
         <div class="section-header">
           <div>
             <p class="panel-kicker">History</p>
-            <h2>Action Log</h2>
+            <h2>Action Timeline</h2>
+            <p class="panel-copy">Operational actions are listed newest-first. Undo is available only for reversible entries.</p>
           </div>
           <button id="refresh-logs" type="button" class="secondary">Refresh</button>
         </div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr><th>Time</th><th>Action</th><th>Status</th><th>Details</th><th>Job</th><th>Undo</th></tr>
-            </thead>
-            <tbody id="logs-body">
-              <tr><td colspan="6">No logs loaded.</td></tr>
-            </tbody>
-          </table>
+        <div class="log-filters" aria-label="Timeline filters">
+          <label>Find
+            <input id="log-search" type="search" placeholder="Action, status, details, or job" />
+          </label>
+          <label>Status
+            <select id="log-status-filter">
+              <option value="">Any</option>
+              <option value="success">Success</option>
+              <option value="warning">Warning</option>
+              <option value="error">Error</option>
+            </select>
+          </label>
+          <label class="checkbox"><input id="log-undo-only" type="checkbox" /> Undoable only</label>
+          <p id="logs-count" class="panel-copy">0 items</p>
+        </div>
+        <div id="logs-body" class="log-timeline" aria-live="polite">
+          <article class="log-entry log-entry-empty">
+            <p>No logs loaded.</p>
+          </article>
         </div>
       </section>
     </section>
@@ -173,6 +238,12 @@
               <strong>Current Mail Mode</strong>
               <p id="dummy-mode-description">Dummy mode is on. Searches and actions use the built-in test mailbox.</p>
               <input name="dummyMode" id="dummy-mode-field" type="checkbox" class="is-hidden" />
+            </div>
+            <div class="mode-summary diagnostics-summary">
+              <strong>Quick Diagnostics</strong>
+              <p id="diag-provider-state">Provider: checking</p>
+              <p id="diag-runtime-state">Runtime: checking</p>
+              <p id="diag-fakemail-state">Fake mail: checking</p>
             </div>
             <div class="inline-actions">
               <button id="open-advanced-settings" type="button" class="secondary">Advanced Settings</button>
@@ -209,11 +280,12 @@
             <label>Summarised Tag <input name="summarisedTag" /></label>
           </section>
 
-          <section class="settings-group settings-actions">
+          <section class="settings-group settings-actions settings-save-shell">
             <div class="settings-group-heading">
               <div>
                 <p class="panel-kicker">Workspace</p>
                 <h3>Configuration Actions</h3>
+                <p class="panel-copy">Load current backend values, then save edited fields.</p>
               </div>
             </div>
             <div class="inline-actions">
@@ -230,7 +302,7 @@
           </div>
           <p class="field-note">Provider prompts, model tools, backend targeting, and operator controls live here.</p>
 
-          <section class="settings-group">
+          <section class="settings-group settings-advanced-group">
             <div class="settings-group-heading">
               <div>
                 <p class="panel-kicker">Provider</p>
@@ -271,7 +343,7 @@
             </label>
           </section>
 
-          <section class="settings-group">
+          <section class="settings-group settings-advanced-group">
             <div class="settings-group-heading">
               <div>
                 <p class="panel-kicker">Ollama</p>
@@ -304,7 +376,7 @@
             <p id="catalog-status" class="status-line">Catalogue not loaded yet.</p>
           </section>
 
-          <section class="settings-group">
+          <section class="settings-group settings-advanced-group">
             <div class="settings-group-heading">
               <div>
                 <p class="panel-kicker">Backend</p>
@@ -324,7 +396,7 @@
             </label>
           </section>
 
-          <section id="fake-mail-card" class="settings-group is-hidden">
+          <section id="fake-mail-card" class="settings-group settings-advanced-group is-hidden">
             <strong>Fake Mail Server</strong>
             <p id="fake-mail-status" class="status-line">Developer fake mail server is disabled.</p>
             <p id="fake-mail-credentials" class="field-note">Start the local fake IMAP/SMTP server to generate disposable test credentials.</p>
@@ -335,7 +407,7 @@
             </div>
           </section>
 
-          <section class="settings-group danger-zone">
+          <section class="settings-group settings-advanced-group danger-zone">
             <div class="settings-group-heading">
               <div>
                 <p class="panel-kicker">Operator</p>
@@ -363,18 +435,18 @@
         <section>
           <h3>Getting Started</h3>
           <ol>
-            <li><strong>Search criteria</strong>: Fill in the search fields on the main tab. You can filter by keyword, sender, tags, and more.</li>
-            <li><strong>Run a summary</strong>: Click <strong>Create Summary</strong> to search for matching messages and generate a summary.</li>
-            <li><strong>Review results</strong>: Check the summary text and review the list of messages that were included.</li>
-            <li><strong>Take action</strong>: Use the buttons below the summary to mark messages read, add tags, or email the summary.</li>
+            <li><strong>Pick a starting view</strong>: Use <strong>Quick Filters</strong> in the left rail, then refine with Advanced Query.</li>
+            <li><strong>Generate digest</strong>: Click <strong>Generate Digest</strong> to create a new summary job from the active filters.</li>
+            <li><strong>Review context</strong>: Inspect the Summary Canvas and message stack; click any message row for full body preview.</li>
+            <li><strong>Apply scoped actions</strong>: Use the right action panel to choose mark/tag/email operations, then apply to the current job.</li>
           </ol>
         </section>
 
         <section>
           <h3>Tabs</h3>
           <ul>
-            <li><strong>Main</strong>: The main interface. Search for messages and create summaries.</li>
-            <li><strong>Log</strong>: View the history of actions performed. You can undo recent actions here.</li>
+            <li><strong>Main</strong>: Studio view with quick filters, digest canvas, message review, and scoped actions.</li>
+            <li><strong>Log</strong>: Action timeline with search, status filtering, and undoable-only filter.</li>
             <li><strong>Settings</strong>: Configure backend connection, LLM provider, email settings, and Ollama models.</li>
             <li><strong>Help</strong>: This page.</li>
           </ul>
@@ -407,10 +479,10 @@
         <section>
           <h3>Actions</h3>
           <ul>
-            <li><strong>Mark Read</strong>: Mark all messages in the summary result as read.</li>
-            <li><strong>Tag Summarised</strong>: Add the configured tag to all messages in the result.</li>
-            <li><strong>Email Summary</strong>: Send the summary text to the configured recipient email.</li>
-            <li><strong>Undo Last</strong>: Reverse the last action (available in the Log tab).</li>
+            <li><strong>Mark messages read</strong>: Marks every message in the active summary job as read.</li>
+            <li><strong>Tag as summarised</strong>: Applies the configured summary tag to messages in the active job.</li>
+            <li><strong>Email summary</strong>: Sends the summary text to the configured recipient address.</li>
+            <li><strong>Undo Last</strong>: Reverses the latest reversible action from the current workspace state.</li>
           </ul>
         </section>
 

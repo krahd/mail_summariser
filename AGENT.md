@@ -22,6 +22,7 @@ Maintain and evolve this repository without reintroducing stale artifacts or mig
 3. Preserve API contracts unless explicitly asked to change them.
 4. Update docs when behavior changes.
 5. Run tests relevant to the touched area before finishing.
+6. Keep `STATUS.md` up to date whenever implementation status, architecture status, or validation scope changes.
 
 ## Never commit these
 
@@ -33,8 +34,13 @@ Maintain and evolve this repository without reintroducing stale artifacts or mig
 
 ## Backend architecture summary
 
-- App entrypoint and routes: `backend/app.py`
+- App entrypoint and router assembly: `backend/app.py`
+- Router context resolver for test/runtime module parity: `backend/router_context.py`
 - Runtime/model domain router: `backend/routers_runtime_models.py`
+- Settings/admin routes: `backend/routers_settings.py`
+- Summary/message routes: `backend/routers_summaries.py`
+- Action/log/undo routes: `backend/routers_actions.py`
+- Dev fake-mail routes: `backend/routers_devtools.py`
 - Settings/defaults: `backend/config.py`
 - Storage: `backend/db.py`
 - Mail transport and search: `backend/mail_service.py`
@@ -52,6 +58,12 @@ Maintain and evolve this repository without reintroducing stale artifacts or mig
 
 ```bash
 pytest -q
+```
+
+1. If touching route wiring or app-module resolution, also run:
+
+```bash
+pytest -q tests/test_router_decomposition.py tests/test_router_context.py
 ```
 
 1. If touching web client behavior, also validate the API contract used by `webapp/api.js`.
@@ -73,6 +85,9 @@ pytest -q
 
 # Full-stack startup validation
 ./scripts/validate_full_stack.sh
+
+# Cross-platform full-stack startup validation
+python scripts/validate_full_stack.py
 
 # Build backend binary (platform-specific)
 python3 scripts/build_backend_binary.py --platform macos --arch arm64

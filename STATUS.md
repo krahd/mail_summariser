@@ -76,8 +76,23 @@ Ignore rules strengthened in `.gitignore` for these artifact classes.
 3. Runtime/model smoke tests: implemented in `tests/test_runtime_model_endpoints.py`.
 4. Single full-stack validation command: implemented in `scripts/validate_full_stack.sh`, CI-enabled, and exposed in `.vscode/tasks.json`.
 5. Structured diagnostics logging: debug `print` calls replaced with logger-based messages in `backend/app.py`.
+6. Route decomposition (settings/actions/summaries/dev-tools): implemented via
+  - `backend/routers_settings.py`
+  - `backend/routers_actions.py`
+  - `backend/routers_summaries.py`
+  - `backend/routers_devtools.py`
+  - shared module resolver in `backend/router_context.py`
+7. Startup validation matrix: implemented in `.github/workflows/ci.yml` as
+  `startup-validation-matrix` on `ubuntu-latest`, `macos-latest`, and
+  `windows-latest` using cross-platform `scripts/validate_full_stack.py`.
+8. Router decomposition regression guards: implemented via
+  - `tests/test_router_decomposition.py` (route registration contract)
+  - `tests/test_router_context.py` (top-level vs package app-module resolution)
+9. Router error-path behavior coverage: implemented via
+  - `tests/test_router_error_paths.py` for settings, summaries, actions, and
+    dev-tools failure/404 paths.
 
 ## Remaining opportunities
 
-1. Continue route decomposition for settings, actions, summaries, and dev-tools endpoints.
-2. Add startup validation on additional OS targets for release confidence (Linux/macOS matrix).
+1. Add property-based fuzzing for search criteria payload shapes to stress parser
+  and validation behavior under malformed request combinations.

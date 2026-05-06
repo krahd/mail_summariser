@@ -14,51 +14,34 @@ from datetime import datetime
 from typing import Callable, Optional, TYPE_CHECKING, Any
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException  # pylint: disable=import-error
+from fastapi import FastAPI  # pylint: disable=import-error
 from fastapi.middleware.cors import CORSMiddleware  # pylint: disable=import-error
 
 from backend import dummy_state
 from backend.config import (
     ALLOWED_ORIGINS,
     DEFAULT_SETTINGS,
-    DEFAULT_SYSTEM_MESSAGES,
     ENABLE_DEV_TOOLS as _CONFIG_ENABLE_DEV_TOOLS,
 )
 from backend.db import (
-    get_job,
     init_db,
-    insert_job,
-    list_logs,
     list_settings,
-    reset_database,
     set_setting,
 )
 from backend.logging_service import log_action
 from backend.mail_service import (
-    MailServiceError,
     is_dummy_mode,
     reset_dummy_mailbox,
-    search_messages,
-    mark_messages_read,
-    restore_messages_unread,
-    add_keyword_tag,
-    remove_keyword_tag,
-    send_summary_email,
-    test_mail_connection,
 )
 from backend.schemas import (
-    AppSettings,
-    DatabaseResetRequest,
-    DatabaseResetResponse,
-    MessageDetail,
-    MessageItem,
     SummaryRequest,
-    SummaryResponse,
-    SystemMessageDefaultsResponse,
 )
-from backend.summary_service import summarize_messages
 from backend import model_provider_service
+from backend.routers_actions import router as actions_router
+from backend.routers_devtools import router as devtools_router
 from backend.routers_runtime_models import router as runtime_models_router
+from backend.routers_settings import router as settings_router
+from backend.routers_summaries import router as summaries_router
 
 if TYPE_CHECKING:
     # Provide imports for static type checkers. These modules are often
@@ -69,6 +52,7 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+__all__ = ['app', 'SummaryRequest']
 
 
 @contextlib.asynccontextmanager
@@ -135,6 +119,10 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*'],
 )
+app.include_router(settings_router)
+app.include_router(summaries_router)
+app.include_router(actions_router)
+app.include_router(devtools_router)
 app.include_router(runtime_models_router)
 
 SECRET_SETTING_KEYS = ('openaiApiKey', 'anthropicApiKey', 'imapPassword', 'smtpPassword')
@@ -272,321 +260,4 @@ def _push_undo(payload: dict) -> None:
 
 @app.get('/health')
 def health() -> dict[str, str]:
-    return {'status': 'ok'}
-
-
-@app.get('/settings', response_model=AppSettings)
-def get_settings() -> AppSettings:
-    try:
-        current = list_settings()
-    except Exception:  # pylint: disable=broad-except
-        current = {}
-    logger.debug(
-        "settings_read dummy_default=%s dummy_persisted=%s",
-        DEFAULT_SETTINGS.get('dummyMode'),
-        current.get('dummyMode'),
-    )
-    return AppSettings(**_masked_settings_payload())
-
-
-@app.get('/settings/system-message-defaults', response_model=SystemMessageDefaultsResponse)
-def get_system_message_defaults() -> SystemMessageDefaultsResponse:
-    return SystemMessageDefaultsResponse(**DEFAULT_SYSTEM_MESSAGES)
-
-
-@app.post('/settings')
-def save_settings(settings: AppSettings) -> dict[str, str]:
-    data = settings.model_dump()
-    for key_name in SECRET_SETTING_KEYS:
-        if data.get(key_name) == '__MASKED__':
-            data.pop(key_name)
-    for key, value in data.items():
-        set_setting(key, value)
-    _record_log('save_settings', 'ok', 'Settings updated', settings=settings.model_dump())
-    return {'status': 'ok'}
-
-
-@app.post('/summaries', response_model=SummaryResponse)
-def create_summary(request: SummaryRequest) -> SummaryResponse:
-    settings = _merged_settings()
-    try:
-        messages = search_messages(request.criteria, settings)
-    except MailServiceError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    summary, meta = summarize_messages(messages, request.summaryLength, settings=settings)
-    job_id = f'job-{uuid4()}'
-    created_at = datetime.now().isoformat(timespec='seconds')
-    criteria_payload = request.criteria.model_dump()
-    criteria_payload['mailContext'] = {'dummyMode': settings.get('dummyMode')}
-    if is_dummy_mode(settings):
-        dummy_state.insert_job(job_id, created_at, criteria_payload,
-                               request.summaryLength, summary, messages)
-    else:
-        insert_job(job_id, created_at, criteria_payload, request.summaryLength, summary, messages)
-    _record_log('create_summary', 'ok',
-                f'Created summary with {len(messages)} messages', job_id=job_id, settings=settings)
-    _record_log('summary_provider', meta.get('status', 'ok'),
-                f"provider={meta.get('provider')} model={meta.get('model')}", job_id=job_id, settings=settings)
-    return SummaryResponse(jobId=job_id, messages=[MessageItem(id=m['id'], subject=m['subject'], sender=m['sender'], date=m['date']) for m in messages], summary=summary)
-
-
-@app.post('/settings/test-connection')
-def test_connection(settings: dict) -> dict:
-    try:
-        payload = settings if isinstance(settings, dict) else settings.model_dump()
-        # Delegate to mail service which returns a detailed status payload
-        return test_mail_connection(payload)
-    except Exception as exc:  # pylint: disable=broad-except
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-@app.post('/settings/dummy-mode')
-def set_dummy_mode(payload: dict) -> dict:
-    try:
-        data = payload if isinstance(payload, dict) else payload.model_dump()
-        dummy_mode = bool(data.get('dummyMode'))
-        set_setting('dummyMode', dummy_mode)
-        if not dummy_mode:
-            dummy_state.reset_dummy_session_store()
-        return {'dummyMode': dummy_mode}
-    except Exception as exc:  # pylint: disable=broad-except
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-@app.get('/jobs/{job_id}/messages/{message_id}', response_model=MessageDetail)
-def get_job_message(job_id: str, message_id: str) -> MessageDetail:
-    job = dummy_state.get_job(job_id) if is_dummy_mode(_merged_settings()) else get_job(job_id)
-    if job is None:
-        raise HTTPException(status_code=404, detail='Job not found')
-    for message in job.get('messages_json', []):
-        if str(message.get('id', '')) == message_id:
-            return MessageDetail(
-                id=str(message.get('id', '')),
-                subject=str(message.get('subject', '')),
-                sender=str(message.get('sender', '')),
-                recipient=str(message.get('recipient', '')),
-                date=str(message.get('date', '')),
-                body=str(message.get('body', '')),
-            )
-    raise HTTPException(status_code=404, detail='Message not found')
-
-
-@app.post('/actions/mark-read')
-def actions_mark_read(payload: dict) -> dict:
-    try:
-        job_id = payload.get('jobId') if isinstance(payload, dict) else None
-        settings = _merged_settings()
-        job = dummy_state.get_job(job_id) if is_dummy_mode(settings) else get_job(job_id)
-        if job is None:
-            raise HTTPException(status_code=404, detail='Job not found')
-        message_ids = [m.get('id') for m in job.get('messages_json', [])]
-        mark_messages_read(message_ids, settings)
-        details = f"marked_read {len(message_ids)} messages"
-        log_id = _record_log('mark_read', 'ok', details, job_id=job_id, settings=settings)
-        _push_undo({'action': 'mark_read', 'log_id': log_id,
-                   'job_id': job_id, 'message_ids': message_ids})
-        return {'status': 'ok'}
-    except HTTPException:
-        raise
-    except Exception as exc:  # pylint: disable=broad-except
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-@app.post('/actions/tag-summarised')
-def actions_tag_summarised(payload: dict) -> dict:
-    try:
-        job_id = payload.get('jobId') if isinstance(payload, dict) else None
-        settings = _merged_settings()
-        job = dummy_state.get_job(job_id) if is_dummy_mode(settings) else get_job(job_id)
-        if job is None:
-            raise HTTPException(status_code=404, detail='Job not found')
-        message_ids = [m.get('id') for m in job.get('messages_json', [])]
-        add_keyword_tag(message_ids, str(DEFAULT_SETTINGS.get(
-            'summarisedTag', 'summarised')), settings)
-        details = f"tagged_summarised {len(message_ids)} messages"
-        log_id = _record_log('tag_summarised', 'ok', details, job_id=job_id, settings=settings)
-        _push_undo({'action': 'tag_summarised', 'log_id': log_id,
-                   'job_id': job_id, 'message_ids': message_ids})
-        return {'status': 'ok'}
-    except HTTPException:
-        raise
-    except Exception as exc:  # pylint: disable=broad-except
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-@app.post('/actions/email-summary')
-def actions_email_summary(payload: dict) -> dict:
-    try:
-        job_id = payload.get('jobId') if isinstance(payload, dict) else None
-        settings = _merged_settings()
-        job = dummy_state.get_job(job_id) if is_dummy_mode(settings) else get_job(job_id)
-        if job is None:
-            raise HTTPException(status_code=404, detail='Job not found')
-        summary_text = str(job.get('summary_text') or '')
-        recipient = str(settings.get('recipientEmail') or '')
-        if is_dummy_mode(settings):
-            send_summary_email(recipient, 'Mail summary', summary_text, settings)
-        else:
-            # Use unified helper which handles fake SMTP environments as well as real SMTP
-            send_summary_email(recipient, 'Mail summary', summary_text, settings)
-        details = 'email_summary_sent'
-        _record_log('email_summary', 'ok', details, job_id=job_id, settings=settings)
-        return {'status': 'ok'}
-    except HTTPException:
-        raise
-    except Exception as exc:  # pylint: disable=broad-except
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-@app.post('/actions/undo/logs/{log_id}')
-def actions_undo_log(log_id: str) -> dict:
-    try:
-        settings = _merged_settings()
-        if is_dummy_mode(settings):
-            payload = dummy_state.pop_undo_by_log_id(log_id)
-        else:
-            payload = _get_db().pop_undo_by_log_id(log_id)
-        if payload is None:
-            raise HTTPException(status_code=404, detail='No undo found for log')
-        action = payload.get('action')
-        job_id = payload.get('job_id')
-        message_ids = payload.get('message_ids', []) or []
-        if action == 'mark_read':
-            restore_messages_unread(message_ids, settings)
-            _record_log(
-                'undo', 'ok', f'restored {len(message_ids)} messages', job_id=job_id, settings=settings)
-        elif action == 'tag_summarised':
-            for mid in message_ids:
-                remove_keyword_tag([mid], str(DEFAULT_SETTINGS.get(
-                    'summarisedTag', 'summarised')), settings)
-            _record_log(
-                'undo', 'ok', f'removed tags from {len(message_ids)} messages', job_id=job_id, settings=settings)
-        else:
-            # Unknown undoable action
-            _record_log(
-                'undo', 'ok', f'performed undo for action {action}', job_id=job_id, settings=settings)
-        return {'status': 'ok'}
-    except HTTPException:
-        raise
-    except Exception as exc:  # pylint: disable=broad-except
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-@app.post('/actions/undo')
-def actions_undo() -> dict:
-    try:
-        settings = _merged_settings()
-        # Pop the most recent undo payload from the appropriate store
-        payload = dummy_state.pop_latest_undo() if is_dummy_mode(settings) else _get_db().pop_latest_undo()
-        if payload is None:
-            raise HTTPException(status_code=404, detail='No undo found')
-        action = payload.get('action')
-        job_id = payload.get('job_id')
-        message_ids = payload.get('message_ids', []) or []
-        if action == 'mark_read':
-            restore_messages_unread(message_ids, settings)
-            _record_log(
-                'undo', 'ok', f'restored {len(message_ids)} messages', job_id=job_id, settings=settings)
-        elif action == 'tag_summarised':
-            for mid in message_ids:
-                remove_keyword_tag([mid], str(DEFAULT_SETTINGS.get(
-                    'summarisedTag', 'summarised')), settings)
-            _record_log(
-                'undo', 'ok', f'removed tags from {len(message_ids)} messages', job_id=job_id, settings=settings)
-        else:
-            # Unknown undoable action
-            _record_log(
-                'undo', 'ok', f'performed undo for action {action}', job_id=job_id, settings=settings)
-        return {'status': 'ok'}
-    except HTTPException:
-        raise
-    except Exception as exc:  # pylint: disable=broad-except
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-@app.get('/logs')
-def get_logs() -> list[dict]:
-    raw = dummy_state.list_logs() if is_dummy_mode(_merged_settings()) else list_logs()
-    undoable = dummy_state.list_undoable_log_ids() if is_dummy_mode(
-        _merged_settings()) else _get_db().list_undoable_log_ids()
-    enriched: list[dict] = []
-    for item in raw:
-        entry = dict(item)
-        entry['undoable'] = bool(entry.get('id') in undoable)
-        if entry.get('action') in ('tag_summarised', 'email_summary') and not entry['undoable']:
-            entry['undo_status'] = 'final'
-        else:
-            entry['undo_status'] = None
-        enriched.append(entry)
-    return enriched
-
-
-@app.post('/admin/database/reset', response_model=DatabaseResetResponse)
-def admin_reset_database(request: DatabaseResetRequest) -> DatabaseResetResponse:
-    if request.confirmation != 'RESET DATABASE':
-        raise HTTPException(status_code=400, detail='Confirmation text must be RESET DATABASE')
-    removed = reset_database(DEFAULT_SETTINGS)
-    dummy_state.reset_dummy_session_store()
-    reset_dummy_mailbox()
-    return DatabaseResetResponse(status='ok', message='Local database reset to defaults.', removed=removed, settings=AppSettings(**_masked_settings_payload()))
-
-
-# Dev fake-mail endpoints ------------------------------------------------------
-@app.get('/dev/fake-mail/status')
-def dev_fake_mail_status() -> dict:
-    if not ENABLE_DEV_TOOLS:
-        return {
-            'enabled': False,
-            'running': False,
-            'message': 'dev tools disabled',
-            'suggestedSettings': None,
-        }
-    env = _fake_mail_manager._environment
-    if env is None:
-        return {'enabled': True, 'running': False, 'message': 'stopped', 'suggestedSettings': None}
-    return {
-        'enabled': True,
-        'running': True,
-        'imapHost': '127.0.0.1',
-        'imapPort': env.imap_server.server_address[1],
-        'smtpHost': '127.0.0.1',
-        'smtpPort': env.smtp_server.server_address[1],
-        'username': getattr(env, 'username', ''),
-        'password': getattr(env, 'password', ''),
-        'recipientEmail': getattr(env, 'recipient_email', ''),
-        'suggestedSettings': getattr(env, 'settings_payload', None) or (env.settings_payload if hasattr(env, 'settings_payload') else None),
-    }
-
-
-@app.post('/dev/fake-mail/start')
-def dev_fake_mail_start() -> dict:
-    if not ENABLE_DEV_TOOLS:
-        return dev_fake_mail_status()
-    env = _fake_mail_manager.start()
-    return {
-        'enabled': True,
-        'running': True,
-        'imapHost': '127.0.0.1',
-        'imapPort': env.imap_server.server_address[1],
-        'smtpHost': '127.0.0.1',
-        'smtpPort': env.smtp_server.server_address[1],
-        'username': getattr(env, 'username', ''),
-        'password': getattr(env, 'password', ''),
-        'recipientEmail': getattr(env, 'recipient_email', ''),
-        'suggestedSettings': env.settings_payload,
-    }
-
-
-@app.post('/dev/fake-mail/stop')
-def dev_fake_mail_stop() -> dict:
-    if not ENABLE_DEV_TOOLS:
-        return dev_fake_mail_status()
-    _fake_mail_manager.shutdown()
-    return {'enabled': True, 'running': False, 'message': 'stopped', 'suggestedSettings': None}
-
-
-@app.post('/runtime/shutdown')
-def runtime_shutdown() -> dict:
-    # Schedule backend shutdown
-    _schedule_backend_shutdown()
     return {'status': 'ok'}
