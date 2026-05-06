@@ -4,12 +4,17 @@ import sys
 from typing import Any
 
 from fastapi import APIRouter
+from pydantic import BaseModel
 
 from backend.config import DEFAULT_SETTINGS
 from backend.router_context import get_app_module
 
 
 router = APIRouter()
+
+
+class _ModelNamePayload(BaseModel):
+    name: str
 
 
 def _provider_module() -> Any:
@@ -94,6 +99,22 @@ def runtime_start_ollama() -> dict:
     return {'status': status, 'message': message, 'runtime': runtime}
 
 
+@router.post('/runtime/ollama/install')
+def runtime_install_ollama() -> dict:
+    provider = _provider_module()
+    installed, message = provider.install_ollama()
+    runtime = _build_runtime_status()
+    return {'status': 'ok' if installed else 'error', 'message': message, 'runtime': runtime}
+
+
+@router.post('/runtime/ollama/stop')
+def runtime_stop_ollama() -> dict:
+    provider = _provider_module()
+    stopped, message = provider.stop_managed_ollama(only_owned=False)
+    runtime = _build_runtime_status()
+    return {'status': 'ok' if stopped else 'warning', 'message': message, 'runtime': runtime}
+
+
 @router.post('/runtime/shutdown')
 def runtime_shutdown() -> dict:
     app_module = get_app_module()
@@ -126,12 +147,38 @@ def models_options(provider: str | None = None) -> dict:
 
 @router.get('/models/catalog')
 def models_catalog(query: str | None = None, limit: int | None = 20) -> dict:
-    del query
-    del limit
     provider = _provider_module()
     host = str(DEFAULT_SETTINGS.get('ollamaHost', 'http://127.0.0.1:11434'))
     try:
-        models = provider.list_ollama_models(host)
+        models = provider.list_online_ollama_models(host, query=query or '', limit=int(limit or 20))
     except (AttributeError, TypeError, OSError):
         models = []
     return {'provider': 'ollama', 'models': models, 'count': len(models)}
+
+
+@router.post('/models/serve')
+def models_serve(payload: _ModelNamePayload) -> dict:
+    provider = _provider_module()
+    host = str(DEFAULT_SETTINGS.get('ollamaHost', 'http://127.0.0.1:11434'))
+    ok, message = provider.serve_ollama_model(host, payload.name)
+    return {'status': 'ok' if ok else 'error', 'message': message}
+
+
+@router.post('/models/download')
+def models_download(payload: _ModelNamePayload) -> dict:
+    provider = _provider_module()
+    ok, message = provider.pull_ollama_model(payload.name)
+    return {'status': 'ok' if ok else 'error', 'message': message}
+
+
+@router.get('/models/download/status')
+def models_download_status(name: str) -> dict:
+    provider = _provider_module()
+    return provider.get_pull_status(name)
+
+
+@router.delete('/models/local')
+def models_delete(name: str) -> dict:
+    provider = _provider_module()
+    ok, message = provider.delete_ollama_model(name)
+    return {'status': 'ok' if ok else 'error', 'message': message}

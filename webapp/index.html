@@ -356,12 +356,16 @@
             <label class="checkbox"><input name="ollamaStopOnExit" type="checkbox" /> Stop Ollama automatically on exit</label>
             <p id="ollama-runtime-status" class="status-line">Runtime status not loaded yet.</p>
             <div class="inline-actions">
+              <button id="runtime-ollama-install" type="button" class="secondary">Install Ollama</button>
               <button id="runtime-ollama-action" type="button" class="secondary is-hidden">Start Ollama</button>
+              <button id="runtime-ollama-stop" type="button" class="secondary">Stop Ollama</button>
               <button id="refresh-runtime-status" type="button" class="secondary">Refresh Ollama Status</button>
             </div>
             <label>Model Name <input name="modelName" required /></label>
             <div class="inline-actions">
               <button id="refresh-models" type="button" class="secondary">Refresh Available Models</button>
+              <button id="serve-model" type="button" class="secondary">Serve Selected Model</button>
+              <button id="delete-model" type="button" class="secondary">Delete Local Model</button>
             </div>
             <p id="ollama-status" class="status-line">Model list not loaded yet.</p>
             <label>Discover Downloadable Ollama Models
