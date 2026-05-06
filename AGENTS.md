@@ -1,4 +1,4 @@
-# AGENT Guide
+# AGENTS Guide
 
 This file is a machine-oriented operating guide for AI coding agents (Codex, Claude, and similar).
 
@@ -23,6 +23,7 @@ Maintain and evolve this repository without reintroducing stale artifacts or mig
 4. Update docs when behavior changes.
 5. Run tests relevant to the touched area before finishing.
 6. Keep `STATUS.md` up to date whenever implementation status, architecture status, or validation scope changes.
+7. Ensure `STATUS.md` always has an accurate `Last updated` date and time reflecting the latest substantive change.
 
 ## Never commit these
 
