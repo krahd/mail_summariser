@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest import mock
 
 from fastapi.testclient import TestClient
@@ -81,7 +82,16 @@ def test_actions_mark_read_returns_400_when_mail_operation_fails() -> None:
 
 
 def test_actions_undo_log_returns_404_when_log_payload_missing() -> None:
-    with TestClient(backend_app.app) as client:
+    fake_app_module = SimpleNamespace(
+        _merged_settings=lambda: {"dummyMode": True},
+        dummy_state=SimpleNamespace(pop_undo_by_log_id=lambda _log_id: None),
+    )
+
+    with (
+        TestClient(backend_app.app) as client,
+        mock.patch.object(routers_actions, "get_app_module", return_value=fake_app_module),
+        mock.patch.object(routers_actions, "is_dummy_mode", return_value=True),
+    ):
         response = client.post("/actions/undo/logs/missing-log-id", json={})
 
     assert response.status_code == 404
@@ -89,7 +99,16 @@ def test_actions_undo_log_returns_404_when_log_payload_missing() -> None:
 
 
 def test_actions_undo_returns_404_when_stack_is_empty() -> None:
-    with TestClient(backend_app.app) as client:
+    fake_app_module = SimpleNamespace(
+        _merged_settings=lambda: {"dummyMode": True},
+        dummy_state=SimpleNamespace(pop_latest_undo=lambda: None),
+    )
+
+    with (
+        TestClient(backend_app.app) as client,
+        mock.patch.object(routers_actions, "get_app_module", return_value=fake_app_module),
+        mock.patch.object(routers_actions, "is_dummy_mode", return_value=True),
+    ):
         response = client.post("/actions/undo", json={})
 
     assert response.status_code == 404

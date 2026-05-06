@@ -1,6 +1,6 @@
-# mail_summariser status report
+# mail_summariser – Project Status
 
-Last updated: 2026-05-06 
+Last updated: 2026-05-06 08:46
 
 ## Current state
 
@@ -95,8 +95,23 @@ Ignore rules strengthened in `.gitignore` for these artifact classes.
   - `tests/test_fuzz_summary_payloads.py` using Hypothesis to stress malformed
     `/summaries` payload shapes and assert handled outcomes (`200`, `400`, `422`)
     without server crashes.
+11. Cross-endpoint payload fuzzing hardening: implemented via
+  - `tests/test_fuzz_settings_actions_payloads.py` using Hypothesis to fuzz
+    malformed payload contracts for `/settings`, `/settings/test-connection`,
+    `/settings/dummy-mode`, `/actions/mark-read`, `/actions/tag-summarised`,
+    and `/actions/email-summary` with assertions that responses remain handled
+    (`200`, `400`, `404`, `422`) and do not surface server crashes.
+12. Targeted remaining-route fuzzing hardening: implemented via
+  - `tests/test_fuzz_settings_actions_payloads.py` coverage for
+    `/actions/undo`, `/actions/undo/logs/{log_id}`, `/logs` query shapes, and
+    `/admin/database/reset` confirmation edge cases and malformed payloads.
+13. Runtime/model malformed-contract fuzzing hardening: implemented via
+  - `tests/test_fuzz_runtime_models_payloads.py` for `/runtime/status`,
+    `/runtime/ollama/start`, `/runtime/shutdown`, `/models/options`, and
+    `/models/catalog` query/body shape stress coverage.
 
 ## Remaining opportunities
 
-1. Expand fuzzing scope to include settings and action payload contracts for
-  cross-endpoint malformed input hardening.
+1. Add property-based fuzzing for dev fake-mail endpoint payload/query contracts
+  (`/dev/fake-mail/status`, `/dev/fake-mail/start`, `/dev/fake-mail/stop`) to
+  complete malformed input hardening across all backend mutable/control routes.
