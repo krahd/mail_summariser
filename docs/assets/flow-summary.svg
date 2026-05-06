@@ -36,7 +36,8 @@
   <text class="txt" x="530" y="686">Provider summarization attempt</text>
 
   <polygon class="decision" points="640,760 820,830 640,900 460,830"/>
-  <text class="txt" x="532" y="834">response valid + sentinel?</text>
+  <text class="txt" x="640" y="824" text-anchor="middle">response valid +</text>
+  <text class="txt" x="640" y="846" text-anchor="middle">sentinel?</text>
 
   <rect class="step" x="120" y="790" width="280" height="80"/>
   <text class="txt" x="165" y="837">Use provider summary</text>
@@ -49,15 +50,15 @@
 
   <path class="edge" d="M640 160 L640 200"/>
   <path class="edge" d="M640 270 L640 320"/>
-  <path class="edge" d="M520 420 L330 510"/>
-  <path class="edge" d="M760 420 L950 510"/>
+  <path class="edge" d="M520 420 L430 470 L330 510"/>
+  <path class="edge" d="M760 420 L850 470 L950 510"/>
   <path class="edge" d="M330 590 L560 640"/>
   <path class="edge" d="M950 590 L720 640"/>
   <path class="edge" d="M640 720 L640 760"/>
   <path class="edge" d="M500 845 L400 845"/>
   <path class="edge" d="M780 845 L880 845"/>
-  <path class="edge" d="M260 870 L560 936"/>
-  <path class="edge" d="M1020 870 L720 936"/>
+  <path class="edge" d="M260 870 L260 900 L560 900 L560 920"/>
+  <path class="edge" d="M1020 870 L1020 900 L720 900 L720 920"/>
 
   <text class="tag" x="430" y="475">yes</text>
   <text class="tag" x="835" y="475">no</text>
