@@ -1,6 +1,6 @@
 # mail_summariser – Project Status
 
-Last updated: 2026-05-06 08:46
+Last updated: 2026-05-06 17:37
 
 ## Current state
 
@@ -22,7 +22,8 @@ Key runtime characteristics:
   - provider abstraction in `backend/llm_provider_clients.py`
   - orchestration and fallback handling in `backend/summary_service.py`
 - Runtime model control:
-  - Ollama install/running checks and start/stop behavior in `backend/model_provider_service.py`
+  - Ollama install/running checks and full admin behavior (install/start/stop/serve/list pullable/pull/delete) in `backend/model_provider_service.py`
+  - all Ollama admin lifecycle operations now delegated through `modelito==1.2.2` APIs
   - runtime/model route module in `backend/routers_runtime_models.py`
 
 ## Cleanup performed

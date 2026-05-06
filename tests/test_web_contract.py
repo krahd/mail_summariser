@@ -85,6 +85,16 @@ class WebContractTests(unittest.TestCase):
                       "index.html").read_text(encoding="utf-8"))
         self.assertIn("runtime-startup-banner", (REPO_ROOT / "webapp" /
                       "index.html").read_text(encoding="utf-8"))
+        html = (REPO_ROOT / "webapp" / "index.html").read_text(encoding="utf-8")
+        self.assertIn('id="runtime-ollama-install"', html)
+        self.assertIn('id="runtime-ollama-stop"', html)
+        self.assertIn('id="serve-model"', html)
+        self.assertIn('id="delete-model"', html)
+        api_js = (REPO_ROOT / "webapp" / "api.js").read_text(encoding="utf-8")
+        self.assertIn("installOllamaRuntime", api_js)
+        self.assertIn("stopOllamaRuntime", api_js)
+        self.assertIn("serveModel", api_js)
+        self.assertIn("deleteLocalModel", api_js)
 
 
 if __name__ == "__main__":
