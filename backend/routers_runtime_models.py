@@ -26,13 +26,23 @@ def _provider_module() -> Any:
     return model_provider_service
 
 
-def _build_runtime_status() -> dict:
+def _runtime_settings() -> dict:
+    try:
+        return get_app_module()._merged_settings()
+    except (AttributeError, TypeError, RuntimeError):
+        return DEFAULT_SETTINGS
+
+
+def _build_runtime_status(settings: dict | None = None) -> dict:
+    runtime_settings = settings or _runtime_settings()
     provider = _provider_module()
     backend = {'running': True, 'canShutdown': True}
-    host = str(DEFAULT_SETTINGS.get('ollamaHost', 'http://127.0.0.1:11434'))
+    host = str(runtime_settings.get('ollamaHost') or DEFAULT_SETTINGS.get(
+        'ollamaHost', 'http://127.0.0.1:11434'))
     installed = False
     running = False
-    model_name = DEFAULT_SETTINGS.get('modelName', '')
+    model_name = str(runtime_settings.get('modelName') or DEFAULT_SETTINGS.get(
+        'modelName', ''))
     started_by_app = False
     message = ''
 
@@ -88,9 +98,11 @@ def runtime_status() -> dict:
 @router.post('/runtime/ollama/start')
 def runtime_start_ollama() -> dict:
     provider = _provider_module()
-    host = str(DEFAULT_SETTINGS.get('ollamaHost', 'http://127.0.0.1:11434'))
+    settings = _runtime_settings()
+    host = str(settings.get('ollamaHost') or DEFAULT_SETTINGS.get(
+        'ollamaHost', 'http://127.0.0.1:11434'))
     _started, message = provider.ensure_ollama_running(host, auto_start=True)
-    runtime = _build_runtime_status()
+    runtime = _build_runtime_status(settings)
     try:
         models = provider.list_ollama_models(host)
     except (AttributeError, TypeError, OSError):
@@ -129,12 +141,17 @@ def models_options(provider: str | None = None) -> dict:
         return {'provider': 'openai', 'models': []}
     if prov == 'ollama':
         service = _provider_module()
-        host = str(DEFAULT_SETTINGS.get('ollamaHost', 'http://127.0.0.1:11434'))
+        settings = _runtime_settings()
+        host = str(settings.get('ollamaHost') or DEFAULT_SETTINGS.get(
+            'ollamaHost', 'http://127.0.0.1:11434'))
         try:
             models = service.list_ollama_models(host)
         except (AttributeError, TypeError, OSError):
             models = []
-        running = service.is_ollama_running(host)
+        try:
+            running = service.is_ollama_running(host)
+        except (AttributeError, TypeError, OSError):
+            running = False
         rt = getattr(service, '_runtime_state', None)
         last_message = getattr(rt, 'last_message', '') if rt is not None else ''
         return {
@@ -148,7 +165,9 @@ def models_options(provider: str | None = None) -> dict:
 @router.get('/models/catalog')
 def models_catalog(query: str | None = None, limit: int | None = 20) -> dict:
     provider = _provider_module()
-    host = str(DEFAULT_SETTINGS.get('ollamaHost', 'http://127.0.0.1:11434'))
+    settings = _runtime_settings()
+    host = str(settings.get('ollamaHost') or DEFAULT_SETTINGS.get(
+        'ollamaHost', 'http://127.0.0.1:11434'))
     try:
         models = provider.list_online_ollama_models(host, query=query or '', limit=int(limit or 20))
     except (AttributeError, TypeError, OSError):
@@ -159,7 +178,9 @@ def models_catalog(query: str | None = None, limit: int | None = 20) -> dict:
 @router.post('/models/serve')
 def models_serve(payload: _ModelNamePayload) -> dict:
     provider = _provider_module()
-    host = str(DEFAULT_SETTINGS.get('ollamaHost', 'http://127.0.0.1:11434'))
+    settings = _runtime_settings()
+    host = str(settings.get('ollamaHost') or DEFAULT_SETTINGS.get(
+        'ollamaHost', 'http://127.0.0.1:11434'))
     ok, message = provider.serve_ollama_model(host, payload.name)
     return {'status': 'ok' if ok else 'error', 'message': message}
 

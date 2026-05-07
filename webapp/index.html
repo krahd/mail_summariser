@@ -45,28 +45,7 @@
     <button class="tab active" data-tab="search">Main</button>
     <button class="tab" data-tab="logs">Log</button>
     <button class="tab" data-tab="settings">Settings</button>
-    <button id="dummy-mode-toggle" type="button" class="mode-toggle">Dummy Mode: On</button>
   </nav>
-
-  <section class="site-hero card" aria-label="Workspace overview">
-    <article class="hero-copy">
-      <p class="panel-kicker">Control Room</p>
-      <h2>Email Digest Studio</h2>
-      <p>Run fast summaries, review full message context, and trigger scoped actions with clear operational visibility.</p>
-    </article>
-    <article class="hero-pill">
-      <p class="hero-pill-label">Workflow</p>
-      <p class="hero-pill-value">Search -> Summarise -> Review -> Apply</p>
-    </article>
-    <article class="hero-pill">
-      <p class="hero-pill-label">Runtime Modes</p>
-      <p class="hero-pill-value">Dummy, IMAP/SMTP, and gated fake-mail tools</p>
-    </article>
-    <article class="hero-pill">
-      <p class="hero-pill-label">Provider Layer</p>
-      <p class="hero-pill-value">Ollama, OpenAI, Anthropic, deterministic fallback</p>
-    </article>
-  </section>
 
   <main>
     <section id="tab-search" class="tab-panel active studio-tab">
@@ -78,8 +57,8 @@
           </div>
         </div>
         <div class="quick-filters" id="quick-filters">
-          <button type="button" class="quick-filter active" data-filter="today-unread">Today Unread</button>
-          <button type="button" class="quick-filter" data-filter="pending-replies">Pending Replies</button>
+          <button type="button" class="quick-filter active" data-filter="today-unread">Unread Mail</button>
+          <button type="button" class="quick-filter" data-filter="pending-replies">Needs Reply</button>
           <button type="button" class="quick-filter" data-filter="finance">Finance</button>
           <button type="button" class="quick-filter" data-filter="clear">All Messages</button>
         </div>
@@ -112,7 +91,7 @@
 
       <section class="studio-main">
         <div class="card health-strip" id="workspace-health-strip">
-          <span class="health-chip" id="health-mode">Mode: Dummy</span>
+          <span class="health-chip" id="health-mode">Mailbox: Sample</span>
           <span class="health-chip" id="health-provider">Provider: Ollama</span>
           <span class="health-chip" id="health-runtime">Runtime: Checking</span>
           <span class="health-chip" id="health-sync">Last sync: --</span>
@@ -257,8 +236,11 @@
           <section class="settings-group settings-hero">
             <p id="connection-test-status" class="status-line connection-status">Connection not tested yet.</p>
             <div class="mode-summary">
-              <strong>Current Mail Mode</strong>
-              <p id="dummy-mode-description">Dummy mode is on. Searches and actions use the built-in test mailbox.</p>
+              <strong>Sample Mailbox</strong>
+              <p id="dummy-mode-description">Sample mailbox is on. Searches and actions use resettable sample mail.</p>
+              <div class="inline-actions">
+                <button id="dummy-mode-toggle" type="button" class="mode-toggle">Sample Mailbox: On</button>
+              </div>
               <input name="dummyMode" id="dummy-mode-field" type="checkbox" class="is-hidden" />
             </div>
             <div class="mode-summary diagnostics-summary">
@@ -284,7 +266,7 @@
             <label class="checkbox"><input name="imapUseSSL" type="checkbox" /> Use SSL for IMAP</label>
             <label>IMAP Password
               <div class="secret-row">
-                <input name="imapPassword" id="imap-password" type="password" placeholder="Used when dummy mode is off" autocomplete="off" />
+                <input name="imapPassword" id="imap-password" type="password" placeholder="Used when sample mailbox is off" autocomplete="off" />
                 <button id="toggle-imap-password" type="button" class="secondary tiny-btn">Show</button>
               </div>
             </label>
@@ -516,8 +498,8 @@
           <h3>Settings</h3>
           <p>Configure mail basics on the main settings screen, then open Advanced Settings for provider prompts, model tools, backend controls, and operator actions.</p>
           <ul>
-            <li><strong>Dummy Mode</strong>: Toggle between the built-in test mailbox and a real IMAP/SMTP account.</li>
-            <li><strong>Test Connection</strong>: Validate the current settings against dummy mode or the configured IMAP/SMTP servers before saving.</li>
+            <li><strong>Sample Mailbox</strong>: Toggle between resettable sample mail and a real IMAP/SMTP account.</li>
+            <li><strong>Test Connection</strong>: Validate the current settings against the sample mailbox or the configured IMAP/SMTP servers before saving.</li>
             <li><strong>LLM Provider</strong>: Choose between Ollama (local), OpenAI (remote), or Anthropic (remote).</li>
             <li><strong>Ollama lifecycle</strong>: Choose whether Ollama starts with mail_summariser, starts only when needed, or is stopped automatically on exit.</li>
             <li><strong>Stop mail_summariser</strong>: Shut down the connected backend from the Settings tab.</li>

@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-05-07 01:13
+Last updated: 2026-05-07 02:29
 
 ## Purpose
 
@@ -10,7 +10,7 @@ mail_summariser is a local-first email workflow with:
 - a browser client
 - a macOS SwiftUI client
 
-It supports dummy-mode onboarding, live IMAP/SMTP workflows, provider-backed summaries, and deterministic fallback summaries when providers are unavailable or return invalid output.
+It supports a resettable sample mailbox for onboarding and testing, live IMAP/SMTP workflows, provider-backed summaries, and deterministic fallback summaries when providers are unavailable or return invalid output.
 
 ## Current state
 
@@ -43,8 +43,8 @@ Current focus is stability, safety, and product clarity of the local-first workf
 - keeping fake-mail dev tooling strictly gated
 - maintaining alignment between backend, browser client, and macOS client
 - continuing malformed-input hardening and endpoint-level fuzz coverage
-- reducing end-user exposure to test/development concepts that are still required for validation
-- tightening the browser workflow so the first run produces grounded, inspectable results
+- keeping end-user surfaces focused on the sample mailbox and live mailbox concepts rather than internal dummy-mode naming
+- keeping the browser first-run path grounded in real sample messages and explicit empty-result handling
 
 ## Architecture
 
@@ -59,7 +59,7 @@ The backend is the system of record for settings, mailbox integration, summaries
   <rect x="40" y="80" width="180" height="70" rx="10" fill="none" stroke="black" /><text x="130" y="110" text-anchor="middle" font-size="14">webapp/</text><text x="130" y="130" text-anchor="middle" font-size="12">browser client</text>
   <rect x="40" y="230" width="180" height="70" rx="10" fill="none" stroke="black" /><text x="130" y="260" text-anchor="middle" font-size="14">macos-app/</text><text x="130" y="280" text-anchor="middle" font-size="12">SwiftUI client</text>
   <rect x="300" y="145" width="210" height="90" rx="10" fill="none" stroke="black" /><text x="405" y="180" text-anchor="middle" font-size="14">backend/app.py</text><text x="405" y="202" text-anchor="middle" font-size="12">FastAPI app and</text><text x="405" y="220" text-anchor="middle" font-size="12">router mounting</text>
-  <rect x="590" y="40" width="190" height="70" rx="10" fill="none" stroke="black" /><text x="685" y="70" text-anchor="middle" font-size="14">mail services</text><text x="685" y="90" text-anchor="middle" font-size="12">dummy, IMAP, SMTP</text>
+  <rect x="590" y="40" width="190" height="70" rx="10" fill="none" stroke="black" /><text x="685" y="70" text-anchor="middle" font-size="14">mail services</text><text x="685" y="90" text-anchor="middle" font-size="12">sample, IMAP, SMTP</text>
   <rect x="590" y="145" width="190" height="70" rx="10" fill="none" stroke="black" /><text x="685" y="174" text-anchor="middle" font-size="14">summary service</text><text x="685" y="194" text-anchor="middle" font-size="12">provider fallback</text>
   <rect x="590" y="250" width="190" height="70" rx="10" fill="none" stroke="black" /><text x="685" y="280" text-anchor="middle" font-size="14">SQLite database</text><text x="685" y="300" text-anchor="middle" font-size="12">settings and state</text>
   <rect x="820" y="145" width="180" height="80" rx="10" fill="none" stroke="black" /><text x="910" y="176" text-anchor="middle" font-size="14">model providers</text><text x="910" y="198" text-anchor="middle" font-size="12">Ollama, OpenAI,</text><text x="910" y="216" text-anchor="middle" font-size="12">Anthropic, fallback</text>
@@ -77,41 +77,43 @@ Current browser UI state:
 - Settings are split into a basic screen and an advanced screen; advanced controls include provider prompts, provider keys, Ollama lifecycle, model tools, backend targeting, fake-mail tools, database reset, and backend shutdown.
 - The temporary mockups in `mockups/temporary/` are non-functional concept artefacts and remain separate from production UI.
 
-Rendered audit findings:
+Implemented UI/UX changes:
 
-- The app rendered without console errors on the default backend path (`webapp` on `127.0.0.1:5173`, backend on `127.0.0.1:8766`).
-- Desktop and mobile layouts avoid horizontal overflow in the checked viewports.
-- The mobile first viewport is top-heavy: header, status, tabs, dummy toggle, and overview consume the screen before the user reaches the actual digest workflow.
-- The desktop main workflow is usable but dense. In the message review area, date values wrap awkwardly and the table/detail split can make subjects hard to scan.
-- The hero/overview band explains internal architecture rather than helping the user complete the next email task. It should probably be shortened or removed from the operational app surface.
-- The default `Today Unread` quick filter does not match the built-in dummy mailbox because it sets `keyword=today`, while dummy messages do not contain that word. A first-run digest can therefore create a zero-message job.
-- If a provider is running, a zero-message summary request can still return provider-generated content unrelated to any email. Empty result sets need an explicit backend and UI empty state, not a provider call.
-- The browser can switch to a non-default backend URL from local storage, but the initial `/settings` response can overwrite `backendBaseURL` back to the backend's stored value during load. This caused subsequent requests to fall back to `127.0.0.1:8766` in a non-default-port rendered test.
+- The first screen is now task-first. The previous overview band was removed, so the first viewport moves directly from header and tabs into quick filters, digest status, message review, and job actions.
+- User-facing copy now presents the internal `dummyMode` capability as "Sample Mailbox" in the browser and macOS settings UI.
+- The sample-mailbox switch moved out of the global top navigation and into Settings. The health strip shows `Mailbox: Sample` or `Mailbox: Live`.
+- Quick filters were renamed to practical task labels: `Unread Mail`, `Needs Reply`, `Finance`, and `All Messages`.
+- The default `Unread Mail` quick filter no longer injects a `today` keyword, so the resettable sample mailbox returns messages on first run.
+- Empty searches now create an explicit no-message job with the summary text "No messages matched this search..." and log `summary_provider` as `status=empty`, `provider=none`, `model=none`.
+- The browser disables job actions for empty jobs and shows a clearer no-message detail state.
+- Message dates are formatted for scanning, with stable table widths for date and sender columns.
+- Browser settings loading now preserves a manually selected backend URL instead of overwriting it with the backend's stored `backendBaseURL`.
+- Developer fake-mail tooling remains gated by `MAIL_SUMMARISER_ENABLE_DEV_TOOLS` and is still separate from the end-user sample mailbox.
 
-UI improvement ideas:
+Rendered validation:
 
-- Make the first screen task-first: search controls, digest status, and message review should outrank product/architecture copy.
-- Replace the permanent overview band with a compact connection/workspace strip, or move explanatory content to Help.
-- Convert quick filters into predictable presets backed by real dummy and live-mail semantics. For dummy mode, default to a preset that returns messages.
-- Add an explicit empty-result state: "No messages matched this search", with actions to clear filters, change quick filter, or open Settings.
-- Do not call LLM providers for empty message sets.
-- Rename user-facing "Dummy Mode" to "Demo mailbox" or "Sample mailbox" and place the mode switch in onboarding/settings rather than as a permanent global top-nav control.
-- Keep developer fake-mail tooling hidden behind `MAIL_SUMMARISER_ENABLE_DEV_TOOLS`; it should remain separate from the end-user demo mailbox.
-- Improve scan density in the message table with date formatting, stable column widths, and a clearer selected-message detail panel.
-- Treat destructive and operational controls as advanced/admin actions with stronger separation from ordinary account setup.
-- Prefer icons or compact controls for repeated toolbar actions only after the workflow labels are stable.
+- A Safari-rendered screenshot of `http://127.0.0.1:5173` confirmed the task-first first viewport, sample mailbox health chip, renamed quick filters, and removal of the global mode toggle and overview band.
+- Safari WebDriver could not execute page JavaScript because Safari's "Allow JavaScript from Apple Events" setting is disabled on this machine, so browser flow verification used the rendered screenshot plus backend/API and full-stack validation.
+- The sample quick-filter API payload returned two built-in sample messages on `127.0.0.1:8766`.
+- An empty-search API payload returned an explicit empty summary and did not route to an LLM provider.
 
-## Dummy mode assessment
+Remaining UI ideas:
 
-Dummy mode is still required for tests, onboarding, documentation examples, and safe local verification. It should stay in the backend and test suite.
+- Add a dedicated rendered regression harness for first-run, empty-result, settings, live-mode, and mobile workflows.
+- Consider stronger disabled-button styling for action controls, especially while no job is active.
+- Continue refining dense desktop and mobile layouts as real usage patterns emerge.
+
+## Sample mailbox assessment
+
+The internal `dummyMode` setting is still required for tests, onboarding, documentation examples, and safe local verification. It stays in the backend and test suite for API compatibility and validation.
 
 Product recommendation:
 
-- Keep the capability, but reposition it as a "Demo mailbox" or "Sample mailbox" for end users.
-- Make it a first-run/onboarding affordance and a Settings option, not a persistent global mode toggle.
-- Keep fake-mail dev tools as developer-only integration tooling; do not merge them conceptually with the end-user sample mailbox.
-- Ensure sample data covers the default quick filters so a new user gets a meaningful summary immediately.
-- Ensure actions in sample mode are clearly non-destructive and resettable.
+- Implemented: end-user clients present the capability as "Sample Mailbox".
+- Implemented: the browser mode switch now lives in Settings rather than the global top navigation.
+- Implemented: fake-mail dev tools remain developer-only integration tooling and are not merged conceptually with the end-user sample mailbox.
+- Implemented: the default sample-mail quick filter returns built-in sample messages.
+- Implemented: sample jobs, logs, and undo entries continue to use in-memory stores and reset when switching to live mode or resetting the database.
 
 Current implementation notes:
 
@@ -119,7 +121,7 @@ Current implementation notes:
 - Dummy jobs, logs, and undo entries use the in-memory `backend/dummy_state.py` store rather than the SQLite job/log tables.
 - Switching from dummy mode to live mode resets dummy session state, which prevents old dummy jobs from being acted on after the mode change.
 - Database reset restores default settings and resets dummy state.
-- Dummy mode exercises the same summary/action endpoints as live mode, which is valuable for tests.
+- Sample mailbox mode exercises the same summary/action endpoints as live mode, which is valuable for tests.
 
 ## Main request flow
 
@@ -162,12 +164,13 @@ python scripts/validate_full_stack.py
 ## Configuration
 
 - Settings persist in SQLite (`backend/data/mail_summariser.sqlite3` by default).
+- The persisted API setting remains named `dummyMode`, but user-facing clients present it as "Sample Mailbox".
 - Secrets returned from settings routes are masked.
 - Writing masked sentinel values (for example `__MASKED__`) does not overwrite persisted secrets.
+- Provider error messages are redacted before fallback text or metadata is returned.
 - Dev fake-mail routes are gated by `MAIL_SUMMARISER_ENABLE_DEV_TOOLS`.
-- `pyproject.toml` pins `modelito==1.2.2`.
-- `backend/requirements.txt` is not aligned with `pyproject.toml`; it does not declare the pinned `modelito` dependency used by backend imports.
-- A tracked `.env` file exists. Its content is not repeated here, but tracked local environment files conflict with the repository safety rules and should be removed or explicitly justified.
+- `pyproject.toml` and `backend/requirements.txt` are aligned on runtime dependencies, including `modelito==1.2.2`, FastAPI, Pydantic, Uvicorn, OpenAI, and Anthropic.
+- Local `.env` files are ignored. The previously tracked `.env` file has been removed from the working tree, and the hygiene guard flags exact tracked `.env` files and tracked backend SQLite databases.
 
 ## Important files
 
@@ -189,24 +192,34 @@ python scripts/validate_full_stack.py
 - Router parity safeguards exist via router-context and route-decomposition tests.
 - Fuzz tests exist for summary, settings/actions, and runtime/model malformed payload contracts.
 - Full-stack validation scripts remain available in both shell and Python variants.
-- Browser rendered checks were run with Python Playwright because the Browser plugin was not available in this session. Screenshots were written outside the repository under `/tmp/mail-summariser-audit/`.
-- The default rendered browser path loads and can create a dummy-mode summary when the backend runs on `127.0.0.1:8766`.
-- Non-default backend targeting needs follow-up because loaded backend settings can overwrite the browser's selected backend URL during initialisation.
+- Empty-message summary creation now skips provider calls and records explicit empty-provider metadata.
+- Summary length is clamped before provider calls and persistence so malformed or extremely large payload values cannot overflow SQLite.
+- Browser and macOS user-facing copy now uses "Sample Mailbox" while preserving the `dummyMode` API field.
+- Runtime/model routes now read merged persisted settings for Ollama host and model name.
+- `tag_summarised` actions and undo now honour the saved `summarisedTag` by storing the actual tag in undo payloads.
+- Browser backend target initialisation now preserves the browser-selected backend URL during settings loads.
+- Dependency declarations and CI install steps now use the project runtime dependency set instead of the stale TestPyPI `modelito==0.1.1` workaround.
+- Repository hygiene now ignores/removes local `.env` state and flags tracked exact `.env` and backend SQLite files.
+- Browser rendered validation used Safari screenshot and API checks because Safari WebDriver JavaScript execution is disabled locally.
 
 ## Verification status
 
 Latest verification:
 
+- `backend/.venv/bin/python -m pytest -q tests/test_summary_service_provider_library.py tests/test_fuzz_summary_payloads.py::test_summary_endpoint_skips_provider_when_search_returns_no_messages`: passed with 8 passed.
+- `backend/.venv/bin/python -m pytest -q tests/test_fuzz_summary_payloads.py`: passed with 4 passed.
+- `backend/.venv/bin/python -m pytest -q tests/test_backend_mail_flow.py tests/test_runtime_model_endpoints.py tests/test_runtime_controls.py tests/test_fuzz_summary_payloads.py tests/test_summary_service_provider_library.py tests/test_web_contract.py`: passed with 32 passed.
+- `backend/.venv/bin/python -m pytest -q`: passed with 71 passed, 1 skipped.
 - `./scripts/check_repo_hygiene.sh`: passed.
-- `backend/.venv/bin/python -m pytest -q`: failed in `test_masked_provider_keys_do_not_count_as_real_credentials` because the local environment contained an OpenAI API key; the failing assertion exposed the key value in output, and the value is intentionally not repeated here.
-- `env -u OPENAI_API_KEY -u ANTHROPIC_API_KEY backend/.venv/bin/python -m pytest -q`: passed with 65 passed, 1 skipped.
-- Rendered browser check on `http://127.0.0.1:5173` with backend `http://127.0.0.1:8766`: loaded without console errors and exercised the dummy all-messages summary path.
-- Ambient `python3 -m uvicorn backend.app:app ...` failed because the ambient Python environment has `modelito` 1.2.0, which does not provide a function imported by `backend/model_provider_service.py`. The project venv has `modelito` 1.2.2 and can run the backend.
+- `./scripts/validate_full_stack.sh`: passed when run with local port binding allowed. A first sandboxed run failed because local binding to `127.0.0.1:8766` was not permitted.
+- Rendered Safari screenshot on `http://127.0.0.1:5173` with backend `http://127.0.0.1:8766`: loaded the updated task-first browser UI.
+- API smoke on `POST /summaries` with the default unread sample-mail criteria returned two built-in sample messages.
+- API smoke on `POST /summaries` with a no-match keyword returned an explicit empty summary and corresponding `summary_provider` log metadata.
 
 Validation implications:
 
-- Test runs should clear provider key environment variables or tests should monkeypatch them, so secret-bearing developer environments do not leak keys into failure output.
-- Fresh install and release paths need dependency alignment checks against `pyproject.toml`.
+- Provider-key tests now clear or set controlled environment variables and redaction prevents provider errors from exposing API keys in fallback responses.
+- Rendered JavaScript automation still needs a Playwright or enabled-Safari-WebDriver path for repeatable UI assertions.
 
 ## Risks and limitations
 
@@ -214,52 +227,41 @@ Validation implications:
 - Secret masking and masked-write semantics must not regress.
 - Dev fake-mail endpoints must remain disabled unless explicitly enabled.
 - Behaviour changes across backend/client boundaries require contract discipline.
-- Provider-backed summaries are not currently guarded against empty message lists; a running provider can produce ungrounded content for zero-email jobs.
-- The default browser quick filter can return no dummy messages, which weakens first-run confidence.
-- Runtime/model endpoints currently read Ollama host/model from defaults in `backend/routers_runtime_models.py`, not from persisted settings, so Settings changes may not fully affect runtime/model controls.
-- `tag_summarised` and undo currently use `DEFAULT_SETTINGS['summarisedTag']`, not the saved `summarisedTag`, so custom tag settings may not be honoured.
-- The tracked `.env` file and environment-sensitive provider-key test are secret-handling risks.
-- `backend/requirements.txt`, release workflow dependency installation, and `pyproject.toml` are not fully aligned.
-- Browser non-default backend targeting is fragile during initial settings load.
+- The rendered UI still lacks an automated browser regression suite; current verification used a screenshot plus API/full-stack checks.
+- Dependency alignment is updated locally and should be confirmed in CI on the next push.
+- Sample mailbox naming is implemented in clients, but backend route and schema names intentionally retain `dummyMode` for compatibility.
+- Browser and macOS clients should continue to be reviewed together when backend response contracts change.
 
 ## Pending tasks
 
 - Continue broad malformed-input fuzzing for any remaining lightly covered route shapes.
 - Keep browser and macOS client expectations aligned with backend response contracts.
 - Keep hygiene checks current as packaging and release scripts evolve.
-- Add an empty-message guard to summary creation and provider calls.
-- Change the default dummy/demo quick filter so it returns built-in sample messages.
-- Reposition dummy mode as end-user demo/sample mailbox mode while keeping the backend test capability.
-- Fix runtime/model routes to use merged/persisted settings where appropriate.
-- Fix tag actions and undo to honour the saved `summarisedTag`.
-- Remove or justify the tracked `.env` file and extend hygiene checks to catch tracked local environment files.
-- Make provider-key tests independent from real `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` environment variables.
-- Align `backend/requirements.txt`, release workflow dependencies, and `pyproject.toml`.
-- Fix browser backend target initialisation so a manually selected backend is not overwritten unexpectedly.
+- Add repeatable rendered UI regression checks for first-run, empty-result, settings, live-mode, and mobile flows.
+- Confirm dependency and hygiene changes in CI after pushing.
 
 ## Next steps
 
-1. Fix empty-message summary behaviour and the default dummy/demo quick filter.
-2. Decide the end-user naming and placement for dummy mode; recommended wording is "Demo mailbox" or "Sample mailbox".
-3. Fix saved-setting alignment issues for `summarisedTag`, Ollama host/model runtime routes, and browser backend targeting.
-4. Remove tracked local environment state and harden tests against secret-bearing environments.
-5. Align dependency files and run full-stack validation from a clean environment.
+1. Push and review CI for the dependency, hygiene, and full-stack validation changes.
+2. Add automated rendered UI coverage using Playwright or an enabled WebDriver path.
+3. Continue broadening malformed-input fuzzing around lightly covered route combinations.
+4. Keep documentation and client copy aligned around "Sample Mailbox" while preserving backend API compatibility.
 
 ## Longer-term steps
 
 1. Keep local-first onboarding reliable through a safe sample mailbox and deterministic fallback behaviour.
 2. Strengthen cross-platform validation for backend and clients.
 3. Preserve safe handling for live mailbox operations and provider integrations.
-4. Convert temporary UX mockup decisions into production UI work or remove obsolete mockups after decisions are made.
-5. Add rendered UI regression checks for first-run, empty-result, live-mode settings, and mobile workflows.
+4. Convert any remaining useful temporary UX mockup decisions into production UI work or remove obsolete mockups after decisions are made.
+5. Add and maintain rendered UI regression checks for first-run, empty-result, live-mode settings, and mobile workflows.
 
 ## Decisions
 
-- Dummy mode remains required for tests and safe local development, but should be presented to end users as a demo/sample mailbox rather than a technical "dummy mode".
+- The internal dummy-mode capability remains required for tests and safe local development, but end users see it as "Sample Mailbox".
 - Provider failures should degrade gracefully to deterministic fallback summaries.
 - Dev-only tooling remains explicit and gated.
 - Empty message sets should not be sent to LLM providers.
 
 ---
 
-Last updated: 2026-05-07 01:13
+Last updated: 2026-05-07 02:29

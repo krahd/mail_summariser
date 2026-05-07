@@ -4,7 +4,7 @@ mail_summariser is a local-first email workflow with a FastAPI backend, a browse
 
 It supports:
 
-- dummy mode for local onboarding and fast validation
+- a resettable sample mailbox for local onboarding and fast validation
 - live IMAP/SMTP mode for real inbox workflows
 - provider-backed summaries via Ollama, OpenAI, or Anthropic
 - deterministic fallback summaries when providers are unavailable or return invalid output
@@ -64,6 +64,7 @@ CI runs startup validation in a matrix on Linux, macOS, and Windows.
 ## Configuration notes
 
 - Runtime settings are persisted in SQLite (`backend/data/mail_summariser.sqlite3` by default).
+- The backend setting is still named `dummyMode` for API compatibility, but user-facing clients present it as the sample mailbox.
 - Secrets are masked on reads from `/settings`.
 - Writing masked sentinel values (`__MASKED__`) does not overwrite stored secrets.
 

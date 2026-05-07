@@ -19,6 +19,23 @@ MESSAGES = [
 ]
 
 
+def test_empty_message_list_skips_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    class StubClient:
+        def summarize(self, request: ProviderRequest) -> str:
+            raise AssertionError('provider should not be called for empty message lists')
+
+    monkeypatch.setattr(summary_service, 'get_provider_client', lambda provider: StubClient())
+
+    text, meta = summary_service.summarize_messages([], 5, settings={'llmProvider': 'openai'})
+    assert text.startswith('No messages matched')
+    assert meta == {
+        'provider': 'none',
+        'model': 'none',
+        'status': 'empty',
+        'fallback': 'false',
+    }
+
+
 def test_unknown_provider_falls_back_to_ollama(monkeypatch: pytest.MonkeyPatch) -> None:
     captured: dict[str, ProviderRequest] = {}
 
@@ -54,6 +71,9 @@ def test_placeholder_provider_response_triggers_fallback(monkeypatch: pytest.Mon
 
 
 def test_masked_provider_keys_do_not_count_as_real_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv('OPENAI_API_KEY', raising=False)
+    monkeypatch.delenv('ANTHROPIC_API_KEY', raising=False)
+
     class StubClient:
         def summarize(self, request: ProviderRequest) -> str:
             raise ProviderClientError(f'api_key={request.api_key!r}')
@@ -68,6 +88,28 @@ def test_masked_provider_keys_do_not_count_as_real_credentials(monkeypatch: pyte
     assert meta['status'] == 'fallback'
     assert "api_key=''" in meta['error']
     assert text.startswith('Fallback summary')
+
+
+def test_provider_errors_redact_environment_api_keys(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_key = 'sk-test-secret-value-12345'
+    monkeypatch.setenv('OPENAI_API_KEY', fake_key)
+    monkeypatch.delenv('ANTHROPIC_API_KEY', raising=False)
+
+    class StubClient:
+        def summarize(self, request: ProviderRequest) -> str:
+            raise ProviderClientError(f'provider rejected api_key={request.api_key}')
+
+    monkeypatch.setattr(summary_service, 'get_provider_client', lambda provider: StubClient())
+
+    text, meta = summary_service.summarize_messages(
+        MESSAGES,
+        5,
+        settings={'llmProvider': 'openai', 'openaiApiKey': '__MASKED__'},
+    )
+    assert meta['status'] == 'fallback'
+    assert fake_key not in meta['error']
+    assert fake_key not in text
+    assert '[redacted]' in meta['error']
 
 
 def test_openai_client_uses_library_response_api(monkeypatch: pytest.MonkeyPatch) -> None:

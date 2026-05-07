@@ -34,8 +34,8 @@ struct SettingsView: View {
                 NavigationStack {
                     Form {
                         Section {
-                            Toggle("Dummy Mode", isOn: $localSettings.dummyMode)
-                            Text(localSettings.dummyMode ? "Using the built-in test mailbox and outbox." : "Using the configured IMAP and SMTP servers.")
+                            Toggle("Sample Mailbox", isOn: $localSettings.dummyMode)
+                            Text(localSettings.dummyMode ? "Using resettable sample mail and the local sample outbox." : "Using the configured IMAP and SMTP servers.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }

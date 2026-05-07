@@ -98,8 +98,10 @@ async def lifespan(_: FastAPI):
     reset_dummy_mailbox()
     # Auto-start Ollama at startup when configured (tests may patch provider)
     try:
-        host = str(DEFAULT_SETTINGS.get('ollamaHost', 'http://127.0.0.1:11434'))
-        if bool(DEFAULT_SETTINGS.get('ollamaStartOnStartup', False)):
+        settings = _merged_settings()
+        host = str(settings.get('ollamaHost') or DEFAULT_SETTINGS.get(
+            'ollamaHost', 'http://127.0.0.1:11434'))
+        if bool(settings.get('ollamaStartOnStartup', False)):
             try:
                 # Best-effort; allow provider to handle subprocess mocking in tests
                 model_provider_service.ensure_ollama_running(host, auto_start=True)

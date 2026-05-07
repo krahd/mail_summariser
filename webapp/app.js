@@ -29,6 +29,7 @@ const dummyModeField = document.getElementById("dummy-mode-field");
 const dummyModeDescription = document.getElementById("dummy-mode-description");
 
 const searchForm = document.getElementById("search-form");
+const summaryCard = document.getElementById("summary-card");
 const summaryText = document.getElementById("summary-text");
 const jobIdLabel = document.getElementById("job-id");
 const messagesSummary = document.getElementById("messages-summary");
@@ -160,6 +161,10 @@ function updateActionScopePreview() {
     actionScopePreview.textContent = "No active job. Generate a digest first.";
     return;
   }
+  if (currentMessages.length === 0) {
+    actionScopePreview.textContent = "Current job has no messages. Change filters and generate another digest.";
+    return;
+  }
 
   const actionNames = [];
   if (scopeActionMarkRead?.checked) actionNames.push("mark read");
@@ -171,12 +176,13 @@ function updateActionScopePreview() {
     return;
   }
 
-  actionScopePreview.textContent = `Job ${currentJobId}: ${actionNames.join(", ")}.`;
+  const suffix = activeDummyMode ? " Sample mailbox actions stay in this local session." : "";
+  actionScopePreview.textContent = `Job ${currentJobId}: ${actionNames.join(", ")}.${suffix}`;
 }
 
 function updateHealthStrip() {
   if (healthMode) {
-    healthMode.textContent = `Mode: ${activeDummyMode ? "Dummy" : "Live"}`;
+    healthMode.textContent = `Mailbox: ${activeDummyMode ? "Sample" : "Live"}`;
   }
   if (healthProvider) {
     healthProvider.textContent = `Provider: ${providerDisplayName(selectedProvider())}`;
@@ -264,11 +270,14 @@ function setQuickFilterState(activeFilter) {
 }
 
 function formatQuickFilterLabel(filter) {
-  const normalized = String(filter || "clear").replace(/-/g, " ").trim();
-  if (!normalized) {
-    return "All messages";
-  }
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  const key = String(filter || "clear");
+  const labels = {
+    "today-unread": "Unread mail",
+    "pending-replies": "Needs reply",
+    finance: "Finance",
+    clear: "All messages",
+  };
+  return labels[key] || "All messages";
 }
 
 function updateDigestMetrics() {
@@ -305,20 +314,19 @@ function applyQuickFilter(filter) {
 
   if (filter === "pending-replies") {
     if (replied) replied.value = "false";
-    if (keyword) keyword.value = "follow up";
   } else if (filter === "finance") {
     if (tag) tag.value = "finance";
     if (keyword) keyword.value = "invoice";
-  } else if (filter === "today-unread") {
-    if (keyword) keyword.value = "today";
   } else if (filter === "clear") {
     if (keyword) keyword.value = "";
     if (sender) sender.value = "";
     if (tag) tag.value = "";
+    if (unreadOnly) unreadOnly.checked = false;
+    if (replied) replied.value = "";
   }
 
   setQuickFilterState(filter);
-  setStatus(`Applied quick filter: ${filter.replace(/-/g, " ")}.`);
+  setStatus(`Applied quick filter: ${formatQuickFilterLabel(filter)}.`);
 }
 
 function clearCurrentWorkspaceState() {
@@ -328,6 +336,9 @@ function clearCurrentWorkspaceState() {
   currentMessageDetail = null;
   latestMessageDetailRequest += 1;
   jobIdLabel.textContent = "No job yet";
+  if (summaryCard) {
+    summaryCard.dataset.state = "idle";
+  }
   summaryText.textContent = "Run a summary to see output here.";
   renderMessages([]);
   renderMessageDetail(null, {
@@ -342,6 +353,23 @@ function clearCurrentWorkspaceState() {
   setActionButtons(false);
   updateActionScopePreview();
   updateDigestMetrics();
+}
+
+function formatMessageDate(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) {
+    return raw;
+  }
+  return date.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function renderMessages(messages) {
@@ -363,11 +391,12 @@ function renderMessages(messages) {
     .map(
       (m) => {
         const isSelected = m.id === selectedMessageId;
+        const displayDate = formatMessageDate(m.date);
         return `<tr class="message-row${isSelected ? " is-selected" : ""}" data-message-id="${escapeHtml(
           m.id
-        )}" tabindex="0" aria-selected="${isSelected}"><td>${escapeHtml(m.date)}</td><td>${escapeHtml(
-          m.sender
-        )}</td><td>${escapeHtml(m.subject)}</td></tr>`;
+        )}" tabindex="0" aria-selected="${isSelected}"><td title="${escapeHtml(m.date)}">${escapeHtml(
+          displayDate
+        )}</td><td>${escapeHtml(m.sender)}</td><td>${escapeHtml(m.subject)}</td></tr>`;
       }
     )
     .join("");
@@ -435,7 +464,7 @@ function renderMessageDetail(detail, options = {}) {
   const isEmptyState = state === "empty";
 
   const subject = detail?.subject || options.subject || "No mail selected";
-  const date = detail?.date || options.date || "";
+  const date = formatMessageDate(detail?.date || options.date || "");
   const body = isEmptyState ? "" : detail?.body || options.body || "";
   const senderMailbox = parseMailbox(
     detail?.sender,
@@ -552,8 +581,12 @@ function renderLogs(logs) {
 
 function fillSettings(settings, options = {}) {
   const updateActiveMode = options.updateActiveMode !== false;
+  const preserveBackendTarget = options.preserveBackendTarget !== false;
   const keyFieldNames = ["openaiApiKey", "anthropicApiKey", "imapPassword", "smtpPassword"];
   Object.entries(settings).forEach(([name, value]) => {
+    if (preserveBackendTarget && name === "backendBaseURL") {
+      return;
+    }
     const input = settingsForm.elements.namedItem(name);
     if (input) {
       if (input.type === "checkbox") {
@@ -589,13 +622,13 @@ function syncDummyModeUI(enabled) {
     dummyModeField.checked = enabled;
   }
   if (dummyModeToggleBtn) {
-    dummyModeToggleBtn.textContent = enabled ? "Dummy Mode: On" : "Dummy Mode: Off";
+    dummyModeToggleBtn.textContent = enabled ? "Sample Mailbox: On" : "Sample Mailbox: Off";
     dummyModeToggleBtn.classList.toggle("is-live", !enabled);
   }
   if (dummyModeDescription) {
     dummyModeDescription.textContent = enabled
-      ? "Dummy mode is on. Searches and actions use the built-in test mailbox."
-      : "Dummy mode is off. Searches and actions use the configured IMAP and SMTP servers.";
+      ? "Sample mailbox is on. Searches and actions use resettable sample mail."
+      : "Sample mailbox is off. Searches and actions use the configured IMAP and SMTP servers.";
   }
   updateHealthStrip();
 }
@@ -1305,16 +1338,21 @@ function wireEvents() {
       latestMessageDetailRequest += 1;
       jobIdLabel.textContent = `Current Job: ${result.jobId}`;
       summaryText.textContent = result.summary;
-      renderMessages(result.messages || []);
-      setActionButtons(true);
+      const messages = result.messages || [];
+      const hasMessages = messages.length > 0;
+      if (summaryCard) {
+        summaryCard.dataset.state = hasMessages ? "ready" : "empty-results";
+      }
+      renderMessages(messages);
+      setActionButtons(hasMessages);
       updateActionScopePreview();
-      setStatus(`Summary created for ${result.messages.length} messages.`);
-      if (result.messages?.length) {
-        await selectMessage(result.messages[0].id);
+      setStatus(hasMessages ? `Summary created for ${messages.length} messages.` : "No messages matched the current filters.");
+      if (hasMessages) {
+        await selectMessage(messages[0].id);
       } else {
         renderMessageDetail(null, {
           state: "empty",
-          subject: "No mail selected",
+          subject: "No messages matched",
           senderName: "",
           senderAddress: "",
           recipientName: "",
@@ -1595,10 +1633,10 @@ function wireEvents() {
       }
       syncDummyModeUI(nextMode);
       clearCurrentWorkspaceState();
-      setStatus(nextMode ? "Dummy mode enabled." : "Dummy mode disabled.");
+      setStatus(nextMode ? "Sample mailbox enabled." : "Live mailbox enabled.");
       renderLogs(await api.getLogs());
     } catch (error) {
-      setStatus(`Dummy mode update failed: ${error.message}`, true);
+      setStatus(`Mailbox mode update failed: ${error.message}`, true);
     }
   });
 

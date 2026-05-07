@@ -18,6 +18,11 @@ from backend.router_context import get_app_module
 router = APIRouter()
 
 
+def _summarised_tag(settings: dict) -> str:
+    return str(settings.get('summarisedTag') or DEFAULT_SETTINGS.get(
+        'summarisedTag', 'summarised'))
+
+
 @router.post('/actions/mark-read')
 def actions_mark_read(payload: dict) -> dict:
     app_module = get_app_module()
@@ -53,13 +58,13 @@ def actions_tag_summarised(payload: dict) -> dict:
         if job is None:
             raise HTTPException(status_code=404, detail='Job not found')
         message_ids = [m.get('id') for m in job.get('messages_json', [])]
-        add_keyword_tag(message_ids, str(DEFAULT_SETTINGS.get(
-            'summarisedTag', 'summarised')), settings)
+        tag = _summarised_tag(settings)
+        add_keyword_tag(message_ids, tag, settings)
         details = f"tagged_summarised {len(message_ids)} messages"
         log_id = app_module._record_log('tag_summarised', 'ok', details,
                                         job_id=job_id, settings=settings)
         app_module._push_undo({'action': 'tag_summarised', 'log_id': log_id,
-                              'job_id': job_id, 'message_ids': message_ids})
+                              'job_id': job_id, 'message_ids': message_ids, 'tag': tag})
         return {'status': 'ok'}
     except HTTPException:
         raise
@@ -109,9 +114,9 @@ def actions_undo_log(log_id: str) -> dict:
             app_module._record_log(
                 'undo', 'ok', f'restored {len(message_ids)} messages', job_id=job_id, settings=settings)
         elif action == 'tag_summarised':
+            tag = str(payload.get('tag') or _summarised_tag(settings))
             for mid in message_ids:
-                remove_keyword_tag([mid], str(DEFAULT_SETTINGS.get(
-                    'summarisedTag', 'summarised')), settings)
+                remove_keyword_tag([mid], tag, settings)
             app_module._record_log(
                 'undo', 'ok', f'removed tags from {len(message_ids)} messages', job_id=job_id, settings=settings)
         else:
@@ -142,9 +147,9 @@ def actions_undo() -> dict:
             app_module._record_log(
                 'undo', 'ok', f'restored {len(message_ids)} messages', job_id=job_id, settings=settings)
         elif action == 'tag_summarised':
+            tag = str(payload.get('tag') or _summarised_tag(settings))
             for mid in message_ids:
-                remove_keyword_tag([mid], str(DEFAULT_SETTINGS.get(
-                    'summarisedTag', 'summarised')), settings)
+                remove_keyword_tag([mid], tag, settings)
             app_module._record_log(
                 'undo', 'ok', f'removed tags from {len(message_ids)} messages', job_id=job_id, settings=settings)
         else:

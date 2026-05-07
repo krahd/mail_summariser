@@ -8,10 +8,14 @@ from backend.db import get_job, insert_job
 from backend.mail_service import MailServiceError, is_dummy_mode, search_messages
 from backend.router_context import get_app_module
 from backend.schemas import MessageDetail, MessageItem, SummaryRequest, SummaryResponse
-from backend.summary_service import summarize_messages
+from backend.summary_service import EMPTY_SUMMARY_TEXT, summarize_messages
 
 
 router = APIRouter()
+
+
+def _safe_summary_length(value: int) -> int:
+    return max(1, min(int(value), 24))
 
 
 @router.post('/summaries', response_model=SummaryResponse)
@@ -19,20 +23,25 @@ def create_summary(request: SummaryRequest) -> SummaryResponse:
     app_module = get_app_module()
 
     settings = app_module._merged_settings()
+    summary_length = _safe_summary_length(request.summaryLength)
     try:
         messages = search_messages(request.criteria, settings)
     except MailServiceError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    summary, meta = summarize_messages(messages, request.summaryLength, settings=settings)
+    if messages:
+        summary, meta = summarize_messages(messages, summary_length, settings=settings)
+    else:
+        summary = EMPTY_SUMMARY_TEXT
+        meta = {'provider': 'none', 'model': 'none', 'status': 'empty', 'fallback': 'false'}
     job_id = f'job-{uuid4()}'
     created_at = datetime.now().isoformat(timespec='seconds')
     criteria_payload = request.criteria.model_dump()
     criteria_payload['mailContext'] = {'dummyMode': settings.get('dummyMode')}
     if is_dummy_mode(settings):
         app_module.dummy_state.insert_job(job_id, created_at, criteria_payload,
-                                          request.summaryLength, summary, messages)
+                                          summary_length, summary, messages)
     else:
-        insert_job(job_id, created_at, criteria_payload, request.summaryLength, summary, messages)
+        insert_job(job_id, created_at, criteria_payload, summary_length, summary, messages)
     app_module._record_log(
         'create_summary',
         'ok',

@@ -241,6 +241,29 @@ class BackendMailFlowTests(unittest.TestCase):
             job_id, payload = self._create_summary_and_get_job(client, "invoice")
             self._perform_imap_flow_checks(client, environment, job_id, payload)
 
+    def test_tag_summarised_uses_saved_tag_in_live_mail(self) -> None:
+        with FakeMailEnvironment() as environment, self._client() as client:
+            save_response = client.post(
+                "/settings",
+                json={**environment.settings_payload, "summarisedTag": "reviewed"},
+            )
+            self.assertEqual(save_response.status_code, 200)
+
+            job_id, payload = self._create_summary_and_get_job(client, "invoice")
+            self.assertEqual(payload["messages"][0]["id"], "102")
+
+            self.assertEqual(client.post("/actions/tag-summarised",
+                             json={"jobId": job_id}).status_code, 200)
+            self.assertIn("reviewed", environment.flags_for("102"))
+            self.assertNotIn("summarised", environment.flags_for("102"))
+
+            logs = client.get("/logs").json()
+            job_logs = [item for item in logs if item.get("job_id") == job_id]
+            tag_log = next(item for item in job_logs if item["action"] == "tag_summarised")
+
+            self.assertEqual(client.post(f"/actions/undo/logs/{tag_log['id']}").status_code, 200)
+            self.assertNotIn("reviewed", environment.flags_for("102"))
+
     def test_embedded_fake_mail_server_can_drive_live_mail_flow(self) -> None:
         backend_app.ENABLE_DEV_TOOLS = True
         with self._client() as client:

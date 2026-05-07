@@ -1,4 +1,5 @@
 import os
+import re
 
 from backend.config import DEFAULT_SYSTEM_MESSAGES
 from backend.llm_provider_clients import ProviderClientError, ProviderRequest, get_provider_client
@@ -11,6 +12,15 @@ class ProviderError(Exception):
 
 RESPONSE_SENTINEL = 'MAIL_SUMMARISER_VALID_V1'
 SUPPORTED_PROVIDERS = {'ollama', 'openai', 'anthropic'}
+EMPTY_SUMMARY_TEXT = (
+    'No messages matched this search. Clear filters or adjust criteria, '
+    'then generate another digest.'
+)
+MASKED_SECRET_VALUES = {'__MASKED__', ''}
+SECRET_PATTERNS = (
+    re.compile(r'sk-ant-[A-Za-z0-9_-]{8,}'),
+    re.compile(r'sk-[A-Za-z0-9_-]{8,}'),
+)
 
 
 def _looks_like_placeholder_response(text: str) -> bool:
@@ -103,12 +113,39 @@ def _resolve_provider_api_key(provider: str, cfg: dict) -> str:
     legacy_key = str(cfg.get('llmApiKey', ''))
     openai_key = str(cfg.get('openaiApiKey', ''))
     anthropic_key = str(cfg.get('anthropicApiKey', ''))
-    masked = {'__MASKED__', ''}
     if provider == 'openai':
-        return os.getenv('OPENAI_API_KEY', '').strip() or ('' if openai_key in masked else openai_key) or ('' if legacy_key in masked else legacy_key)
+        return (
+            os.getenv('OPENAI_API_KEY', '').strip()
+            or ('' if openai_key in MASKED_SECRET_VALUES else openai_key)
+            or ('' if legacy_key in MASKED_SECRET_VALUES else legacy_key)
+        )
     if provider == 'anthropic':
-        return os.getenv('ANTHROPIC_API_KEY', '').strip() or ('' if anthropic_key in masked else anthropic_key) or ('' if legacy_key in masked else legacy_key)
+        return (
+            os.getenv('ANTHROPIC_API_KEY', '').strip()
+            or ('' if anthropic_key in MASKED_SECRET_VALUES else anthropic_key)
+            or ('' if legacy_key in MASKED_SECRET_VALUES else legacy_key)
+        )
     return ''
+
+
+def _known_secret_values(cfg: dict) -> set[str]:
+    values = {
+        str(cfg.get('llmApiKey', '')),
+        str(cfg.get('openaiApiKey', '')),
+        str(cfg.get('anthropicApiKey', '')),
+        os.getenv('OPENAI_API_KEY', '').strip(),
+        os.getenv('ANTHROPIC_API_KEY', '').strip(),
+    }
+    return {value for value in values if value not in MASKED_SECRET_VALUES and len(value) >= 6}
+
+
+def _redact_provider_error(message: str, cfg: dict) -> str:
+    redacted = str(message)
+    for secret in sorted(_known_secret_values(cfg), key=len, reverse=True):
+        redacted = redacted.replace(secret, '[redacted]')
+    for pattern in SECRET_PATTERNS:
+        redacted = pattern.sub('[redacted]', redacted)
+    return redacted
 
 
 def _resolve_system_message(provider: str, cfg: dict) -> str:
@@ -137,6 +174,13 @@ def _summarize_with_provider(provider: str, model_name: str, prompt: str, system
 
 
 def summarize_messages(messages: list[dict], summary_length: int, settings: dict | None = None) -> tuple[str, dict[str, str]]:
+    if not messages:
+        return EMPTY_SUMMARY_TEXT, {
+            'provider': 'none',
+            'model': 'none',
+            'status': 'empty',
+            'fallback': 'false',
+        }
     cfg = settings or {}
     provider = _normalize_provider(str(cfg.get('llmProvider', 'ollama')))
     model_name = str(cfg.get('modelName', 'llama3.2:latest')).strip() or 'llama3.2:latest'
@@ -149,9 +193,10 @@ def summarize_messages(messages: list[dict], summary_length: int, settings: dict
         text = _extract_valid_summary_text(text)
         return text, {'provider': provider, 'model': model_name, 'status': 'ok', 'fallback': 'false'}
     except ProviderError as exc:
+        reason = _redact_provider_error(str(exc), cfg)
         fallback = _demo_summarize_messages(messages, summary_length)
         return (
-            'Fallback summary (provider unavailable).\n' f'Reason: {exc}\n\n{fallback}',
+            'Fallback summary (provider unavailable).\n' f'Reason: {reason}\n\n{fallback}',
             {'provider': provider, 'model': model_name,
-                'status': 'fallback', 'fallback': 'true', 'error': str(exc)},
+                'status': 'fallback', 'fallback': 'true', 'error': reason},
         )
