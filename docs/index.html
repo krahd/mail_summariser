@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mail_summariser</title>
+  <meta
+    name="description"
+    content="mail_summariser is a local-first email workflow with a FastAPI backend, browser client, macOS app, sample mailbox, and provider-backed summaries."
+  />
+  <link rel="preload" href="./assets/webapp-workspace.png" as="image" />
+  <link rel="stylesheet" href="./site.css" />
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="mail_summariser home">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>mail_summariser</span>
+    </a>
+    <nav aria-label="Site navigation">
+      <a href="#product">Product</a>
+      <a href="#downloads">Downloads</a>
+      <a href="#architecture">Architecture</a>
+      <a href="https://github.com/krahd/mail_summariser">GitHub</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero" aria-label="mail_summariser overview">
+      <img class="hero-image" src="./assets/webapp-workspace.png" alt="" aria-hidden="true" />
+      <div class="hero-scrim" aria-hidden="true"></div>
+      <div class="hero-content">
+        <h1>mail_summariser</h1>
+        <p>
+          A local-first email workflow for searching a mailbox, generating grounded summaries,
+          reviewing message context, and applying reversible follow-up actions.
+        </p>
+        <div class="hero-actions">
+          <a class="button primary" href="#downloads">Download latest release</a>
+          <a class="button secondary" href="https://github.com/krahd/mail_summariser">View repository</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="product" class="section product-band">
+      <div class="section-heading">
+        <h2>Built for local email operations</h2>
+        <p>
+          Start safely with the resettable Sample Mailbox, then switch to live IMAP/SMTP
+          when the account settings are ready.
+        </p>
+      </div>
+      <div class="feature-list">
+        <article>
+          <h3>Task-first browser workspace</h3>
+          <p>Quick filters, digest output, message review, and scoped actions share one operational surface.</p>
+        </article>
+        <article>
+          <h3>Grounded summaries</h3>
+          <p>Empty searches skip LLM providers and return an explicit no-message state instead of ungrounded text.</p>
+        </article>
+        <article>
+          <h3>Provider choice</h3>
+          <p>Use Ollama locally, OpenAI, Anthropic, or deterministic fallback summaries when providers are unavailable.</p>
+        </article>
+        <article>
+          <h3>Safe action trail</h3>
+          <p>Mark read, tag summarised, email summaries, inspect logs, and undo supported actions from the same job.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section surface-grid" aria-label="Runtime surfaces">
+      <article class="surface-row">
+        <div>
+          <h2>Browser client</h2>
+          <p>
+            The web UI is a static app that talks to the local FastAPI backend. It preserves
+            manually selected backend targets and keeps developer fake-mail tools gated.
+          </p>
+        </div>
+        <ul class="check-list">
+          <li>Sample Mailbox and live mailbox modes</li>
+          <li>Message detail pane with stable table scanning</li>
+          <li>Provider prompts, model tools, and admin controls</li>
+        </ul>
+      </article>
+      <article class="surface-row">
+        <div>
+          <h2>macOS client</h2>
+          <p>
+            The SwiftUI client shares the backend API and user-facing Sample Mailbox language,
+            so browser and desktop setup flows stay aligned.
+          </p>
+        </div>
+        <ul class="check-list">
+          <li>Native settings and summary workflows</li>
+          <li>Backend bridge for local runtime calls</li>
+          <li>Release archive built in CI</li>
+        </ul>
+      </article>
+    </section>
+
+    <section id="downloads" class="section downloads-band">
+      <div class="section-heading split-heading">
+        <div>
+          <h2>Latest published release</h2>
+          <p id="downloads-status">Loading release metadata from GitHub...</p>
+        </div>
+        <a id="release-page-link" class="text-link" href="https://github.com/krahd/mail_summariser/releases/latest">Open release page</a>
+      </div>
+      <div class="download-grid">
+        <article>
+          <h3>macOS</h3>
+          <p>Apple Silicon backend archive and native app zip.</p>
+          <a class="button primary" data-asset="mail_summariser-backend-macos-arm64.tar.gz" href="https://github.com/krahd/mail_summariser/releases/latest">Backend archive</a>
+          <a class="button secondary" data-asset="mail_summariser-macos-app.zip" href="https://github.com/krahd/mail_summariser/releases/latest">macOS app</a>
+        </article>
+        <article>
+          <h3>Linux</h3>
+          <p>x64 backend tarball for local service deployment.</p>
+          <a class="button primary" data-asset="mail_summariser-backend-linux-x64.tar.gz" href="https://github.com/krahd/mail_summariser/releases/latest">Download tar.gz</a>
+        </article>
+        <article>
+          <h3>Windows</h3>
+          <p>x64 backend zip for Windows local service use.</p>
+          <a class="button primary" data-asset="mail_summariser-backend-windows-x64.zip" href="https://github.com/krahd/mail_summariser/releases/latest">Download zip</a>
+        </article>
+        <article>
+          <h3>Source</h3>
+          <p>Source archives for the latest release tag.</p>
+          <a class="button primary" data-source="zip" href="https://github.com/krahd/mail_summariser/releases/latest">Source zip</a>
+          <a class="button secondary" data-source="tar" href="https://github.com/krahd/mail_summariser/releases/latest">Source tar.gz</a>
+        </article>
+      </div>
+    </section>
+
+    <section id="architecture" class="section diagram-band">
+      <div class="section-heading">
+        <h2>Architecture and request flow</h2>
+        <p>The backend is the system of record for settings, mailbox access, summaries, logs, and runtime model controls.</p>
+      </div>
+      <div class="diagram-grid">
+        <figure>
+          <img src="./assets/architecture.svg" alt="Architecture diagram for web, macOS, backend, storage, mail services, and model providers." />
+          <figcaption>Runtime architecture</figcaption>
+        </figure>
+        <figure>
+          <img src="./assets/flow-summary.svg" alt="Summary request flow showing sample mailbox, live mailbox, empty result guard, provider call, fallback, and persistence." />
+          <figcaption>Summary request flow</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section quick-start">
+      <div>
+        <h2>Run locally</h2>
+        <p>Start the backend, serve the static browser client, and use the Sample Mailbox for a safe first summary.</p>
+      </div>
+      <pre><code>./start_backend.sh
+python -m http.server 8000 --directory webapp</code></pre>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>MIT licensed.</span>
+    <a href="https://github.com/krahd/mail_summariser/blob/main/README.md">README</a>
+    <a href="https://github.com/krahd/mail_summariser/releases/latest">Releases</a>
+  </footer>
+
+  <script src="./site.js"></script>
+</body>
+</html>
