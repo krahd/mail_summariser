@@ -140,24 +140,23 @@ class RuntimeControlTests(unittest.TestCase):
     def test_startup_auto_start_warms_model_and_tracks_owned_process(self) -> None:
         backend_app.DEFAULT_SETTINGS["ollamaStartOnStartup"] = True
         state = {"running": False}
-        fake_process = _FakeProcess()
 
         def fake_is_running(_host: str) -> bool:
             return state["running"]
 
-        def fake_popen(*_args, **_kwargs) -> _FakeProcess:
+        def fake_start(**_kwargs):
             state["running"] = True
-            return fake_process
+            return (True, "started")
 
         with (
             mock.patch.object(model_provider_service, "is_ollama_installed", return_value=True),
             mock.patch.object(model_provider_service, "is_ollama_running",
                               side_effect=fake_is_running),
-            mock.patch.object(model_provider_service.subprocess, "Popen", side_effect=fake_popen),
+            mock.patch.object(model_provider_service, "ensure_ollama_running_verbose",
+                              side_effect=fake_start),
             mock.patch.object(model_provider_service, "list_ollama_models",
                               return_value=[backend_app.DEFAULT_SETTINGS["modelName"]]),
-            mock.patch.object(model_provider_service, "_post_json",
-                              return_value={"response": "READY"}),
+            mock.patch.object(model_provider_service, "ensure_model_ready", return_value=True),
         ):
             with self._client() as client:
                 payload = client.get("/runtime/status").json()
@@ -169,20 +168,20 @@ class RuntimeControlTests(unittest.TestCase):
 
     def test_runtime_start_endpoint_returns_warning_when_model_is_missing(self) -> None:
         state = {"running": False}
-        fake_process = _FakeProcess()
 
         def fake_is_running(_host: str) -> bool:
             return state["running"]
 
-        def fake_popen(*_args, **_kwargs) -> _FakeProcess:
+        def fake_start(**_kwargs):
             state["running"] = True
-            return fake_process
+            return (True, "started")
 
         with (
             mock.patch.object(model_provider_service, "is_ollama_installed", return_value=True),
             mock.patch.object(model_provider_service, "is_ollama_running",
                               side_effect=fake_is_running),
-            mock.patch.object(model_provider_service.subprocess, "Popen", side_effect=fake_popen),
+            mock.patch.object(model_provider_service, "ensure_ollama_running_verbose",
+                              side_effect=fake_start),
             mock.patch.object(model_provider_service, "list_ollama_models", return_value=[]),
         ):
             with self._client() as client:

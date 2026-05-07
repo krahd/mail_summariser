@@ -83,8 +83,12 @@ const resetSystemMessageBtn = document.getElementById("reset-system-message");
 const refreshModelsBtn = document.getElementById("refresh-models");
 const ollamaStatusLine = document.getElementById("ollama-status");
 const ollamaRuntimeStatusLine = document.getElementById("ollama-runtime-status");
+const runtimeOllamaInstallBtn = document.getElementById("runtime-ollama-install");
 const runtimeOllamaActionBtn = document.getElementById("runtime-ollama-action");
+const runtimeOllamaStopBtn = document.getElementById("runtime-ollama-stop");
 const refreshRuntimeStatusBtn = document.getElementById("refresh-runtime-status");
+const serveModelBtn = document.getElementById("serve-model");
+const deleteModelBtn = document.getElementById("delete-model");
 const downloadableModelSelect = document.getElementById("downloadable-model");
 const refreshCatalogBtn = document.getElementById("refresh-catalog");
 const downloadModelBtn = document.getElementById("download-model");
@@ -673,6 +677,12 @@ function renderRuntimeStatus(runtime) {
   const needsAttention = runtimeNeedsAttention(runtime);
   const message = runtime?.ollama?.message || "Runtime status not available.";
   setOllamaRuntimeStatus(message, needsAttention);
+  if (runtimeOllamaInstallBtn) {
+    runtimeOllamaInstallBtn.disabled = Boolean(runtime?.ollama?.installed);
+  }
+  if (runtimeOllamaStopBtn) {
+    runtimeOllamaStopBtn.disabled = !Boolean(runtime?.ollama?.running);
+  }
   configureRuntimeActionButton(runtimeOllamaActionBtn, runtime);
   updateRuntimeStartupBanner(runtime);
   updateHealthStrip();
@@ -736,11 +746,45 @@ function openOllamaInstallPage() {
   setStatus("Opened the Ollama download page.");
 }
 
+function selectedModelName() {
+  const input = settingsForm?.elements.namedItem("modelName");
+  return String(input?.value || "").trim();
+}
+
+async function installOllamaRuntime() {
+  try {
+    const response = await api.installOllamaRuntime();
+    setStatus(response.message || "Ollama installation completed.", response.status !== "ok");
+    if (response.runtime) {
+      renderRuntimeStatus(response.runtime);
+    } else {
+      await refreshRuntimeStatus();
+    }
+  } catch (error) {
+    setStatus(`Ollama install failed: ${error.message}`, true);
+    openOllamaInstallPage();
+  }
+}
+
+async function stopOllamaRuntime() {
+  try {
+    const response = await api.stopOllamaRuntime();
+    setStatus(response.message || "Ollama stop requested.", response.status !== "ok");
+    if (response.runtime) {
+      renderRuntimeStatus(response.runtime);
+    } else {
+      await refreshRuntimeStatus();
+    }
+  } catch (error) {
+    setStatus(`Ollama stop failed: ${error.message}`, true);
+  }
+}
+
 async function handleRuntimeAction() {
   const action = currentRuntimeStatus?.ollama?.startupAction || "none";
 
   if (action === "install") {
-    openOllamaInstallPage();
+    await installOllamaRuntime();
     return;
   }
 
@@ -759,6 +803,39 @@ async function handleRuntimeAction() {
     await refreshModelOptions();
   } catch (error) {
     setStatus(`Ollama start failed: ${error.message}`, true);
+  }
+}
+
+async function serveConfiguredModel() {
+  const modelName = selectedModelName();
+  if (!modelName) {
+    setOllamaStatus("Choose a model name before serving.", true);
+    return;
+  }
+  try {
+    const response = await api.serveModel(modelName);
+    setOllamaStatus(response.message || `Model ${modelName} is ready.`, response.status !== "ok");
+    await refreshRuntimeStatus();
+  } catch (error) {
+    setOllamaStatus(`Serve model failed: ${error.message}`, true);
+  }
+}
+
+async function deleteConfiguredModel() {
+  const modelName = selectedModelName();
+  if (!modelName) {
+    setOllamaStatus("Choose a model name before deleting.", true);
+    return;
+  }
+  if (!window.confirm(`Delete local model ${modelName}?`)) {
+    return;
+  }
+  try {
+    const response = await api.deleteLocalModel(modelName);
+    setOllamaStatus(response.message || `Deleted ${modelName}.`, response.status !== "ok");
+    await refreshModelOptions();
+  } catch (error) {
+    setOllamaStatus(`Delete model failed: ${error.message}`, true);
   }
 }
 
@@ -1428,8 +1505,12 @@ function wireEvents() {
   });
   runtimeStartupActionBtn?.addEventListener("click", handleRuntimeAction);
   runtimeOllamaActionBtn?.addEventListener("click", handleRuntimeAction);
+  runtimeOllamaInstallBtn?.addEventListener("click", installOllamaRuntime);
+  runtimeOllamaStopBtn?.addEventListener("click", stopOllamaRuntime);
   openaiApiKeyInput?.addEventListener("input", refreshProviderKeyWarning);
   anthropicApiKeyInput?.addEventListener("input", refreshProviderKeyWarning);
+  serveModelBtn?.addEventListener("click", serveConfiguredModel);
+  deleteModelBtn?.addEventListener("click", deleteConfiguredModel);
   toggleOpenAiKeyBtn?.addEventListener("click", () => toggleSecretField(openaiApiKeyInput, toggleOpenAiKeyBtn));
   toggleAnthropicKeyBtn?.addEventListener("click", () => toggleSecretField(anthropicApiKeyInput, toggleAnthropicKeyBtn));
   toggleBackendKeyBtn?.addEventListener("click", () => toggleSecretField(backendApiKeyInput, toggleBackendKeyBtn));

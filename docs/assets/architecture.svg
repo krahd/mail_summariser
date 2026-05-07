@@ -27,7 +27,8 @@
   <rect class="node2" x="360" y="170" width="300" height="170"/>
   <text class="txt" x="390" y="208">FastAPI Backend</text>
   <text class="sub" x="390" y="232">backend/app.py</text>
-  <text class="sub" x="390" y="254">domain routes + service orchestration</text>
+  <text class="sub" x="390" y="254">domain routes + service</text>
+  <text class="sub" x="390" y="274">orchestration</text>
 
   <rect class="node" x="740" y="80" width="230" height="92"/>
   <text class="txt" x="766" y="116">SQLite</text>
@@ -53,9 +54,9 @@
 
   <path class="edge" d="M280 168 L360 210"/>
   <path class="edge" d="M280 308 L360 280"/>
-  <path class="edge" d="M660 214 L740 126"/>
+  <path class="edge" d="M660 214 L700 214 L700 126 L740 126"/>
   <path class="edge" d="M660 250 L740 256"/>
-  <path class="edge" d="M660 290 L740 386"/>
-  <path class="edge" d="M970 256 L1040 214"/>
-  <path class="edge" d="M970 386 L1040 364"/>
+  <path class="edge" d="M660 290 L700 290 L700 386 L740 386"/>
+  <path class="edge" d="M970 256 L1006 256 L1006 214 L1040 214"/>
+  <path class="edge" d="M970 386 L1006 386 L1006 364 L1040 364"/>
 </svg>

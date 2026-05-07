@@ -246,6 +246,20 @@ export function createApiClient(context) {
         body: JSON.stringify({}),
       });
     },
+    /** @returns {Promise<RuntimeActionResponse>} */
+    installOllamaRuntime() {
+      return request("/runtime/ollama/install", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+    },
+    /** @returns {Promise<RuntimeActionResponse>} */
+    stopOllamaRuntime() {
+      return request("/runtime/ollama/stop", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+    },
     /** @returns {Promise<{status: string, message?: string}>} */
     shutdownRuntime() {
       return request("/runtime/shutdown", {
@@ -297,6 +311,19 @@ export function createApiClient(context) {
       return request("/models/download", {
         method: "POST",
         body: JSON.stringify({ name }),
+      });
+    },
+    /** @param {string} name */
+    serveModel(name) {
+      return request("/models/serve", {
+        method: "POST",
+        body: JSON.stringify({ name }),
+      });
+    },
+    /** @param {string} name */
+    deleteLocalModel(name) {
+      return request(`/models/local?name=${encodeURIComponent(name)}`, {
+        method: "DELETE",
       });
     },
     /** @param {AppSettings} settings */
