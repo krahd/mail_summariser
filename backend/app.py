@@ -20,6 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware  # pylint: disable=import-err
 from backend import dummy_state
 from backend.config import (
     ALLOWED_ORIGINS,
+    ALLOWED_ORIGIN_REGEX,
     DEFAULT_SETTINGS,
     ENABLE_DEV_TOOLS as _CONFIG_ENABLE_DEV_TOOLS,
 )
@@ -117,6 +118,7 @@ app = FastAPI(title='mail_summariser backend', version='0.0.5', lifespan=lifespa
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=ALLOWED_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=['*'],
     allow_headers=['*'],
