@@ -1,67 +1,74 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="960" viewBox="0 0 1280 960" role="img" aria-label="Summary request flow chart">
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="900" viewBox="0 0 1280 900" role="img" aria-label="Summary request flow chart">
   <defs>
     <style>
       .bg{fill:#f7faf8}
       .title{font:700 28px 'Helvetica Neue',Arial,sans-serif;fill:#0f3d34}
       .step{fill:#fff;stroke:#1f6f5f;stroke-width:2;rx:14;ry:14}
       .decision{fill:#ecf7f3;stroke:#1f6f5f;stroke-width:2}
+      .empty{fill:#fff7ef;stroke:#b86b35;stroke-width:2;rx:14;ry:14}
       .txt{font:600 16px 'Helvetica Neue',Arial,sans-serif;fill:#0b2f29}
+      .small{font:500 13px 'Helvetica Neue',Arial,sans-serif;fill:#2b5c52}
       .edge{stroke:#2d6f62;stroke-width:2.4;fill:none;marker-end:url(#arrow)}
-      .tag{font:600 13px 'Helvetica Neue',Arial,sans-serif;fill:#2b5c52}
+      .edge-warm{stroke:#b86b35;stroke-width:2.4;fill:none;marker-end:url(#arrowWarm)}
     </style>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
       <path d="M0,0 L10,3 L0,6 z" fill="#2d6f62"/>
     </marker>
+    <marker id="arrowWarm" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L10,3 L0,6 z" fill="#b86b35"/>
+    </marker>
   </defs>
 
-  <rect class="bg" x="0" y="0" width="1280" height="960"/>
+  <rect class="bg" x="0" y="0" width="1280" height="900"/>
   <text class="title" x="40" y="56">Summary Flow - POST /summaries</text>
 
   <rect class="step" x="460" y="90" width="360" height="70"/>
-  <text class="txt" x="545" y="133">Client sends summary request</text>
+  <text class="txt" x="532" y="133">Client sends summary request</text>
 
   <rect class="step" x="460" y="200" width="360" height="70"/>
   <text class="txt" x="556" y="243">Load merged settings</text>
 
   <polygon class="decision" points="640,320 820,390 640,460 460,390"/>
-  <text class="txt" x="580" y="395">dummy mode?</text>
+  <text class="txt" x="640" y="384" text-anchor="middle">Sample Mailbox</text>
+  <text class="txt" x="640" y="406" text-anchor="middle">enabled?</text>
 
-  <rect class="step" x="170" y="510" width="320" height="80"/>
-  <text class="txt" x="232" y="557">Search in-memory mailbox</text>
+  <rect class="step" x="170" y="510" width="320" height="76"/>
+  <text class="txt" x="236" y="544">Search sample mailbox</text>
+  <text class="small" x="238" y="566">resettable in-memory data</text>
 
-  <rect class="step" x="790" y="510" width="320" height="80"/>
-  <text class="txt" x="857" y="557">Search IMAP / fake-mail</text>
+  <rect class="step" x="790" y="510" width="320" height="76"/>
+  <text class="txt" x="864" y="544">Search live mailbox</text>
+  <text class="small" x="850" y="566">IMAP or gated fake-mail tools</text>
 
-  <rect class="step" x="460" y="640" width="360" height="80"/>
-  <text class="txt" x="530" y="686">Provider summarization attempt</text>
+  <polygon class="decision" points="640,628 820,698 640,768 460,698"/>
+  <text class="txt" x="640" y="692" text-anchor="middle">messages</text>
+  <text class="txt" x="640" y="714" text-anchor="middle">matched?</text>
 
-  <polygon class="decision" points="640,760 820,830 640,900 460,830"/>
-  <text class="txt" x="640" y="824" text-anchor="middle">response valid +</text>
-  <text class="txt" x="640" y="846" text-anchor="middle">sentinel?</text>
+  <rect class="empty" x="120" y="792" width="300" height="74"/>
+  <text class="txt" x="168" y="824">Return empty result</text>
+  <text class="small" x="154" y="846">skip provider, persist empty job</text>
 
-  <rect class="step" x="120" y="790" width="280" height="80"/>
-  <text class="txt" x="165" y="837">Use provider summary</text>
+  <rect class="step" x="500" y="808" width="280" height="62"/>
+  <text class="txt" x="542" y="845">Call selected provider</text>
 
-  <rect class="step" x="880" y="790" width="280" height="80"/>
-  <text class="txt" x="905" y="837">Fallback deterministic summary</text>
+  <rect class="step" x="850" y="790" width="310" height="80"/>
+  <text class="txt" x="902" y="824">Validate sentinel output</text>
+  <text class="small" x="900" y="846">fallback when provider is unavailable</text>
 
-  <rect class="step" x="460" y="920" width="360" height="32"/>
-  <text class="txt" x="520" y="944">Persist job + logs and return</text>
+  <rect class="step" x="460" y="30" width="360" height="1" opacity="0"/>
 
   <path class="edge" d="M640 160 L640 200"/>
   <path class="edge" d="M640 270 L640 320"/>
   <path class="edge" d="M520 420 L430 470 L330 510"/>
   <path class="edge" d="M760 420 L850 470 L950 510"/>
-  <path class="edge" d="M330 590 L560 640"/>
-  <path class="edge" d="M950 590 L720 640"/>
-  <path class="edge" d="M640 720 L640 760"/>
-  <path class="edge" d="M500 845 L400 845"/>
-  <path class="edge" d="M780 845 L880 845"/>
-  <path class="edge" d="M260 870 L260 900 L560 900 L560 920"/>
-  <path class="edge" d="M1020 870 L1020 900 L720 900 L720 920"/>
+  <path class="edge" d="M330 586 L520 652"/>
+  <path class="edge" d="M950 586 L760 652"/>
+  <path class="edge-warm" d="M500 730 L420 792"/>
+  <path class="edge" d="M640 768 L640 808"/>
+  <path class="edge" d="M780 838 L850 832"/>
 
-  <text class="tag" x="430" y="475">yes</text>
-  <text class="tag" x="835" y="475">no</text>
-  <text class="tag" x="405" y="814">yes</text>
-  <text class="tag" x="840" y="814">no</text>
+  <text class="small" x="430" y="475">yes</text>
+  <text class="small" x="835" y="475">no</text>
+  <text class="small" x="425" y="758">no</text>
+  <text class="small" x="650" y="794">yes</text>
 </svg>

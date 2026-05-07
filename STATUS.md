@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-05-07 02:29
+Last updated: 2026-05-07 15:57
 
 ## Purpose
 
@@ -19,6 +19,7 @@ The repository currently contains three active runtime surfaces:
 - `backend/` for API, storage, mail integration, summary orchestration, and model-runtime control
 - `webapp/` for the browser UI
 - `macos-app/` for the desktop client
+- `docs/` for the GitHub Pages project website served from `main:/docs`
 
 Key implemented backend areas:
 
@@ -182,6 +183,8 @@ python scripts/validate_full_stack.py
 - `backend/model_provider_service.py`: provider runtime controls
 - `backend/llm_provider_clients.py`: provider abstraction
 - `webapp/api.js`: browser API contract surface
+- `docs/index.html`, `docs/site.css`, `docs/site.js`: GitHub Pages website source
+- `docs/assets/`: website diagrams and product screenshot
 - `tests/`: backend/API and robustness test suite
 - `scripts/validate_full_stack.py` and `scripts/validate_full_stack.sh`: startup validation
 - `scripts/check_repo_hygiene.sh`: repository hygiene guard
@@ -195,6 +198,7 @@ python scripts/validate_full_stack.py
 - Empty-message summary creation now skips provider calls and records explicit empty-provider metadata.
 - Summary length is clamped before provider calls and persistence so malformed or extremely large payload values cannot overflow SQLite.
 - Browser and macOS user-facing copy now uses "Sample Mailbox" while preserving the `dummyMode` API field.
+- The GitHub Pages website source has been restored in `docs/` with current Sample Mailbox positioning, download links, architecture diagrams, and a rendered product screenshot.
 - Runtime/model routes now read merged persisted settings for Ollama host and model name.
 - `tag_summarised` actions and undo now honour the saved `summarisedTag` by storing the actual tag in undo payloads.
 - Browser backend target initialisation now preserves the browser-selected backend URL during settings loads.
@@ -206,6 +210,7 @@ python scripts/validate_full_stack.py
 
 Latest verification:
 
+- `backend/.venv/bin/python -m pytest -q tests/test_web_contract.py`: passed with 3 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_summary_service_provider_library.py tests/test_fuzz_summary_payloads.py::test_summary_endpoint_skips_provider_when_search_returns_no_messages`: passed with 8 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_fuzz_summary_payloads.py`: passed with 4 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_backend_mail_flow.py tests/test_runtime_model_endpoints.py tests/test_runtime_controls.py tests/test_fuzz_summary_payloads.py tests/test_summary_service_provider_library.py tests/test_web_contract.py`: passed with 32 passed.
@@ -213,6 +218,7 @@ Latest verification:
 - `./scripts/check_repo_hygiene.sh`: passed.
 - `./scripts/validate_full_stack.sh`: passed when run with local port binding allowed. A first sandboxed run failed because local binding to `127.0.0.1:8766` was not permitted.
 - Rendered Safari screenshot on `http://127.0.0.1:5173` with backend `http://127.0.0.1:8766`: loaded the updated task-first browser UI.
+- Rendered Playwright screenshot on `http://127.0.0.1:8040`: loaded the updated `docs/` project website with `mail_summariser` hero, Sample Mailbox copy, download section, and architecture diagrams.
 - API smoke on `POST /summaries` with the default unread sample-mail criteria returned two built-in sample messages.
 - API smoke on `POST /summaries` with a no-match keyword returned an explicit empty summary and corresponding `summary_provider` log metadata.
 
@@ -245,7 +251,7 @@ Validation implications:
 1. Push and review CI for the dependency, hygiene, and full-stack validation changes.
 2. Add automated rendered UI coverage using Playwright or an enabled WebDriver path.
 3. Continue broadening malformed-input fuzzing around lightly covered route combinations.
-4. Keep documentation and client copy aligned around "Sample Mailbox" while preserving backend API compatibility.
+4. Keep documentation, website, and client copy aligned around "Sample Mailbox" while preserving backend API compatibility.
 
 ## Longer-term steps
 
@@ -264,4 +270,4 @@ Validation implications:
 
 ---
 
-Last updated: 2026-05-07 02:29
+Last updated: 2026-05-07 15:57

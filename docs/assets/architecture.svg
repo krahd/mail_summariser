@@ -36,7 +36,7 @@
 
   <rect class="node" x="740" y="210" width="230" height="92"/>
   <text class="txt" x="766" y="246">Mail Service</text>
-  <text class="sub" x="766" y="270">dummy + IMAP + SMTP</text>
+  <text class="sub" x="766" y="270">sample + IMAP + SMTP</text>
 
   <rect class="node" x="740" y="340" width="230" height="92"/>
   <text class="txt" x="766" y="376">Summary Service</text>

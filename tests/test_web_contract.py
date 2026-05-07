@@ -101,6 +101,20 @@ class WebContractTests(unittest.TestCase):
         self.assertIn("serveModel", api_js)
         self.assertIn("deleteLocalModel", api_js)
 
+    def test_project_website_source_exists_and_uses_current_copy(self) -> None:
+        docs_index = (REPO_ROOT / "docs" / "index.html").read_text(encoding="utf-8")
+        site_js = (REPO_ROOT / "docs" / "site.js").read_text(encoding="utf-8")
+
+        self.assertIn("<title>mail_summariser</title>", docs_index)
+        self.assertIn("Sample Mailbox", docs_index)
+        self.assertIn("webapp-workspace.png", docs_index)
+        self.assertIn("architecture.svg", docs_index)
+        self.assertIn("flow-summary.svg", docs_index)
+        self.assertIn("krahd", site_js)
+        self.assertIn("mail_summariser", site_js)
+        self.assertNotIn("Mail-Summariser", docs_index)
+        self.assertNotIn("Mail-Summariser", site_js)
+
 
 if __name__ == "__main__":
     unittest.main()

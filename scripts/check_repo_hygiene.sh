@@ -10,7 +10,7 @@ while IFS= read -r path; do
   [[ -e "$path" ]] || continue
   bad_files+=("$path")
 done < <(
-  git ls-files | grep -E '(^dist/|^release_artifacts/|\.egg-info/|/__pycache__/|\.pyc$|\.pyo$|^temp\.txt$|(^|/)\.env$|^backend/data/.*\.sqlite3|^docs/(MIGRATION_|CALIBRATION\.md|IMAP_TEST_PLAN\.md|TESTING_STRATEGY\.md)|^docs/index\.html$|^docs/site\.(css|js)$)' || true
+  git ls-files | grep -E '(^dist/|^release_artifacts/|\.egg-info/|/__pycache__/|\.pyc$|\.pyo$|^temp\.txt$|(^|/)\.env$|^backend/data/.*\.sqlite3|^docs/(MIGRATION_|CALIBRATION\.md|IMAP_TEST_PLAN\.md|TESTING_STRATEGY\.md))' || true
 )
 
 if ((${#bad_files[@]} > 0)); then
