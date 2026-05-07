@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-05-07 18:22
+Last updated: 2026-05-07 19:26
 
 ## Purpose
 
@@ -14,7 +14,7 @@ It supports a resettable sample mailbox for onboarding and testing, live IMAP/SM
 
 ## Current state
 
-The repository currently contains three active runtime surfaces:
+The repository currently contains three active runtime surfaces and one documentation surface:
 
 - `backend/` for API, storage, mail integration, summary orchestration, and model-runtime control
 - `webapp/` for the browser UI
@@ -76,7 +76,7 @@ Current browser UI state:
 - The Main surface uses a three-column desktop layout: quick filters and advanced query, digest and message review, and scoped job actions.
 - The Log surface is a timeline-style view with text, status, and undoable filters.
 - Settings are split into a basic screen and an advanced screen; advanced controls include provider prompts, provider keys, Ollama lifecycle, model tools, backend targeting, fake-mail tools, database reset, and backend shutdown.
-- The temporary mockups in `mockups/temporary/` are non-functional concept artefacts and remain separate from production UI.
+- The previous temporary approval-stage mockups have been removed because the key web UI decisions were either implemented in production or superseded.
 
 Implemented UI/UX changes:
 
@@ -214,6 +214,7 @@ python scripts/validate_rendered_ui.py
 - Desktop studio layout now uses a narrower actions column to reduce overlap pressure against the central review column on wider main-screen sessions.
 - Desktop actions panel spacing is slightly denser (reduced internal padding and action-button gap) to keep controls compact without reducing text readability.
 - Ollama runtime/model/catalog status lines now include `?` explainers that open a lightweight modal; clicking anywhere closes the explainer.
+- The obsolete approval-stage files under `mockups/temporary/` have been removed after their useful web UI decisions were implemented or overtaken by the shipped interface.
 - `tag_summarised` actions and undo now honour the saved `summarisedTag` by storing the actual tag in undo payloads.
 - Browser backend target initialisation now preserves the browser-selected backend URL during settings loads.
 - Dependency declarations and CI install steps now use the project runtime dependency set instead of the stale TestPyPI `modelito==0.1.1` workaround.
@@ -222,7 +223,7 @@ python scripts/validate_rendered_ui.py
 
 ## Verification status
 
-Latest verification:
+Recent verification:
 
 - `backend/.venv/bin/python -m pytest -q tests/test_validate_full_stack_script.py`: passed with 3 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_web_contract.py tests/test_validate_full_stack_script.py`: passed with 6 passed.
@@ -237,7 +238,7 @@ Latest verification:
 - `backend/.venv/bin/python -m pytest -q tests/test_summary_service_provider_library.py tests/test_fuzz_summary_payloads.py::test_summary_endpoint_skips_provider_when_search_returns_no_messages`: passed with 8 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_fuzz_summary_payloads.py`: passed with 4 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_backend_mail_flow.py tests/test_runtime_model_endpoints.py tests/test_runtime_controls.py tests/test_fuzz_summary_payloads.py tests/test_summary_service_provider_library.py tests/test_web_contract.py`: passed with 32 passed.
-- `backend/.venv/bin/python -m pytest -q`: passed with 88 passed, 1 skipped.
+- `backend/.venv/bin/python -m pytest -q`: passed with 90 passed, 1 skipped.
 - `./scripts/check_repo_hygiene.sh`: passed.
 - `git diff --check`: passed.
 - `backend/.venv/bin/python -m py_compile scripts/validate_rendered_ui.py scripts/validate_full_stack.py`: passed.
@@ -276,6 +277,8 @@ Validation implications:
 - Continue broad malformed-input fuzzing for any remaining lightly covered route shapes.
 - Keep browser and macOS client expectations aligned with backend response contracts.
 - Keep hygiene checks current as packaging and release scripts evolve.
+- Add more rendered UI assertions as new workflows land.
+- Keep documentation, website, and client copy aligned around "Sample Mailbox" while preserving backend API compatibility.
 
 ## Pending tasks
 
@@ -283,16 +286,16 @@ Validation implications:
 
 ## Next steps
 
-1. Add more rendered UI assertions as new workflows land.
-2. Keep documentation, website, and client copy aligned around "Sample Mailbox" while preserving backend API compatibility.
+1. Add rendered UI assertions for the new status-message explainer modal so its open/close behaviour is regression-tested.
+2. Review the macOS client for any remaining `dummyMode` user-facing copy that should match the browser's "Sample Mailbox" terminology more precisely.
 
 ## Longer-term steps
 
 1. Keep local-first onboarding reliable through a safe sample mailbox and deterministic fallback behaviour.
 2. Strengthen cross-platform validation for backend and clients.
 3. Preserve safe handling for live mailbox operations and provider integrations.
-4. Convert any remaining useful temporary UX mockup decisions into production UI work or remove obsolete mockups after decisions are made.
-5. Add and maintain rendered UI regression checks for first-run, empty-result, live-mode settings, and mobile workflows.
+4. Expand rendered UI regression checks beyond first-run flows to cover help/explainer overlays, scoped actions, and denser desktop layouts.
+5. Keep browser and macOS information architecture aligned as provider/runtime controls continue to evolve.
 
 ## Decisions
 
@@ -303,4 +306,4 @@ Validation implications:
 
 ---
 
-Last updated: 2026-05-07 18:22
+Last updated: 2026-05-07 19:26
