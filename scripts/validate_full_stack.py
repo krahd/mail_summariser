@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import socket
 import subprocess
 import sys
 import tempfile
@@ -11,17 +12,59 @@ from urllib.error import URLError
 from urllib.request import urlopen
 
 
-def wait_for_url(url: str, attempts: int, delay_seconds: float) -> None:
+def find_free_port(host: str) -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as test_socket:
+        test_socket.bind((host, 0))
+        return int(test_socket.getsockname()[1])
+
+
+def read_log_tail(log_path: Path | None, max_lines: int = 80) -> str:
+    if log_path is None:
+        return ""
+    if not log_path.exists():
+        return f"{log_path} does not exist."
+
+    content = log_path.read_text(encoding="utf-8", errors="replace")
+    lines = content.splitlines()
+    if not lines:
+        return f"{log_path} is empty."
+    return "\n".join(lines[-max_lines:])
+
+
+def build_wait_failure_message(
+    url: str,
+    last_error: BaseException | None,
+    process: subprocess.Popen[bytes] | None = None,
+    log_path: Path | None = None,
+) -> str:
+    message = f"Timed out waiting for {url}: {last_error}"
+    if process is not None and process.poll() is not None:
+        message += f"\nProcess exited with code {process.returncode}."
+    if log_path is not None:
+        message += f"\nLog tail ({log_path}):\n{read_log_tail(log_path)}"
+    return message
+
+
+def wait_for_url(
+    url: str,
+    attempts: int,
+    delay_seconds: float,
+    process: subprocess.Popen[bytes] | None = None,
+    log_path: Path | None = None,
+) -> None:
     last_error: Exception | None = None
-    for _ in range(attempts):
+    for attempt in range(attempts):
+        if process is not None and process.poll() is not None:
+            raise RuntimeError(build_wait_failure_message(url, last_error, process, log_path))
         try:
             with urlopen(url, timeout=2.0) as response:  # nosec B310
                 if 200 <= response.status < 500:
                     return
-        except URLError as exc:
+        except (OSError, TimeoutError, URLError) as exc:
             last_error = exc
-        time.sleep(delay_seconds)
-    raise RuntimeError(f"Timed out waiting for {url}: {last_error}")
+        if attempt + 1 < attempts:
+            time.sleep(delay_seconds)
+    raise RuntimeError(build_wait_failure_message(url, last_error, process, log_path))
 
 
 def fetch_or_raise(url: str) -> None:
@@ -48,14 +91,16 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Cross-platform full-stack startup validation")
     parser.add_argument("--backend-host", default="127.0.0.1")
     parser.add_argument("--backend-port", type=int, default=8766)
-    parser.add_argument("--web-port", type=int, default=8000)
+    parser.add_argument("--web-port", type=int, default=0, help="Static web port. Use 0 to select a free port.")
     parser.add_argument("--attempts", type=int, default=40)
     parser.add_argument("--delay", type=float, default=1.0)
     args = parser.parse_args()
 
     root_dir = Path(__file__).resolve().parents[1]
     backend_url = f"http://{args.backend_host}:{args.backend_port}"
-    web_url = f"http://127.0.0.1:{args.web_port}"
+    web_host = "127.0.0.1"
+    web_port = args.web_port if args.web_port else find_free_port(web_host)
+    web_url = f"http://{web_host}:{web_port}"
 
     temp_dir = Path(tempfile.gettempdir())
     backend_log = temp_dir / "mail_summariser_backend.log"
@@ -86,7 +131,13 @@ def main() -> int:
                 stderr=subprocess.STDOUT,
             )
 
-            wait_for_url(f"{backend_url}/health", attempts=args.attempts, delay_seconds=args.delay)
+            wait_for_url(
+                f"{backend_url}/health",
+                attempts=args.attempts,
+                delay_seconds=args.delay,
+                process=backend_proc,
+                log_path=backend_log,
+            )
             fetch_or_raise(f"{backend_url}/health")
             fetch_or_raise(f"{backend_url}/runtime/status")
             fetch_or_raise(f"{backend_url}/models/options?provider=openai")
@@ -98,7 +149,9 @@ def main() -> int:
                     sys.executable,
                     "-m",
                     "http.server",
-                    str(args.web_port),
+                    str(web_port),
+                    "--bind",
+                    web_host,
                     "--directory",
                     "webapp",
                 ],
@@ -108,7 +161,13 @@ def main() -> int:
                 stderr=subprocess.STDOUT,
             )
 
-            wait_for_url(web_url, attempts=20, delay_seconds=args.delay)
+            wait_for_url(
+                web_url,
+                attempts=args.attempts,
+                delay_seconds=args.delay,
+                process=web_proc,
+                log_path=web_log,
+            )
             fetch_or_raise(web_url)
 
         print("Full-stack validation passed.")
