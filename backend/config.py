@@ -29,6 +29,10 @@ ALLOWED_ORIGINS = _split_csv(
         'http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:8766,http://localhost:8766',
     )
 )
+ALLOWED_ORIGIN_REGEX = os.getenv(
+    'ALLOWED_ORIGIN_REGEX',
+    r'^https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$',
+).strip()
 ENABLE_DEV_TOOLS = os.getenv('MAIL_SUMMARISER_ENABLE_DEV_TOOLS', 'false').lower() in ('1', 'true', 'yes', 'on')
 
 DEFAULT_OPENAI_SYSTEM_MESSAGE = os.getenv(

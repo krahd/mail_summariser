@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-05-07 17:30
+Last updated: 2026-05-07 18:08
 
 ## Purpose
 
@@ -210,6 +210,7 @@ python scripts/validate_rendered_ui.py
 - Read-endpoint fuzz coverage now includes `/settings`, `/settings/system-message-defaults`, `/health`, and `/jobs/{job_id}/messages/{message_id}` malformed query/path shapes.
 - Browser API requests now normalise backend URLs (including missing schemes) and convert low-level fetch network failures into explicit backend-connectivity errors.
 - Backend URL settings input now explicitly accepts host:port values and shows examples for both full URLs and host:port format.
+- Backend CORS now accepts localhost/127.0.0.1 dev origins on arbitrary ports via `ALLOWED_ORIGIN_REGEX`, preventing runtime/model preflight `OPTIONS` failures on the default webapp port (`8000`).
 - `tag_summarised` actions and undo now honour the saved `summarisedTag` by storing the actual tag in undo payloads.
 - Browser backend target initialisation now preserves the browser-selected backend URL during settings loads.
 - Dependency declarations and CI install steps now use the project runtime dependency set instead of the stale TestPyPI `modelito==0.1.1` workaround.
@@ -226,6 +227,8 @@ Latest verification:
 - `backend/.venv/bin/python -m pytest -q tests/test_web_contract.py`: passed with 3 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_fuzz_devtools_payloads.py`: passed with 3 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_fuzz_read_endpoints.py`: passed with 4 passed.
+- `backend/.venv/bin/python -m pytest -q tests/test_cors_runtime_endpoints.py tests/test_fuzz_read_endpoints.py`: passed with 6 passed.
+- `backend/.venv/bin/python -m pytest -q tests/test_cors_runtime_endpoints.py tests/test_runtime_controls.py tests/test_runtime_model_endpoints.py`: passed with 14 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_fuzz_runtime_models_payloads.py tests/test_fuzz_settings_actions_payloads.py tests/test_fuzz_summary_payloads.py tests/test_fuzz_devtools_payloads.py`: passed with 29 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_fuzz_runtime_models_payloads.py tests/test_fuzz_settings_actions_payloads.py tests/test_fuzz_summary_payloads.py tests/test_fuzz_devtools_payloads.py tests/test_fuzz_read_endpoints.py`: passed with 33 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_summary_service_provider_library.py tests/test_fuzz_summary_payloads.py::test_summary_endpoint_skips_provider_when_search_returns_no_messages`: passed with 8 passed.
@@ -238,6 +241,7 @@ Latest verification:
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed with local port binding and Chromium launch allowed. Screenshots were written to `/var/folders/z_/872qmw6s5_d1qlyd3xdgsl5r0000gn/T/mail_summariser_rendered_ui/`.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after frontend API backend-URL/error-handling changes.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after backend URL settings input guidance and format updates.
+- `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after backend CORS localhost/loopback regex update.
 - `backend/.venv/bin/python scripts/validate_full_stack.py --attempts 5 --delay 0.5`: passed with local port binding allowed. A first sandboxed run failed because selecting and binding a loopback port was not permitted.
 - `./scripts/validate_full_stack.sh`: passed when run with local port binding allowed. A first sandboxed run failed because local binding to `127.0.0.1:8766` was not permitted.
 - GitHub CI run `25518723986`: passed, including Ubuntu Python 3.11 rendered UI regression and the cross-platform startup validation matrix.
@@ -293,4 +297,4 @@ Validation implications:
 
 ---
 
-Last updated: 2026-05-07 17:30
+Last updated: 2026-05-07 18:08
