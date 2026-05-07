@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-05-07 16:57
+Last updated: 2026-05-07 17:14
 
 ## Purpose
 
@@ -206,6 +206,7 @@ python scripts/validate_rendered_ui.py
 - CI run `25518723986` passed after adding the rendered UI regression, Playwright dependency, and expanded fuzz coverage.
 - Runtime/model routes now read merged persisted settings for Ollama host and model name.
 - Runtime/model fuzz coverage now includes install/stop runtime routes, model serve/download payloads, download-status query strings, and local-model delete query strings.
+- Dev fake-mail route fuzz coverage now includes `/dev/fake-mail/status`, `/dev/fake-mail/start`, and `/dev/fake-mail/stop` malformed query/payload shapes with safe disabled-mode mocking.
 - `tag_summarised` actions and undo now honour the saved `summarisedTag` by storing the actual tag in undo payloads.
 - Browser backend target initialisation now preserves the browser-selected backend URL during settings loads.
 - Dependency declarations and CI install steps now use the project runtime dependency set instead of the stale TestPyPI `modelito==0.1.1` workaround.
@@ -220,6 +221,8 @@ Latest verification:
 - `backend/.venv/bin/python -m pytest -q tests/test_web_contract.py tests/test_validate_full_stack_script.py`: passed with 6 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_fuzz_runtime_models_payloads.py`: passed with 11 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_web_contract.py`: passed with 3 passed.
+- `backend/.venv/bin/python -m pytest -q tests/test_fuzz_devtools_payloads.py`: passed with 3 passed.
+- `backend/.venv/bin/python -m pytest -q tests/test_fuzz_runtime_models_payloads.py tests/test_fuzz_settings_actions_payloads.py tests/test_fuzz_summary_payloads.py tests/test_fuzz_devtools_payloads.py`: passed with 29 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_summary_service_provider_library.py tests/test_fuzz_summary_payloads.py::test_summary_endpoint_skips_provider_when_search_returns_no_messages`: passed with 8 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_fuzz_summary_payloads.py`: passed with 4 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_backend_mail_flow.py tests/test_runtime_model_endpoints.py tests/test_runtime_controls.py tests/test_fuzz_summary_payloads.py tests/test_summary_service_provider_library.py tests/test_web_contract.py`: passed with 32 passed.
@@ -283,4 +286,4 @@ Validation implications:
 
 ---
 
-Last updated: 2026-05-07 16:57
+Last updated: 2026-05-07 17:14
