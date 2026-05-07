@@ -118,6 +118,9 @@ const useFakeMailSettingsBtn = document.getElementById("use-fake-mail-settings")
 const diagnosticsProviderState = document.getElementById("diag-provider-state");
 const diagnosticsRuntimeState = document.getElementById("diag-runtime-state");
 const diagnosticsFakeMailState = document.getElementById("diag-fakemail-state");
+const messageHelpButtons = Array.from(document.querySelectorAll(".message-help-btn"));
+const messageExplainerModal = document.getElementById("message-explainer-modal");
+const messageExplainerBody = document.getElementById("message-explainer-body");
 
 const api = createApiClient({
   getBaseUrl,
@@ -1261,6 +1264,34 @@ function updateHelpButton(isHelpActive) {
   }
 }
 
+function openMessageExplainer(kind) {
+  if (!messageExplainerModal || !messageExplainerBody) {
+    return;
+  }
+
+  const copy = {
+    runtime:
+      "Runtime status tells you whether the local Ollama service is installed, reachable, and ready to answer requests. " +
+      "If it says running but not ready, model warm-up may still be in progress or may have failed.",
+    models:
+      "Model status reflects local model availability and refresh results from the configured provider. " +
+      "If refresh fails, check backend connectivity, provider choice, and whether Ollama is running.",
+    catalog:
+      "Catalogue status reports whether downloadable models were fetched successfully. " +
+      "An empty catalogue can be normal for connectivity issues, offline mode, or provider-side lookup limits.",
+  };
+
+  messageExplainerBody.textContent = copy[kind] || "Status help is not available for this message yet.";
+  messageExplainerModal.classList.remove("is-hidden");
+}
+
+function closeMessageExplainer() {
+  if (!messageExplainerModal) {
+    return;
+  }
+  messageExplainerModal.classList.add("is-hidden");
+}
+
 async function loadInitialData() {
   try {
     const [logs, settings, defaults] = await Promise.all([
@@ -1298,6 +1329,24 @@ async function runJobAction(action) {
 }
 
 function wireEvents() {
+  messageHelpButtons.forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openMessageExplainer(button.dataset.messageHelp || "");
+    });
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!messageExplainerModal || messageExplainerModal.classList.contains("is-hidden")) {
+      return;
+    }
+    const target = event.target;
+    if (target instanceof Element && target.closest(".message-help-btn")) {
+      return;
+    }
+    closeMessageExplainer();
+  });
+
   const loadSettings = async () => {
     try {
       const settings = await api.getSettings();

@@ -358,7 +358,10 @@
             <label class="checkbox"><input name="ollamaAutoStart" type="checkbox" /> Auto-start Ollama when needed for summaries and downloads</label>
             <label class="checkbox"><input name="ollamaStartOnStartup" type="checkbox" /> Start Ollama automatically on startup</label>
             <label class="checkbox"><input name="ollamaStopOnExit" type="checkbox" /> Stop Ollama automatically on exit</label>
-            <p id="ollama-runtime-status" class="status-line">Runtime status not loaded yet.</p>
+            <div class="status-help-row">
+              <p id="ollama-runtime-status" class="status-line">Runtime status not loaded yet.</p>
+              <button type="button" class="message-help-btn" data-message-help="runtime" aria-label="Explain runtime status message">?</button>
+            </div>
             <div class="inline-actions">
               <button id="runtime-ollama-install" type="button" class="secondary">Install Ollama</button>
               <button id="runtime-ollama-action" type="button" class="secondary is-hidden">Start Ollama</button>
@@ -371,7 +374,10 @@
               <button id="serve-model" type="button" class="secondary">Serve Selected Model</button>
               <button id="delete-model" type="button" class="secondary">Delete Local Model</button>
             </div>
-            <p id="ollama-status" class="status-line">Model list not loaded yet.</p>
+            <div class="status-help-row">
+              <p id="ollama-status" class="status-line">Model list not loaded yet.</p>
+              <button type="button" class="message-help-btn" data-message-help="models" aria-label="Explain model status message">?</button>
+            </div>
             <label>Discover Downloadable Ollama Models
               <select id="downloadable-model" name="downloadableModel">
                 <option value="">Select a model to download...</option>
@@ -381,7 +387,10 @@
               <button id="refresh-catalog" type="button" class="secondary">Discover Models</button>
               <button id="download-model" type="button">Download Selected Model</button>
             </div>
-            <p id="catalog-status" class="status-line">Catalogue not loaded yet.</p>
+            <div class="status-help-row">
+              <p id="catalog-status" class="status-line">Catalogue not loaded yet.</p>
+              <button type="button" class="message-help-btn" data-message-help="catalog" aria-label="Explain catalogue status message">?</button>
+            </div>
           </section>
 
           <section class="settings-group settings-advanced-group">
@@ -519,6 +528,14 @@
       </article>
     </section>
   </main>
+
+  <div id="message-explainer-modal" class="message-explainer-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="message-explainer-title">
+    <article class="message-explainer-card">
+      <h3 id="message-explainer-title">Status Message Help</h3>
+      <p id="message-explainer-body"></p>
+      <p class="field-note">Click anywhere to close.</p>
+    </article>
+  </div>
 
   <script type="module" src="app.js"></script>
 </body>
