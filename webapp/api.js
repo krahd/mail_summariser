@@ -186,6 +186,19 @@ export function createApiClient(context) {
   const apiKeyHeader = context.apiKeyHeader || "X-API-Key";
 
   /**
+   * @param {string} rawBaseUrl
+   * @returns {string}
+   */
+  function normalizeBaseUrl(rawBaseUrl) {
+    const trimmed = String(rawBaseUrl || "").trim();
+    const withScheme = /^[a-zA-Z][a-zA-Z\d+.-]*:\/\//.test(trimmed)
+      ? trimmed
+      : `http://${trimmed}`;
+    const parsed = new URL(withScheme);
+    return parsed.toString().replace(/\/$/, "");
+  }
+
+  /**
    * @template T
    * @param {string} path
    * @param {RequestInit} [options]
@@ -201,10 +214,29 @@ export function createApiClient(context) {
       headers[apiKeyHeader] = key;
     }
 
-    const response = await fetch(`${context.getBaseUrl()}${path}`, {
-      ...options,
-      headers,
-    });
+    const rawBaseUrl = context.getBaseUrl();
+    let normalizedBaseUrl = "";
+    let requestUrl = "";
+
+    try {
+      normalizedBaseUrl = normalizeBaseUrl(rawBaseUrl);
+      requestUrl = new URL(path, `${normalizedBaseUrl}/`).toString();
+    } catch (_error) {
+      throw new Error(`Invalid backend URL: ${String(rawBaseUrl || "").trim() || "(empty)"}`);
+    }
+
+    let response;
+    try {
+      response = await fetch(requestUrl, {
+        ...options,
+        headers,
+      });
+    } catch (error) {
+      throw new Error(
+        `Could not reach backend at ${normalizedBaseUrl}. ` +
+          "Check that the backend is running and the backend URL is correct."
+      );
+    }
 
     if (!response.ok) {
       const text = await response.text();

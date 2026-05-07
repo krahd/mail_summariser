@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-05-07 17:14
+Last updated: 2026-05-07 17:30
 
 ## Purpose
 
@@ -207,6 +207,9 @@ python scripts/validate_rendered_ui.py
 - Runtime/model routes now read merged persisted settings for Ollama host and model name.
 - Runtime/model fuzz coverage now includes install/stop runtime routes, model serve/download payloads, download-status query strings, and local-model delete query strings.
 - Dev fake-mail route fuzz coverage now includes `/dev/fake-mail/status`, `/dev/fake-mail/start`, and `/dev/fake-mail/stop` malformed query/payload shapes with safe disabled-mode mocking.
+- Read-endpoint fuzz coverage now includes `/settings`, `/settings/system-message-defaults`, `/health`, and `/jobs/{job_id}/messages/{message_id}` malformed query/path shapes.
+- Browser API requests now normalise backend URLs (including missing schemes) and convert low-level fetch network failures into explicit backend-connectivity errors.
+- Backend URL settings input now explicitly accepts host:port values and shows examples for both full URLs and host:port format.
 - `tag_summarised` actions and undo now honour the saved `summarisedTag` by storing the actual tag in undo payloads.
 - Browser backend target initialisation now preserves the browser-selected backend URL during settings loads.
 - Dependency declarations and CI install steps now use the project runtime dependency set instead of the stale TestPyPI `modelito==0.1.1` workaround.
@@ -222,15 +225,19 @@ Latest verification:
 - `backend/.venv/bin/python -m pytest -q tests/test_fuzz_runtime_models_payloads.py`: passed with 11 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_web_contract.py`: passed with 3 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_fuzz_devtools_payloads.py`: passed with 3 passed.
+- `backend/.venv/bin/python -m pytest -q tests/test_fuzz_read_endpoints.py`: passed with 4 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_fuzz_runtime_models_payloads.py tests/test_fuzz_settings_actions_payloads.py tests/test_fuzz_summary_payloads.py tests/test_fuzz_devtools_payloads.py`: passed with 29 passed.
+- `backend/.venv/bin/python -m pytest -q tests/test_fuzz_runtime_models_payloads.py tests/test_fuzz_settings_actions_payloads.py tests/test_fuzz_summary_payloads.py tests/test_fuzz_devtools_payloads.py tests/test_fuzz_read_endpoints.py`: passed with 33 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_summary_service_provider_library.py tests/test_fuzz_summary_payloads.py::test_summary_endpoint_skips_provider_when_search_returns_no_messages`: passed with 8 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_fuzz_summary_payloads.py`: passed with 4 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_backend_mail_flow.py tests/test_runtime_model_endpoints.py tests/test_runtime_controls.py tests/test_fuzz_summary_payloads.py tests/test_summary_service_provider_library.py tests/test_web_contract.py`: passed with 32 passed.
-- `backend/.venv/bin/python -m pytest -q`: passed with 81 passed, 1 skipped.
+- `backend/.venv/bin/python -m pytest -q`: passed with 88 passed, 1 skipped.
 - `./scripts/check_repo_hygiene.sh`: passed.
 - `git diff --check`: passed.
 - `backend/.venv/bin/python -m py_compile scripts/validate_rendered_ui.py scripts/validate_full_stack.py`: passed.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed with local port binding and Chromium launch allowed. Screenshots were written to `/var/folders/z_/872qmw6s5_d1qlyd3xdgsl5r0000gn/T/mail_summariser_rendered_ui/`.
+- `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after frontend API backend-URL/error-handling changes.
+- `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after backend URL settings input guidance and format updates.
 - `backend/.venv/bin/python scripts/validate_full_stack.py --attempts 5 --delay 0.5`: passed with local port binding allowed. A first sandboxed run failed because selecting and binding a loopback port was not permitted.
 - `./scripts/validate_full_stack.sh`: passed when run with local port binding allowed. A first sandboxed run failed because local binding to `127.0.0.1:8766` was not permitted.
 - GitHub CI run `25518723986`: passed, including Ubuntu Python 3.11 rendered UI regression and the cross-platform startup validation matrix.
@@ -286,4 +293,4 @@ Validation implications:
 
 ---
 
-Last updated: 2026-05-07 17:14
+Last updated: 2026-05-07 17:30
