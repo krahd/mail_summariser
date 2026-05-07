@@ -741,9 +741,13 @@ button.danger {
   box-shadow: none;
 }
 
-button:disabled {
-  opacity: 0.52;
-  cursor: default;
+button:disabled,
+button:disabled:hover {
+  background: #edf3f1;
+  border-color: rgba(29, 47, 44, 0.12);
+  color: #7a8984;
+  opacity: 1;
+  cursor: not-allowed;
   transform: none;
   box-shadow: none;
 }
@@ -829,7 +833,7 @@ pre {
 
 .review-split {
   display: grid;
-  grid-template-columns: minmax(320px, 0.92fr) minmax(0, 1.08fr);
+  grid-template-columns: minmax(380px, 1.05fr) minmax(260px, 0.95fr);
   gap: 12px;
   min-height: 380px;
 }
@@ -846,6 +850,7 @@ pre {
 table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 th,
@@ -858,13 +863,23 @@ td {
 
 th:nth-child(1),
 td:nth-child(1) {
-  width: 8.5rem;
+  width: 7.2rem;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 th:nth-child(2),
 td:nth-child(2) {
-  width: 15rem;
+  width: 8.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+td:nth-child(3) {
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 th {
@@ -990,6 +1005,7 @@ tr:hover td {
   color: var(--ink);
   font-size: 0.82rem;
   line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 
 .message-detail-body {

@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-05-07 16:12
+Last updated: 2026-05-07 16:52
 
 ## Purpose
 
@@ -87,21 +87,20 @@ Implemented UI/UX changes:
 - The default `Unread Mail` quick filter no longer injects a `today` keyword, so the resettable sample mailbox returns messages on first run.
 - Empty searches now create an explicit no-message job with the summary text "No messages matched this search..." and log `summary_provider` as `status=empty`, `provider=none`, `model=none`.
 - The browser disables job actions for empty jobs and shows a clearer no-message detail state.
+- Disabled browser action buttons now use a muted inactive treatment rather than a faded active-colour treatment.
 - Message dates are formatted for scanning, with stable table widths for date and sender columns.
+- The rendered message table now uses fixed columns, wrapping, and a wider review split to prevent horizontal table scroll in the desktop review pane.
 - Browser settings loading now preserves a manually selected backend URL instead of overwriting it with the backend's stored `backendBaseURL`.
 - Developer fake-mail tooling remains gated by `MAIL_SUMMARISER_ENABLE_DEV_TOOLS` and is still separate from the end-user sample mailbox.
 
 Rendered validation:
 
-- A Safari-rendered screenshot of `http://127.0.0.1:5173` confirmed the task-first first viewport, sample mailbox health chip, renamed quick filters, and removal of the global mode toggle and overview band.
-- Safari WebDriver could not execute page JavaScript because Safari's "Allow JavaScript from Apple Events" setting is disabled on this machine, so browser flow verification used the rendered screenshot plus backend/API and full-stack validation.
-- The sample quick-filter API payload returned two built-in sample messages on `127.0.0.1:8766`.
-- An empty-search API payload returned an explicit empty summary and did not route to an LLM provider.
+- `scripts/validate_rendered_ui.py` starts isolated backend and static-web instances, then drives Chromium through first load, sample digest generation, empty-result handling, the settings/live-mode toggle, and a mobile settings viewport.
+- The rendered validator checks page identity, console warnings/errors, page overflow, message-table overflow, Sample Mailbox copy, enabled/disabled action states, and screenshot capture.
+- CI installs Chromium and required browser dependencies, then runs the rendered UI regression on the Ubuntu Python 3.11 test job.
 
 Remaining UI ideas:
 
-- Add a dedicated rendered regression harness for first-run, empty-result, settings, live-mode, and mobile workflows.
-- Consider stronger disabled-button styling for action controls, especially while no job is active.
 - Continue refining dense desktop and mobile layouts as real usage patterns emerge.
 
 ## Sample mailbox assessment
@@ -159,6 +158,8 @@ Validation commands:
 pytest -q
 ./scripts/validate_full_stack.sh
 python scripts/validate_full_stack.py
+python -m playwright install chromium
+python scripts/validate_rendered_ui.py
 ./scripts/check_repo_hygiene.sh
 ```
 
@@ -187,6 +188,7 @@ python scripts/validate_full_stack.py
 - `docs/assets/`: website diagrams and product screenshot
 - `tests/`: backend/API and robustness test suite
 - `scripts/validate_full_stack.py` and `scripts/validate_full_stack.sh`: startup validation
+- `scripts/validate_rendered_ui.py`: Playwright rendered UI regression
 - `scripts/check_repo_hygiene.sh`: repository hygiene guard
 
 ## Recent audit status
@@ -200,7 +202,9 @@ python scripts/validate_full_stack.py
 - Browser and macOS user-facing copy now uses "Sample Mailbox" while preserving the `dummyMode` API field.
 - The GitHub Pages website source has been restored in `docs/` with current Sample Mailbox positioning, download links, architecture diagrams, and a rendered product screenshot.
 - The Python full-stack validator now selects a free static-web port by default, binds the static server to `127.0.0.1`, watches startup subprocess exits, and includes service log tails in readiness failures. This addresses the macOS CI startup-validation timeout observed against fixed port `8000`.
+- The Playwright rendered UI validator is available locally and wired into CI for first-run, empty-result, settings/live-mode, and mobile checks.
 - Runtime/model routes now read merged persisted settings for Ollama host and model name.
+- Runtime/model fuzz coverage now includes install/stop runtime routes, model serve/download payloads, download-status query strings, and local-model delete query strings.
 - `tag_summarised` actions and undo now honour the saved `summarisedTag` by storing the actual tag in undo payloads.
 - Browser backend target initialisation now preserves the browser-selected backend URL during settings loads.
 - Dependency declarations and CI install steps now use the project runtime dependency set instead of the stale TestPyPI `modelito==0.1.1` workaround.
@@ -213,13 +217,16 @@ Latest verification:
 
 - `backend/.venv/bin/python -m pytest -q tests/test_validate_full_stack_script.py`: passed with 3 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_web_contract.py tests/test_validate_full_stack_script.py`: passed with 6 passed.
+- `backend/.venv/bin/python -m pytest -q tests/test_fuzz_runtime_models_payloads.py`: passed with 11 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_web_contract.py`: passed with 3 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_summary_service_provider_library.py tests/test_fuzz_summary_payloads.py::test_summary_endpoint_skips_provider_when_search_returns_no_messages`: passed with 8 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_fuzz_summary_payloads.py`: passed with 4 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_backend_mail_flow.py tests/test_runtime_model_endpoints.py tests/test_runtime_controls.py tests/test_fuzz_summary_payloads.py tests/test_summary_service_provider_library.py tests/test_web_contract.py`: passed with 32 passed.
-- `backend/.venv/bin/python -m pytest -q`: passed with 75 passed, 1 skipped.
+- `backend/.venv/bin/python -m pytest -q`: passed with 81 passed, 1 skipped.
 - `./scripts/check_repo_hygiene.sh`: passed.
 - `git diff --check`: passed.
+- `backend/.venv/bin/python -m py_compile scripts/validate_rendered_ui.py scripts/validate_full_stack.py`: passed.
+- `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed with local port binding and Chromium launch allowed. Screenshots were written to `/var/folders/z_/872qmw6s5_d1qlyd3xdgsl5r0000gn/T/mail_summariser_rendered_ui/`.
 - `backend/.venv/bin/python scripts/validate_full_stack.py --attempts 5 --delay 0.5`: passed with local port binding allowed. A first sandboxed run failed because selecting and binding a loopback port was not permitted.
 - `./scripts/validate_full_stack.sh`: passed when run with local port binding allowed. A first sandboxed run failed because local binding to `127.0.0.1:8766` was not permitted.
 - Rendered Safari screenshot on `http://127.0.0.1:5173` with backend `http://127.0.0.1:8766`: loaded the updated task-first browser UI.
@@ -230,7 +237,7 @@ Latest verification:
 Validation implications:
 
 - Provider-key tests now clear or set controlled environment variables and redaction prevents provider errors from exposing API keys in fallback responses.
-- Rendered JavaScript automation still needs a Playwright or enabled-Safari-WebDriver path for repeatable UI assertions.
+- Rendered JavaScript automation now has a Playwright path. Safari WebDriver remains unavailable locally because Safari's "Allow JavaScript from Apple Events" setting is disabled on this machine.
 
 ## Risks and limitations
 
@@ -238,25 +245,25 @@ Validation implications:
 - Secret masking and masked-write semantics must not regress.
 - Dev fake-mail endpoints must remain disabled unless explicitly enabled.
 - Behaviour changes across backend/client boundaries require contract discipline.
-- The rendered UI still lacks an automated browser regression suite; current verification used a screenshot plus API/full-stack checks.
-- Dependency alignment is updated locally and should be confirmed in CI on the next push.
+- Playwright browser installation is now a CI dependency for the Ubuntu Python 3.11 test job and should be watched on the next push.
 - Sample mailbox naming is implemented in clients, but backend route and schema names intentionally retain `dummyMode` for compatibility.
 - Browser and macOS clients should continue to be reviewed together when backend response contracts change.
 
-## Pending tasks
+## Recurring tasks
 
 - Continue broad malformed-input fuzzing for any remaining lightly covered route shapes.
 - Keep browser and macOS client expectations aligned with backend response contracts.
 - Keep hygiene checks current as packaging and release scripts evolve.
-- Add repeatable rendered UI regression checks for first-run, empty-result, settings, live-mode, and mobile flows.
-- Push and confirm the macOS startup-validation fix in CI.
+
+## Pending tasks
+
+- Push and confirm the rendered UI regression, Playwright dependency, and expanded fuzz coverage in CI.
 
 ## Next steps
 
-1. Push and review CI for the macOS startup-validation fix.
-2. Add automated rendered UI coverage using Playwright or an enabled WebDriver path.
-3. Continue broadening malformed-input fuzzing around lightly covered route combinations.
-4. Keep documentation, website, and client copy aligned around "Sample Mailbox" while preserving backend API compatibility.
+1. Push and review CI for the rendered UI regression and expanded fuzz coverage.
+2. Add more rendered UI assertions as new workflows land.
+3. Keep documentation, website, and client copy aligned around "Sample Mailbox" while preserving backend API compatibility.
 
 ## Longer-term steps
 
@@ -275,4 +282,4 @@ Validation implications:
 
 ---
 
-Last updated: 2026-05-07 16:12
+Last updated: 2026-05-07 16:52

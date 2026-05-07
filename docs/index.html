@@ -134,7 +134,7 @@
 
     <section id="architecture" class="section diagram-band">
       <div class="section-heading">
-        <h2>Architecture and request flow</h2>
+        <h2>Architecture</h2>
         <p>The backend is the system of record for settings, mailbox access, summaries, logs, and runtime model controls.</p>
       </div>
       <div class="diagram-grid">
@@ -155,7 +155,9 @@
         <p>Start the backend, serve the static browser client, and use the Sample Mailbox for a safe first summary.</p>
       </div>
       <pre><code>./start_backend.sh
-python -m http.server 8000 --directory webapp</code></pre>
+python -m http.server 8000 --directory webapp
+python -m playwright install chromium
+python scripts/validate_rendered_ui.py</code></pre>
     </section>
   </main>
 

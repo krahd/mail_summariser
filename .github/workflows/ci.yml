@@ -36,6 +36,14 @@ jobs:
       - name: Full-stack startup validation
         run: |
           python scripts/validate_full_stack.py
+      - name: Install Playwright browser
+        if: matrix.python-version == '3.11'
+        run: |
+          python -m playwright install --with-deps chromium
+      - name: Rendered UI regression
+        if: matrix.python-version == '3.11'
+        run: |
+          python scripts/validate_rendered_ui.py
 
   startup-validation-matrix:
     runs-on: ${{ matrix.os }}
