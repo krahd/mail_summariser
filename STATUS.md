@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-05-07 18:08
+Last updated: 2026-05-07 18:22
 
 ## Purpose
 
@@ -211,6 +211,9 @@ python scripts/validate_rendered_ui.py
 - Browser API requests now normalise backend URLs (including missing schemes) and convert low-level fetch network failures into explicit backend-connectivity errors.
 - Backend URL settings input now explicitly accepts host:port values and shows examples for both full URLs and host:port format.
 - Backend CORS now accepts localhost/127.0.0.1 dev origins on arbitrary ports via `ALLOWED_ORIGIN_REGEX`, preventing runtime/model preflight `OPTIONS` failures on the default webapp port (`8000`).
+- Desktop studio layout now uses a narrower actions column to reduce overlap pressure against the central review column on wider main-screen sessions.
+- Desktop actions panel spacing is slightly denser (reduced internal padding and action-button gap) to keep controls compact without reducing text readability.
+- Ollama runtime/model/catalog status lines now include `?` explainers that open a lightweight modal; clicking anywhere closes the explainer.
 - `tag_summarised` actions and undo now honour the saved `summarisedTag` by storing the actual tag in undo payloads.
 - Browser backend target initialisation now preserves the browser-selected backend URL during settings loads.
 - Dependency declarations and CI install steps now use the project runtime dependency set instead of the stale TestPyPI `modelito==0.1.1` workaround.
@@ -242,6 +245,9 @@ Latest verification:
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after frontend API backend-URL/error-handling changes.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after backend URL settings input guidance and format updates.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after backend CORS localhost/loopback regex update.
+- `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after narrowing the desktop actions column in the main studio grid.
+- `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after tightening actions panel internal spacing.
+- `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after adding status-message `?` explainers and click-anywhere close behaviour.
 - `backend/.venv/bin/python scripts/validate_full_stack.py --attempts 5 --delay 0.5`: passed with local port binding allowed. A first sandboxed run failed because selecting and binding a loopback port was not permitted.
 - `./scripts/validate_full_stack.sh`: passed when run with local port binding allowed. A first sandboxed run failed because local binding to `127.0.0.1:8766` was not permitted.
 - GitHub CI run `25518723986`: passed, including Ubuntu Python 3.11 rendered UI regression and the cross-platform startup validation matrix.
@@ -297,4 +303,4 @@ Validation implications:
 
 ---
 
-Last updated: 2026-05-07 18:08
+Last updated: 2026-05-07 18:22
