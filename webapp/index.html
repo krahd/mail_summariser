@@ -19,9 +19,9 @@
       <div class="app-title-lockup">
         <span class="app-mark" aria-hidden="true"></span>
         <div class="app-title-copy">
-          <p class="app-kicker">Local-First Workflow</p>
+          
           <h1>mail_summariser</h1>
-          <p class="app-subtitle">Summarise inbox activity, inspect context, and apply batch actions from one workspace.</p>
+          
         </div>
       </div>
       <div class="app-header-actions">
@@ -392,8 +392,8 @@
               </div>
             </div>
             <label>Backend Base URL
-              <input name="backendBaseURL" type="url" required />
-              <small class="field-note">Changes which backend this web app talks to. It does not restart any backend service.</small>
+              <input name="backendBaseURL" type="text" required placeholder="http://127.0.0.1:8766 or 127.0.0.1:8766" />
+              <small class="field-note">Changes which backend this web app talks to. It does not restart any backend service. You can enter either a full URL or host:port.</small>
             </label>
             <label>Backend API Key (for backend auth, not OpenAI/Anthropic)
               <div class="secret-row">
