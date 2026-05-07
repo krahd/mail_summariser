@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-05-07 16:52
+Last updated: 2026-05-07 16:57
 
 ## Purpose
 
@@ -203,6 +203,7 @@ python scripts/validate_rendered_ui.py
 - The GitHub Pages website source has been restored in `docs/` with current Sample Mailbox positioning, download links, architecture diagrams, and a rendered product screenshot.
 - The Python full-stack validator now selects a free static-web port by default, binds the static server to `127.0.0.1`, watches startup subprocess exits, and includes service log tails in readiness failures. This addresses the macOS CI startup-validation timeout observed against fixed port `8000`.
 - The Playwright rendered UI validator is available locally and wired into CI for first-run, empty-result, settings/live-mode, and mobile checks.
+- CI run `25518723986` passed after adding the rendered UI regression, Playwright dependency, and expanded fuzz coverage.
 - Runtime/model routes now read merged persisted settings for Ollama host and model name.
 - Runtime/model fuzz coverage now includes install/stop runtime routes, model serve/download payloads, download-status query strings, and local-model delete query strings.
 - `tag_summarised` actions and undo now honour the saved `summarisedTag` by storing the actual tag in undo payloads.
@@ -229,6 +230,7 @@ Latest verification:
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed with local port binding and Chromium launch allowed. Screenshots were written to `/var/folders/z_/872qmw6s5_d1qlyd3xdgsl5r0000gn/T/mail_summariser_rendered_ui/`.
 - `backend/.venv/bin/python scripts/validate_full_stack.py --attempts 5 --delay 0.5`: passed with local port binding allowed. A first sandboxed run failed because selecting and binding a loopback port was not permitted.
 - `./scripts/validate_full_stack.sh`: passed when run with local port binding allowed. A first sandboxed run failed because local binding to `127.0.0.1:8766` was not permitted.
+- GitHub CI run `25518723986`: passed, including Ubuntu Python 3.11 rendered UI regression and the cross-platform startup validation matrix.
 - Rendered Safari screenshot on `http://127.0.0.1:5173` with backend `http://127.0.0.1:8766`: loaded the updated task-first browser UI.
 - Rendered Playwright screenshot on `http://127.0.0.1:8040`: loaded the updated `docs/` project website with `mail_summariser` hero, Sample Mailbox copy, download section, and architecture diagrams.
 - API smoke on `POST /summaries` with the default unread sample-mail criteria returned two built-in sample messages.
@@ -245,7 +247,7 @@ Validation implications:
 - Secret masking and masked-write semantics must not regress.
 - Dev fake-mail endpoints must remain disabled unless explicitly enabled.
 - Behaviour changes across backend/client boundaries require contract discipline.
-- Playwright browser installation is now a CI dependency for the Ubuntu Python 3.11 test job and should be watched on the next push.
+- Playwright browser installation is now a CI dependency for the Ubuntu Python 3.11 test job; the first CI run passed, but CDN/browser-install availability remains an external dependency.
 - Sample mailbox naming is implemented in clients, but backend route and schema names intentionally retain `dummyMode` for compatibility.
 - Browser and macOS clients should continue to be reviewed together when backend response contracts change.
 
@@ -257,13 +259,12 @@ Validation implications:
 
 ## Pending tasks
 
-- Push and confirm the rendered UI regression, Playwright dependency, and expanded fuzz coverage in CI.
+- No immediate post-push blockers. Continue recurring tasks as workflows evolve.
 
 ## Next steps
 
-1. Push and review CI for the rendered UI regression and expanded fuzz coverage.
-2. Add more rendered UI assertions as new workflows land.
-3. Keep documentation, website, and client copy aligned around "Sample Mailbox" while preserving backend API compatibility.
+1. Add more rendered UI assertions as new workflows land.
+2. Keep documentation, website, and client copy aligned around "Sample Mailbox" while preserving backend API compatibility.
 
 ## Longer-term steps
 
@@ -282,4 +283,4 @@ Validation implications:
 
 ---
 
-Last updated: 2026-05-07 16:52
+Last updated: 2026-05-07 16:57
