@@ -71,6 +71,56 @@ def _status_is_handled(response_status: int) -> bool:
     return response_status in {200, 400, 422}
 
 
+def test_summary_endpoint_skips_provider_when_search_returns_no_messages() -> None:
+    backend_app._reset_dummy_sandbox()
+    payload = {
+        "criteria": {
+            "keyword": "no-match",
+            "rawSearch": "",
+            "sender": "",
+            "recipient": "",
+            "tag": "",
+            "unreadOnly": True,
+            "readOnly": False,
+            "replied": None,
+            "useAnd": True,
+        },
+        "summaryLength": 5,
+    }
+
+    with (
+        TestClient(backend_app.app) as client,
+        mock.patch.object(routers_summaries, "search_messages", return_value=[]),
+        mock.patch.object(routers_summaries, "summarize_messages") as summarize_mock,
+    ):
+        response = client.post("/summaries", json=payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["messages"] == []
+    assert body["summary"].startswith("No messages matched")
+    summarize_mock.assert_not_called()
+
+
+def test_summary_endpoint_clamps_large_summary_length_before_persistence() -> None:
+    backend_app._reset_dummy_sandbox()
+    payload = {
+        "criteria": {},
+        "summaryLength": 10 ** 100,
+    }
+
+    with (
+        TestClient(backend_app.app) as client,
+        mock.patch.object(routers_summaries, "search_messages", return_value=[]),
+        mock.patch.object(routers_summaries, "summarize_messages") as summarize_mock,
+    ):
+        response = client.post("/summaries", json=payload)
+
+    assert response.status_code == 200
+    assert response.json()["messages"] == []
+    summarize_mock.assert_not_called()
+
+
 @given(payload=summary_payload_shape)
 @settings(
     max_examples=120,

@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import importlib
+import sys
+import tempfile
+from pathlib import Path
 from unittest import mock
 
 from fastapi.testclient import TestClient
 
 from backend import app as backend_app
+from backend import db as backend_db
 from backend import model_provider_service
 
 
@@ -72,6 +76,84 @@ def test_runtime_start_ollama_endpoint_returns_runtime_payload() -> None:
     payload = response.json()
     assert payload['status'] == 'ok'
     assert payload['runtime']['ollama']['running'] is True
+
+
+def test_runtime_routes_use_persisted_ollama_settings() -> None:
+    saved_host = 'http://127.0.0.1:9999'
+    saved_model = 'custom-model:latest'
+    host_calls: list[str] = []
+    original_backend_db_path = backend_db.DB_PATH
+    top_level_db = sys.modules.get('db')
+    original_top_level_db_path = getattr(top_level_db, 'DB_PATH', None)
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_db_path = Path(temp_dir) / 'mail_summariser.sqlite3'
+        backend_db.DB_PATH = temp_db_path
+        if top_level_db is not None:
+            top_level_db.DB_PATH = temp_db_path
+
+        def capture_list_models(host: str) -> list[str]:
+            host_calls.append(host)
+            return [saved_model]
+
+        def capture_serve_model(host: str, model_name: str) -> tuple[bool, str]:
+            host_calls.append(host)
+            assert model_name == saved_model
+            return True, 'served'
+
+        settings_payload = {
+            key: value for key, value in backend_app.DEFAULT_SETTINGS.items()
+            if key != 'llmApiKey'
+        }
+        settings_payload.update({
+            'imapPassword': '',
+            'smtpPassword': '',
+            'username': '',
+            'recipientEmail': '',
+            'openaiApiKey': '',
+            'anthropicApiKey': '',
+            'ollamaHost': saved_host,
+            'modelName': saved_model,
+            'ollamaStartOnStartup': False,
+        })
+
+        try:
+            with (
+                mock.patch.object(model_provider_service, 'is_ollama_installed',
+                                  return_value=True),
+                mock.patch.object(model_provider_service, 'is_ollama_running',
+                                  return_value=True),
+                mock.patch.object(model_provider_service, 'list_ollama_models',
+                                  side_effect=capture_list_models),
+                mock.patch.object(model_provider_service, 'serve_ollama_model',
+                                  side_effect=capture_serve_model),
+                mock.patch.object(top_level_provider, 'is_ollama_installed',
+                                  return_value=True),
+                mock.patch.object(top_level_provider, 'is_ollama_running',
+                                  return_value=True),
+                mock.patch.object(top_level_provider, 'list_ollama_models',
+                                  side_effect=capture_list_models),
+                mock.patch.object(top_level_provider, 'serve_ollama_model',
+                                  side_effect=capture_serve_model),
+            ):
+                with TestClient(backend_app.app) as client:
+                    save = client.post('/settings', json=settings_payload)
+                    runtime = client.get('/runtime/status')
+                    options = client.get('/models/options', params={'provider': 'ollama'})
+                    serve = client.post('/models/serve', json={'name': saved_model})
+        finally:
+            backend_db.DB_PATH = original_backend_db_path
+            if top_level_db is not None:
+                top_level_db.DB_PATH = original_top_level_db_path
+
+    assert save.status_code == 200
+    assert runtime.status_code == 200
+    assert options.status_code == 200
+    assert serve.status_code == 200
+    assert runtime.json()['ollama']['host'] == saved_host
+    assert runtime.json()['ollama']['modelName'] == saved_model
+    assert options.json()['ollama']['host'] == saved_host
+    assert saved_host in host_calls
 
 
 def test_runtime_ollama_admin_routes() -> None:

@@ -8,7 +8,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 class WebContractTests(unittest.TestCase):
-    def test_main_log_and_dummy_mode_copy_exist(self) -> None:
+    def test_main_log_and_sample_mailbox_copy_exist(self) -> None:
         html = (REPO_ROOT / "webapp" / "index.html").read_text(encoding="utf-8")
         self.assertIn(">Main<", html)
         self.assertIn(">Log<", html)
@@ -16,6 +16,11 @@ class WebContractTests(unittest.TestCase):
         self.assertIn('id="help-button"', html)
         self.assertIn('class="help-btn-glyph"', html)
         self.assertIn('id="dummy-mode-toggle"', html)
+        self.assertIn("Sample Mailbox", html)
+        self.assertIn("Unread Mail", html)
+        self.assertIn("Needs Reply", html)
+        self.assertNotIn("Dummy Mode", html)
+        self.assertNotIn("Dummy mode", html)
         self.assertIn('id="test-connection"', html)
         self.assertIn("Start Ollama automatically on startup", html)
         self.assertIn("Stop Ollama automatically on exit", html)

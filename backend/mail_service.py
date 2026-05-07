@@ -528,8 +528,8 @@ def test_mail_connection(settings: dict[str, Any]) -> dict[str, Any]:
         return {
             'status': 'ok',
             'mode': 'dummy',
-            'imap': {'status': 'ok', 'message': 'Dummy mode uses the built-in test mailbox'},
-            'smtp': {'status': 'ok', 'message': 'Dummy mode uses the in-memory outbox'},
+            'imap': {'status': 'ok', 'message': 'Sample mailbox uses resettable sample mail'},
+            'smtp': {'status': 'ok', 'message': 'Sample mailbox uses the local sample outbox'},
             'details': {'messageCount': len(_dummy_mailbox)},
         }
     # Live IMAP/SMTP check
