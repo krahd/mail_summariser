@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-05-07 15:57
+Last updated: 2026-05-07 16:12
 
 ## Purpose
 
@@ -199,6 +199,7 @@ python scripts/validate_full_stack.py
 - Summary length is clamped before provider calls and persistence so malformed or extremely large payload values cannot overflow SQLite.
 - Browser and macOS user-facing copy now uses "Sample Mailbox" while preserving the `dummyMode` API field.
 - The GitHub Pages website source has been restored in `docs/` with current Sample Mailbox positioning, download links, architecture diagrams, and a rendered product screenshot.
+- The Python full-stack validator now selects a free static-web port by default, binds the static server to `127.0.0.1`, watches startup subprocess exits, and includes service log tails in readiness failures. This addresses the macOS CI startup-validation timeout observed against fixed port `8000`.
 - Runtime/model routes now read merged persisted settings for Ollama host and model name.
 - `tag_summarised` actions and undo now honour the saved `summarisedTag` by storing the actual tag in undo payloads.
 - Browser backend target initialisation now preserves the browser-selected backend URL during settings loads.
@@ -210,12 +211,16 @@ python scripts/validate_full_stack.py
 
 Latest verification:
 
+- `backend/.venv/bin/python -m pytest -q tests/test_validate_full_stack_script.py`: passed with 3 passed.
+- `backend/.venv/bin/python -m pytest -q tests/test_web_contract.py tests/test_validate_full_stack_script.py`: passed with 6 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_web_contract.py`: passed with 3 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_summary_service_provider_library.py tests/test_fuzz_summary_payloads.py::test_summary_endpoint_skips_provider_when_search_returns_no_messages`: passed with 8 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_fuzz_summary_payloads.py`: passed with 4 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_backend_mail_flow.py tests/test_runtime_model_endpoints.py tests/test_runtime_controls.py tests/test_fuzz_summary_payloads.py tests/test_summary_service_provider_library.py tests/test_web_contract.py`: passed with 32 passed.
-- `backend/.venv/bin/python -m pytest -q`: passed with 71 passed, 1 skipped.
+- `backend/.venv/bin/python -m pytest -q`: passed with 75 passed, 1 skipped.
 - `./scripts/check_repo_hygiene.sh`: passed.
+- `git diff --check`: passed.
+- `backend/.venv/bin/python scripts/validate_full_stack.py --attempts 5 --delay 0.5`: passed with local port binding allowed. A first sandboxed run failed because selecting and binding a loopback port was not permitted.
 - `./scripts/validate_full_stack.sh`: passed when run with local port binding allowed. A first sandboxed run failed because local binding to `127.0.0.1:8766` was not permitted.
 - Rendered Safari screenshot on `http://127.0.0.1:5173` with backend `http://127.0.0.1:8766`: loaded the updated task-first browser UI.
 - Rendered Playwright screenshot on `http://127.0.0.1:8040`: loaded the updated `docs/` project website with `mail_summariser` hero, Sample Mailbox copy, download section, and architecture diagrams.
@@ -244,11 +249,11 @@ Validation implications:
 - Keep browser and macOS client expectations aligned with backend response contracts.
 - Keep hygiene checks current as packaging and release scripts evolve.
 - Add repeatable rendered UI regression checks for first-run, empty-result, settings, live-mode, and mobile flows.
-- Confirm dependency and hygiene changes in CI after pushing.
+- Push and confirm the macOS startup-validation fix in CI.
 
 ## Next steps
 
-1. Push and review CI for the dependency, hygiene, and full-stack validation changes.
+1. Push and review CI for the macOS startup-validation fix.
 2. Add automated rendered UI coverage using Playwright or an enabled WebDriver path.
 3. Continue broadening malformed-input fuzzing around lightly covered route combinations.
 4. Keep documentation, website, and client copy aligned around "Sample Mailbox" while preserving backend API compatibility.
@@ -270,4 +275,4 @@ Validation implications:
 
 ---
 
-Last updated: 2026-05-07 15:57
+Last updated: 2026-05-07 16:12
