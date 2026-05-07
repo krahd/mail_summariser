@@ -1,24 +1,24 @@
 :root {
-  --bg: #f3f6f6;
-  --bg-soft: #fafcfc;
-  --surface: rgba(255, 255, 255, 0.96);
-  --surface-muted: #f5f8f7;
+  --bg: #f0f4ef;
+  --bg-soft: #f9fbf8;
+  --surface: rgba(255, 255, 255, 0.95);
+  --surface-muted: #f3f7f2;
   --surface-strong: #ffffff;
-  --ink: #18352f;
-  --muted: #65746f;
-  --line: rgba(24, 53, 47, 0.08);
-  --line-strong: rgba(24, 53, 47, 0.16);
-  --accent: #12685d;
-  --accent-strong: #0e564d;
-  --accent-soft: rgba(18, 104, 93, 0.08);
-  --accent-warm: #b66742;
+  --ink: #1d2f2c;
+  --muted: #5f6e69;
+  --line: rgba(29, 47, 44, 0.11);
+  --line-strong: rgba(29, 47, 44, 0.2);
+  --accent: #0a7569;
+  --accent-strong: #08584f;
+  --accent-soft: rgba(10, 117, 105, 0.1);
+  --accent-warm: #c96f3e;
   --danger-bg: #fdf2ef;
   --danger-ink: #9b3d31;
-  --warn-bg: #fff4e4;
+  --warn-bg: #fff2df;
   --warn-ink: #875a1d;
-  --success-ink: #0b6257;
-  --shadow-soft: 0 10px 28px rgba(16, 31, 27, 0.05);
-  --shadow-frame: 0 8px 22px rgba(16, 31, 27, 0.045);
+  --success-ink: #08584f;
+  --shadow-soft: 0 14px 32px rgba(15, 28, 25, 0.06);
+  --shadow-frame: 0 12px 28px rgba(15, 28, 25, 0.06);
   --radius-lg: 18px;
   --radius-md: 14px;
   --radius-sm: 10px;
@@ -37,8 +37,11 @@ body {
   margin: 0;
   min-height: 100vh;
   color: var(--ink);
-  font-family: "Source Sans 3", sans-serif;
-  background: linear-gradient(180deg, #f1f5f4 0%, #f8fbfb 30%, #fcfdfd 100%);
+  font-family: "IBM Plex Sans", sans-serif;
+  background:
+    radial-gradient(circle at 14% 8%, rgba(201, 111, 62, 0.12) 0%, rgba(201, 111, 62, 0) 40%),
+    radial-gradient(circle at 88% 14%, rgba(10, 117, 105, 0.14) 0%, rgba(10, 117, 105, 0) 42%),
+    linear-gradient(180deg, #eef3ee 0%, #f7faf7 36%, #fbfdfb 100%);
   padding: 12px 20px 24px;
 }
 
@@ -56,7 +59,28 @@ body::before {
 }
 
 .bg-shape {
-  display: none;
+  position: fixed;
+  z-index: -1;
+  border-radius: 999px;
+  filter: blur(60px);
+  opacity: 0.36;
+  pointer-events: none;
+}
+
+.bg-shape-1 {
+  width: 300px;
+  height: 300px;
+  top: -90px;
+  left: -40px;
+  background: rgba(10, 117, 105, 0.32);
+}
+
+.bg-shape-2 {
+  width: 340px;
+  height: 340px;
+  right: -120px;
+  top: 34%;
+  background: rgba(201, 111, 62, 0.28);
 }
 
 a {
@@ -126,8 +150,9 @@ main {
 }
 
 .app-title-copy {
-  display: flex;
-  align-items: center;
+  display: grid;
+  align-items: start;
+  gap: 2px;
   min-width: 0;
 }
 
@@ -135,9 +160,9 @@ main {
 .panel-kicker {
   margin: 0 0 4px;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.15em;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--accent-strong);
 }
 
@@ -145,7 +170,7 @@ h1,
 h2,
 h3,
 .tab {
-  font-family: "Manrope", "Source Sans 3", sans-serif;
+  font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
 }
 
 h1,
@@ -167,8 +192,60 @@ h1 {
 
 .app-subtitle {
   color: var(--muted);
-  max-width: 62ch;
+  max-width: 72ch;
   font-size: 0.95rem;
+}
+
+.site-hero {
+  width: var(--content-width);
+  margin: 0 auto 14px;
+  padding: 16px 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: stretch;
+  background:
+    linear-gradient(130deg, rgba(255, 255, 255, 0.94) 0%, rgba(242, 250, 248, 0.92) 48%, rgba(255, 249, 242, 0.92) 100%);
+  border-color: rgba(29, 47, 44, 0.14);
+}
+
+.hero-copy {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+}
+
+.hero-copy h2 {
+  font-size: clamp(1.2rem, 1.8vw, 1.5rem);
+  letter-spacing: -0.03em;
+}
+
+.hero-copy p {
+  color: var(--muted);
+  max-width: 48ch;
+  line-height: 1.45;
+}
+
+.hero-pill {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 10px 12px;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+}
+
+.hero-pill-label {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-size: 0.68rem;
+}
+
+.hero-pill-value {
+  font-size: 0.88rem;
+  line-height: 1.32;
 }
 
 .app-header-actions {
@@ -250,7 +327,7 @@ h1 {
 }
 
 .runtime-banner-copy strong {
-  font-family: "Manrope", "Source Sans 3", sans-serif;
+  font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
   color: var(--warn-ink);
 }
 
@@ -345,7 +422,7 @@ main {
   display: grid;
   grid-template-columns: minmax(290px, 330px) minmax(0, 1fr);
   gap: 16px;
-  animation: fade-up 180ms ease;
+  animation: fade-up 260ms ease;
 }
 
 .studio-tab.tab-panel.active {
@@ -498,7 +575,7 @@ main {
 }
 
 .digest-metric-value {
-  font-family: "Manrope", "Source Sans 3", sans-serif;
+  font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
   font-size: 0.95rem;
   color: var(--ink);
   line-height: 1.2;
@@ -528,6 +605,7 @@ main {
   border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(2px);
 }
 
 .workspace-sidebar,
@@ -599,7 +677,7 @@ main {
 }
 
 .log-entry-action {
-  font-family: "Manrope", "Source Sans 3", sans-serif;
+  font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
   font-size: 1rem;
 }
 
@@ -1016,6 +1094,23 @@ td[colspan] {
   box-shadow: var(--shadow-soft);
 }
 
+.studio-tab.tab-panel.active > .card,
+.site-hero > article {
+  animation: rise-in 420ms ease both;
+}
+
+.site-hero > article:nth-child(2) {
+  animation-delay: 60ms;
+}
+
+.site-hero > article:nth-child(3) {
+  animation-delay: 110ms;
+}
+
+.site-hero > article:nth-child(4) {
+  animation-delay: 160ms;
+}
+
 .settings-group-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -1059,7 +1154,7 @@ td[colspan] {
 }
 
 .mode-summary strong {
-  font-family: "Manrope", "Source Sans 3", sans-serif;
+  font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
 }
 
 .mode-summary p {
@@ -1148,7 +1243,27 @@ td[colspan] {
   }
 }
 
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (max-width: 1080px) {
+  .site-hero {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .hero-copy {
+    padding: 4px 2px;
+  }
+
   .studio-tab.tab-panel.active {
     grid-template-columns: 1fr;
   }
@@ -1193,6 +1308,7 @@ td[colspan] {
   .app-header,
   .runtime-banner,
   .tabs,
+  .site-hero,
   main {
     width: min(100%, calc(100vw - 24px));
   }

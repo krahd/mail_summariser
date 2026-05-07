@@ -7,7 +7,7 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='20' fill='%2312685d'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -19,7 +19,9 @@
       <div class="app-title-lockup">
         <span class="app-mark" aria-hidden="true"></span>
         <div class="app-title-copy">
+          <p class="app-kicker">Local-First Workflow</p>
           <h1>mail_summariser</h1>
+          <p class="app-subtitle">Summarise inbox activity, inspect context, and apply batch actions from one workspace.</p>
         </div>
       </div>
       <div class="app-header-actions">
@@ -45,6 +47,26 @@
     <button class="tab" data-tab="settings">Settings</button>
     <button id="dummy-mode-toggle" type="button" class="mode-toggle">Dummy Mode: On</button>
   </nav>
+
+  <section class="site-hero card" aria-label="Workspace overview">
+    <article class="hero-copy">
+      <p class="panel-kicker">Control Room</p>
+      <h2>Email Digest Studio</h2>
+      <p>Run fast summaries, review full message context, and trigger scoped actions with clear operational visibility.</p>
+    </article>
+    <article class="hero-pill">
+      <p class="hero-pill-label">Workflow</p>
+      <p class="hero-pill-value">Search -> Summarise -> Review -> Apply</p>
+    </article>
+    <article class="hero-pill">
+      <p class="hero-pill-label">Runtime Modes</p>
+      <p class="hero-pill-value">Dummy, IMAP/SMTP, and gated fake-mail tools</p>
+    </article>
+    <article class="hero-pill">
+      <p class="hero-pill-label">Provider Layer</p>
+      <p class="hero-pill-value">Ollama, OpenAI, Anthropic, deterministic fallback</p>
+    </article>
+  </section>
 
   <main>
     <section id="tab-search" class="tab-panel active studio-tab">
