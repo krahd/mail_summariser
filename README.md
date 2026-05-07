@@ -55,6 +55,17 @@ python scripts/validate_full_stack.py
 
 CI runs startup validation in a matrix on Linux, macOS, and Windows.
 
+### Rendered UI regression
+
+Install the Playwright browser once, then run the rendered browser smoke test:
+
+```bash
+python -m playwright install chromium
+python scripts/validate_rendered_ui.py
+```
+
+This starts isolated backend and static-web instances, verifies the sample mailbox first-run flow, empty-result handling, settings/live-mode toggle, and a mobile layout check. Screenshots are written under the system temp directory.
+
 ### Repository hygiene guard
 
 ```bash
