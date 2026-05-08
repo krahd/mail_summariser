@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-05-08 18:10
+Last updated: 2026-05-08 18:39
 
 ## Purpose
 
@@ -317,9 +317,10 @@ Validation implications:
 
 ## Next steps
 
-1. Keep expanding targeted coverage where browser and macOS copy or status affordances intentionally mirror each other.
-2. Run the broader validation set again after the next cross-surface UI or prompt-behaviour change.
-3. Add targeted tests for in-progress pull handling so serve-while-downloading regressions are caught early. (Model-name normalisation and CLI-style row parsing are now covered by tests added in de9d904.)
+- No outstanding next steps. All three items from the previous cycle are now implemented and verified:
+  - In-progress pull handling tests added and passing (`test_runtime_model_endpoints.py`).
+  - Browser/macOS copy mirroring tests added and passing (`test_web_contract.py`).
+  - Full suite: **101 passed, 1 skipped**.
 
 ## Longer-term steps
 
@@ -338,4 +339,4 @@ Validation implications:
 
 ---
 
-Last updated: 2026-05-08 18:10
+Last updated: 2026-05-08 18:39
