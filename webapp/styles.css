@@ -1212,10 +1212,6 @@ td[colspan] {
   color: var(--accent-strong);
 }
 
-.ollama-status-panel {
-  background: linear-gradient(180deg, #ffffff 0%, #f3faf8 100%);
-}
-
 .ollama-toggle-grid {
   display: grid;
   gap: 6px;
@@ -1303,64 +1299,6 @@ td[colspan] {
 
 .connection-status {
   color: var(--muted);
-}
-
-.status-help-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 100%;
-}
-
-.message-help-btn {
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  border: 1px solid var(--line-strong);
-  background: var(--surface-strong);
-  color: var(--accent-strong);
-  font-size: 0.68rem;
-  font-weight: 700;
-  line-height: 1;
-  cursor: pointer;
-  box-shadow: none;
-  padding: 0;
-}
-
-.message-help-btn:hover {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  box-shadow: none;
-}
-
-.message-explainer-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 30;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background: rgba(15, 28, 25, 0.34);
-}
-
-.message-explainer-card {
-  width: min(560px, 100%);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--surface-strong);
-  box-shadow: var(--shadow-soft);
-  padding: 16px 18px;
-  display: grid;
-  gap: 10px;
-}
-
-.message-explainer-card h3 {
-  color: var(--accent-strong);
-}
-
-.message-explainer-card p {
-  line-height: 1.5;
 }
 
 .is-hidden {
