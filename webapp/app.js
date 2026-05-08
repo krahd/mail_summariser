@@ -118,11 +118,20 @@ const useFakeMailSettingsBtn = document.getElementById("use-fake-mail-settings")
 const diagnosticsProviderState = document.getElementById("diag-provider-state");
 const diagnosticsRuntimeState = document.getElementById("diag-runtime-state");
 const diagnosticsFakeMailState = document.getElementById("diag-fakemail-state");
+const bottomStatusText = document.getElementById("bottom-status-text");
+const bottomStatusMailbox = document.getElementById("bottom-status-mailbox");
+const bottomStatusProvider = document.getElementById("bottom-status-provider");
+const bottomStatusJob = document.getElementById("bottom-status-job");
+const bottomStatusMessages = document.getElementById("bottom-status-messages");
 const messageHelpButtons = Array.from(document.querySelectorAll(".message-help-btn"));
 const messageExplainerModal = document.getElementById("message-explainer-modal");
 const messageExplainerTitle = document.getElementById("message-explainer-title");
 const messageExplainerBody = document.getElementById("message-explainer-body");
-const messageExplainerCloseBtn = document.getElementById("message-explainer-close");
+const ollamaStatusSummaryLine = document.getElementById("ollama-status-summary");
+
+let ollamaRuntimeStatusState = { message: "Runtime status not loaded yet.", isError: false };
+let ollamaModelStatusState = { message: "Model list not loaded yet.", isError: false };
+let ollamaCatalogStatusState = { message: "Catalogue not loaded yet.", isError: false };
 
 const api = createApiClient({
   getBaseUrl,
@@ -139,6 +148,11 @@ function getBaseUrl() {
 function setStatus(message, isError = false) {
   statusLine.textContent = message;
   statusLine.style.color = isError ? "var(--danger-ink)" : "var(--success-ink)";
+  if (bottomStatusText) {
+    bottomStatusText.textContent = message;
+    bottomStatusText.style.color = isError ? "var(--danger-ink)" : "var(--ink)";
+  }
+  updateBottomStatusBar();
 }
 
 function setConnectionTestStatus(message, isError = false) {
@@ -201,6 +215,7 @@ function updateHealthStrip() {
     const stamp = new Date();
     healthSync.textContent = `Last sync: ${stamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
   }
+  updateBottomStatusBar();
 }
 
 function updateDiagnosticsSummary() {
@@ -296,6 +311,22 @@ function updateDigestMetrics() {
   if (digestMetricFilter) {
     digestMetricFilter.textContent = formatQuickFilterLabel(activeQuickFilter);
   }
+  updateBottomStatusBar();
+}
+
+function updateBottomStatusBar() {
+  if (bottomStatusMailbox) {
+    bottomStatusMailbox.textContent = `Mailbox: ${activeDummyMode ? "Sample" : "Live"}`;
+  }
+  if (bottomStatusProvider) {
+    bottomStatusProvider.textContent = `Provider: ${providerDisplayName(selectedProvider())}`;
+  }
+  if (bottomStatusJob) {
+    bottomStatusJob.textContent = currentJobId ? `Job: ${currentJobId}` : "Job: none";
+  }
+  if (bottomStatusMessages) {
+    bottomStatusMessages.textContent = `Messages: ${currentMessages.length}`;
+  }
 }
 
 function applyQuickFilter(filter) {
@@ -358,6 +389,7 @@ function clearCurrentWorkspaceState() {
   setActionButtons(false);
   updateActionScopePreview();
   updateDigestMetrics();
+  updateBottomStatusBar();
 }
 
 function formatMessageDate(value) {
@@ -639,27 +671,58 @@ function syncDummyModeUI(enabled) {
 }
 
 function setOllamaStatus(message, isError = false) {
-  if (!ollamaStatusLine) {
-    return;
+  ollamaModelStatusState = { message, isError };
+  if (ollamaStatusLine) {
+    ollamaStatusLine.textContent = message;
+    ollamaStatusLine.style.color = isError ? "var(--danger-ink)" : "var(--success-ink)";
   }
-  ollamaStatusLine.textContent = message;
-  ollamaStatusLine.style.color = isError ? "var(--danger-ink)" : "var(--success-ink)";
+  updateOllamaStatusSummary();
 }
 
 function setOllamaRuntimeStatus(message, isError = false) {
-  if (!ollamaRuntimeStatusLine) {
-    return;
+  ollamaRuntimeStatusState = { message, isError };
+  if (ollamaRuntimeStatusLine) {
+    ollamaRuntimeStatusLine.textContent = message;
+    ollamaRuntimeStatusLine.style.color = isError ? "var(--danger-ink)" : "var(--success-ink)";
   }
-  ollamaRuntimeStatusLine.textContent = message;
-  ollamaRuntimeStatusLine.style.color = isError ? "var(--danger-ink)" : "var(--success-ink)";
+  updateOllamaStatusSummary();
 }
 
 function setCatalogStatus(message, isError = false) {
-  if (!catalogStatusLine) {
+  ollamaCatalogStatusState = { message, isError };
+  if (catalogStatusLine) {
+    catalogStatusLine.textContent = message;
+    catalogStatusLine.style.color = isError ? "var(--danger-ink)" : "var(--success-ink)";
+  }
+  updateOllamaStatusSummary();
+}
+
+function updateOllamaStatusSummary() {
+  if (!ollamaStatusSummaryLine) {
     return;
   }
-  catalogStatusLine.textContent = message;
-  catalogStatusLine.style.color = isError ? "var(--danger-ink)" : "var(--success-ink)";
+
+  const lines = [
+    { label: "Runtime", ...ollamaRuntimeStatusState },
+    { label: "Models", ...ollamaModelStatusState },
+    { label: "Catalogue", ...ollamaCatalogStatusState },
+  ];
+
+  const seen = new Set();
+  const deduped = [];
+  for (const entry of lines) {
+    const normalized = String(entry.message || "").trim().toLowerCase();
+    if (!normalized || seen.has(normalized)) {
+      continue;
+    }
+    seen.add(normalized);
+    deduped.push(`${entry.label}: ${entry.message}`);
+  }
+
+  ollamaStatusSummaryLine.textContent = deduped.join(" | ") || "Status not available yet.";
+  ollamaStatusSummaryLine.style.color = lines.some((entry) => entry.isError)
+    ? "var(--danger-ink)"
+    : "var(--success-ink)";
 }
 
 function selectedProvider() {
@@ -982,7 +1045,7 @@ function refreshProviderSystemMessageEditor() {
   providerSystemMessageEditor.value = field?.value || "";
   if (providerSystemMessageNote) {
     providerSystemMessageNote.textContent =
-      `${displayName} uses its own saved system message. Switching providers swaps the text shown here.`;
+      `${displayName} uses its own saved system message. Keep it focused on priorities, deadlines, blockers, and reply-needed items.`;
   }
 }
 
@@ -1026,10 +1089,10 @@ async function refreshDownloadCatalog() {
     }
 
     setCatalogStatus(`Loaded ${models.length} downloadable models from the Ollama catalogue.`);
-    return models.length;
+    return { ok: true, count: models.length };
   } catch (error) {
     setCatalogStatus(`Catalogue refresh failed: ${error.message}`, true);
-    return 0;
+    return { ok: false, count: 0, error: error.message };
   }
 }
 
@@ -1110,7 +1173,25 @@ async function refreshModelOptions() {
     }
 
     const options = Array.isArray(result.models) ? result.models : [];
-    if (options.length > 0 && !options.includes(modelInput.value)) {
+    const previousSelection = String(modelInput.value || "").trim();
+
+    if (modelInput instanceof HTMLSelectElement) {
+      modelInput.innerHTML = "";
+      if (options.length === 0) {
+        const emptyOption = document.createElement("option");
+        emptyOption.value = "";
+        emptyOption.textContent = "No available models";
+        modelInput.appendChild(emptyOption);
+      } else {
+        options.forEach((name) => {
+          const option = document.createElement("option");
+          option.value = name;
+          option.textContent = name;
+          modelInput.appendChild(option);
+        });
+      }
+      modelInput.value = options.includes(previousSelection) ? previousSelection : options[0] || "";
+    } else if (options.length > 0 && !options.includes(modelInput.value)) {
       modelInput.value = options[0];
     }
 
@@ -1119,10 +1200,10 @@ async function refreshModelOptions() {
     } else {
       setOllamaStatus(`Loaded ${options.length} suggested models for ${result.provider}.`);
     }
-    return options.length;
+    return { ok: true, count: options.length };
   } catch (error) {
     setOllamaStatus(`Model refresh failed: ${error.message}`, true);
-    return 0;
+    return { ok: false, count: 0, error: error.message };
   }
 }
 
@@ -1276,23 +1357,11 @@ function openMessageExplainer(kind) {
   }
 
   const copy = {
-    runtime: {
-      title: "Runtime Status Help",
+    ollama: {
+      title: "Ollama Status Help",
       body:
-        "Runtime status tells you whether the local Ollama service is installed, reachable, and ready to answer requests. " +
-        "If it says running but not ready, model warm-up may still be in progress or may have failed.",
-    },
-    models: {
-      title: "Model Status Help",
-      body:
-        "Model status reflects local model availability and refresh results from the configured provider. " +
-        "If refresh fails, check backend connectivity, provider choice, and whether Ollama is running.",
-    },
-    catalog: {
-      title: "Catalogue Status Help",
-      body:
-        "Catalogue status reports whether downloadable models were fetched successfully. " +
-        "An empty catalogue can be normal for connectivity issues, offline mode, or provider-side lookup limits.",
+        "This panel combines runtime, local-model, and catalogue status into one view. " +
+        "Use Refresh Ollama Status to update runtime state, Refresh Available Models to reload local models, and Discover Models to reload downloadable model entries.",
     },
   };
 
@@ -1356,7 +1425,17 @@ function wireEvents() {
     });
   });
 
-  messageExplainerCloseBtn?.addEventListener("click", closeMessageExplainer);
+  document.addEventListener("click", (event) => {
+    if (!messageExplainerModal || messageExplainerModal.classList.contains("is-hidden")) {
+      return;
+    }
+    const target = event.target;
+    if (target instanceof Element && target.closest(".message-help-btn")) {
+      return;
+    }
+    closeMessageExplainer();
+  });
+
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closeMessageExplainer();
@@ -1567,9 +1646,15 @@ function wireEvents() {
   });
 
   refreshModelsBtn.addEventListener("click", async () => {
+    refreshModelsBtn.disabled = true;
     setStatus("Refreshing available models...");
-    const modelCount = await refreshModelOptions();
-    setStatus(`Available models refreshed (${modelCount}).`);
+    const result = await refreshModelOptions();
+    if (result.ok) {
+      setStatus(`Available models refreshed (${result.count}).`);
+    } else {
+      setStatus(`Available model refresh failed: ${result.error}`, true);
+    }
+    refreshModelsBtn.disabled = false;
   });
   refreshRuntimeStatusBtn?.addEventListener("click", async () => {
     try {
@@ -1624,9 +1709,15 @@ function wireEvents() {
   toggleImapPasswordBtn?.addEventListener("click", () => toggleSecretField(imapPasswordInput, toggleImapPasswordBtn));
   toggleSmtpPasswordBtn?.addEventListener("click", () => toggleSecretField(smtpPasswordInput, toggleSmtpPasswordBtn));
   refreshCatalogBtn.addEventListener("click", async () => {
+    refreshCatalogBtn.disabled = true;
     setStatus("Discovering downloadable models...");
-    const modelCount = await refreshDownloadCatalog();
-    setStatus(`Discover models completed (${modelCount}).`);
+    const result = await refreshDownloadCatalog();
+    if (result.ok) {
+      setStatus(`Discover models completed (${result.count}).`);
+    } else {
+      setStatus(`Discover models failed: ${result.error}`, true);
+    }
+    refreshCatalogBtn.disabled = false;
   });
   downloadModelBtn.addEventListener("click", downloadSelectedModel);
   stopMailSummariserBtn?.addEventListener("click", async () => {

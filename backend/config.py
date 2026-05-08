@@ -37,15 +37,15 @@ ENABLE_DEV_TOOLS = os.getenv('MAIL_SUMMARISER_ENABLE_DEV_TOOLS', 'false').lower(
 
 DEFAULT_OPENAI_SYSTEM_MESSAGE = os.getenv(
     'OPENAI_SYSTEM_MESSAGE',
-    'You are an assistant that creates compact, practical email digests.',
+    'Create compact, practical email digests. Prioritise deadlines, requests, blockers, and follow-up actions. Group related threads, avoid greetings and filler, do not invent facts, and make the next step obvious when one exists.',
 ).strip()
 DEFAULT_ANTHROPIC_SYSTEM_MESSAGE = os.getenv(
     'ANTHROPIC_SYSTEM_MESSAGE',
-    'You create practical, concise email summaries with action cues.',
+    'Create concise, practical email summaries with clear action cues. Highlight deadlines, owners, approvals, risks, and reply-needed items. Keep wording neutral, specific, and free of invented details.',
 ).strip()
 DEFAULT_OLLAMA_SYSTEM_MESSAGE = os.getenv(
     'OLLAMA_SYSTEM_MESSAGE',
-    'You create compact, practical email digests that focus on priorities, deadlines, and follow-up actions.',
+    'Create compact, practical email digests that focus on priorities, deadlines, blockers, and follow-up actions. Group related messages, keep the output scannable, and prefer specific next steps over generic commentary.',
 ).strip()
 
 DEFAULT_SYSTEM_MESSAGES = {

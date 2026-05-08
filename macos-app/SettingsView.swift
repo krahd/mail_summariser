@@ -35,7 +35,7 @@ struct SettingsView: View {
                     Form {
                         Section {
                             Toggle("Sample Mailbox", isOn: $localSettings.dummyMode)
-                            Text(localSettings.dummyMode ? "Using resettable sample mail and the local sample outbox." : "Using the configured IMAP and SMTP servers.")
+                            Text(localSettings.dummyMode ? "Using the Sample Mailbox with resettable sample messages and the local sample outbox." : "Using the configured live IMAP and SMTP servers.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -186,6 +186,9 @@ struct SettingsView: View {
                                 .stroke(BrandPalette.line, lineWidth: 1)
                         }
                     Text("\(providerDisplayName) stores its own system message. Switching providers swaps the prompt shown here.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text("Prompt checklist: prioritise deadlines, approvals, blockers, and reply-needed items; group related threads; avoid filler; do not invent facts.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Button("Reset to Default") {

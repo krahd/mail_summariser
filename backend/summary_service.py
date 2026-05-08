@@ -90,7 +90,11 @@ def _build_prompt(messages: list[dict], summary_length: int) -> str:
     chunks = [
         'Summarize the email list into concise actionable points.',
         f'Requested detail level: {summary_length}. Keep around {target_lines} bullet lines.',
-        'Focus on priority items, deadlines, and likely responses needed.',
+        'Focus on priority items, deadlines, owners, blockers, and likely responses needed.',
+        'Group related messages into one bullet when they clearly belong together.',
+        'Do not repeat greetings, signatures, or boilerplate unless they materially affect the work.',
+        'Do not invent facts, dates, owners, or commitments that are not present in the emails.',
+        'When useful, include a short next-step cue such as reply, schedule, approve, pay, or monitor.',
         f'First line must be exactly: {RESPONSE_SENTINEL}',
         'On following lines, provide only the summary.',
         '',
