@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-05-07 23:56
+Last updated: 2026-05-08 00:31
 
 ## Purpose
 
@@ -222,9 +222,12 @@ python scripts/validate_rendered_ui.py
 - Rendered UI validation now asserts the central Ollama explainer opens and closes via click-anywhere modal behaviour.
 - Default provider system messages now give clearer guidance about deadlines, blockers, reply-needed items, grouping related threads, and avoiding invented details.
 - Backend prompt construction now explicitly asks for grouped, factual, action-oriented output with short next-step cues when useful.
+- Targeted backend tests now lock the updated default system-message copy and `_build_prompt()` guardrails so prompt regressions are caught without relying only on rendered UI coverage.
 - Browser advanced settings now includes a prompt checklist beside the editable provider system message.
 - The browser UI now includes a bottom status bar that keeps the current status text, mailbox mode, provider, job id, and message count visible.
+- Rendered UI validation now asserts the bottom status bar on initial load, after a populated summary, and after an empty-result search so provider, job, status text, and message-count updates stay covered.
 - macOS Settings now uses clearer Sample Mailbox wording and includes the same prompt checklist guidance as the browser advanced settings screen.
+- The macOS shell now includes a persistent footer strip that mirrors the browser's status visibility with current status text, mailbox mode, provider, runtime health, fake-mail health, job id, and message count.
 - The obsolete approval-stage files under `mockups/temporary/` have been removed after their useful web UI decisions were implemented or overtaken by the shipped interface.
 - `tag_summarised` actions and undo now honour the saved `summarisedTag` by storing the actual tag in undo payloads.
 - Browser backend target initialisation now preserves the browser-selected backend URL during settings loads.
@@ -254,6 +257,7 @@ Recent verification:
 - `git diff --check`: passed.
 - `backend/.venv/bin/python -m py_compile scripts/validate_rendered_ui.py scripts/validate_full_stack.py`: passed.
 - `backend/.venv/bin/python -m py_compile backend/config.py backend/summary_service.py scripts/validate_rendered_ui.py`: passed.
+- `backend/.venv/bin/python -m pytest -q tests/test_system_message_settings.py tests/test_summary_service_provider_library.py tests/test_web_contract.py`: passed.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed with local port binding and Chromium launch allowed. Screenshots were written to `/var/folders/z_/872qmw6s5_d1qlyd3xdgsl5r0000gn/T/mail_summariser_rendered_ui/`.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after frontend API backend-URL/error-handling changes.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after backend URL settings input guidance and format updates.
@@ -264,6 +268,7 @@ Recent verification:
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after adding explicit rendered assertions for explainer modal open/close behaviour.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after centralising Ollama status/help into one panel, restoring click-anywhere explainer close behaviour, reducing help-button size, converting local-model input to dropdown, and strengthening refresh/discover button feedback.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after improving default prompt guidance, adding the bottom browser status bar, and aligning macOS/browser Sample Mailbox wording.
+- `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after extending bottom-status assertions beyond initial load and adding the macOS footer status strip.
 - `backend/.venv/bin/python scripts/validate_full_stack.py --attempts 5 --delay 0.5`: passed with local port binding allowed. A first sandboxed run failed because selecting and binding a loopback port was not permitted.
 - `./scripts/validate_full_stack.sh`: passed when run with local port binding allowed. A first sandboxed run failed because local binding to `127.0.0.1:8766` was not permitted.
 - GitHub CI run `25518723986`: passed, including Ubuntu Python 3.11 rendered UI regression and the cross-platform startup validation matrix.
@@ -275,6 +280,7 @@ Recent verification:
 Validation implications:
 
 - Provider-key tests now clear or set controlled environment variables and redaction prevents provider errors from exposing API keys in fallback responses.
+- Settings/defaults regression tests now force a temporary SQLite path so they validate startup defaults instead of inheriting a developer's persisted local settings.
 - Rendered JavaScript automation now has a Playwright path. Safari WebDriver remains unavailable locally because Safari's "Allow JavaScript from Apple Events" setting is disabled on this machine.
 
 ## Risks and limitations
@@ -301,9 +307,9 @@ Validation implications:
 
 ## Next steps
 
-1. Add targeted tests for the updated default system-message text and prompt-building rules so prompt regressions are caught without relying only on rendered checks.
-2. Expand rendered UI assertions for the bottom status bar so provider, job, and message-count updates are regression-tested beyond initial load.
-3. Review the macOS main screen for whether a persistent status strip or footer should mirror the browser's new bottom-status visibility.
+1. Keep expanding targeted coverage where browser and macOS copy or status affordances intentionally mirror each other.
+2. Run the broader validation set again after the next cross-surface UI or prompt-behaviour change.
+3. Consider whether runtime/fake-mail health labels should include richer transitional states (for example warming or unavailable) without adding noise.
 
 ## Longer-term steps
 
@@ -322,4 +328,4 @@ Validation implications:
 
 ---
 
-Last updated: 2026-05-07 23:56
+Last updated: 2026-05-08 00:31

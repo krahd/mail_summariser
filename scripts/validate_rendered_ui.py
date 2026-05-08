@@ -148,6 +148,23 @@ def _assert_text_absent(page, text: str) -> None:
         raise RuntimeError(f"Unexpected rendered text found: {text}")
 
 
+def _assert_bottom_status(page, *, text: str | None = None, mailbox: str | None = None,
+                          provider: str | None = None, messages: str | None = None,
+                          require_job: bool = False) -> None:
+    if text is not None and text not in page.locator("#bottom-status-text").inner_text(timeout=5_000):
+        raise RuntimeError(f"Bottom status text did not include expected value: {text}")
+    if mailbox is not None and mailbox not in page.locator("#bottom-status-mailbox").inner_text(timeout=5_000):
+        raise RuntimeError(f"Bottom status mailbox did not include expected value: {mailbox}")
+    if provider is not None and provider not in page.locator("#bottom-status-provider").inner_text(timeout=5_000):
+        raise RuntimeError(f"Bottom status provider did not include expected value: {provider}")
+    if messages is not None and messages not in page.locator("#bottom-status-messages").inner_text(timeout=5_000):
+        raise RuntimeError(f"Bottom status message count did not include expected value: {messages}")
+    if require_job:
+        job_text = page.locator("#bottom-status-job").inner_text(timeout=5_000).strip()
+        if job_text == "Job: none":
+            raise RuntimeError("Bottom status bar did not update with the active job id.")
+
+
 def _assert_message_explainer_modal_behaviour(page) -> None:
     modal = page.locator("#message-explainer-modal")
     title = page.locator("#message-explainer-title")
@@ -186,8 +203,13 @@ def _run_desktop_flow(browser, web_url: str, backend_url: str, screenshot_dir: P
     if "Mailbox: Sample" not in page.locator("#health-mode").inner_text():
         raise RuntimeError("Sample mailbox health chip was not rendered.")
     page.locator("#bottom-status-mailbox").wait_for(state="visible", timeout=5_000)
-    if "Mailbox: Sample" not in page.locator("#bottom-status-mailbox").inner_text():
-        raise RuntimeError("Bottom status bar did not render Sample mailbox state.")
+    _assert_bottom_status(
+        page,
+        text="Connected and loaded initial data.",
+        mailbox="Mailbox: Sample",
+        provider="Provider: OpenAI",
+        messages="Messages: 0",
+    )
     _assert_text_absent(page, "Dummy Mode")
     _assert_text_absent(page, "Dummy mode")
     _assert_no_horizontal_overflow(page, "desktop initial")
@@ -210,6 +232,13 @@ def _run_desktop_flow(browser, web_url: str, backend_url: str, screenshot_dir: P
         raise RuntimeError("First-run sample summary did not include two messages.")
     if not page.locator("#apply-scope-actions").is_enabled():
         raise RuntimeError("Scoped action button was not enabled for a non-empty job.")
+    _assert_bottom_status(
+        page,
+        text="Summary created for 2 messages.",
+        provider="Provider: OpenAI",
+        messages="Messages: 2",
+        require_job=True,
+    )
     _assert_no_element_horizontal_scroll(page, ".message-table-wrapper", "sample message table")
 
     page.wait_for_timeout(350)
@@ -227,6 +256,13 @@ def _run_desktop_flow(browser, web_url: str, backend_url: str, screenshot_dir: P
         raise RuntimeError("Empty-result summary text was not rendered.")
     if page.locator("#apply-scope-actions").is_enabled():
         raise RuntimeError("Scoped action button stayed enabled for an empty job.")
+    _assert_bottom_status(
+        page,
+        text="No messages matched the current filters.",
+        provider="Provider: OpenAI",
+        messages="Messages: 0",
+        require_job=True,
+    )
 
     page.wait_for_timeout(350)
     empty_path = screenshot_dir / "rendered-ui-empty-result.png"

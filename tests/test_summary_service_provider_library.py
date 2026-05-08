@@ -70,6 +70,17 @@ def test_placeholder_provider_response_triggers_fallback(monkeypatch: pytest.Mon
     assert 'placeholder content' in meta['error']
 
 
+def test_build_prompt_includes_guardrails_for_grouping_and_factuality() -> None:
+    prompt = summary_service._build_prompt(MESSAGES, 5)
+
+    assert 'Focus on priority items, deadlines, owners, blockers, and likely responses needed.' in prompt
+    assert 'Group related messages into one bullet when they clearly belong together.' in prompt
+    assert 'Do not repeat greetings, signatures, or boilerplate unless they materially affect the work.' in prompt
+    assert 'Do not invent facts, dates, owners, or commitments that are not present in the emails.' in prompt
+    assert 'When useful, include a short next-step cue such as reply, schedule, approve, pay, or monitor.' in prompt
+    assert f'First line must be exactly: {summary_service.RESPONSE_SENTINEL}' in prompt
+
+
 def test_masked_provider_keys_do_not_count_as_real_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv('OPENAI_API_KEY', raising=False)
     monkeypatch.delenv('ANTHROPIC_API_KEY', raising=False)
