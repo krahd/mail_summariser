@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-05-08 16:36
+Last updated: 2026-05-08 18:10
 
 ## Purpose
 
@@ -278,6 +278,7 @@ Recent verification:
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after improving default prompt guidance, adding the bottom browser status bar, and aligning macOS/browser Sample Mailbox wording.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after extending bottom-status assertions beyond initial load and adding the macOS footer status strip.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after removing the dedicated Ollama status panel/modal and using bottom-status-only runtime/model/catalog feedback.
+- `backend/.venv/bin/python -m pytest -q`: passed with 96 passed, 1 skipped.
 - `backend/.venv/bin/python scripts/validate_full_stack.py --attempts 5 --delay 0.5`: passed with local port binding allowed. A first sandboxed run failed because selecting and binding a loopback port was not permitted.
 - `./scripts/validate_full_stack.sh`: passed when run with local port binding allowed. A first sandboxed run failed because local binding to `127.0.0.1:8766` was not permitted.
 - GitHub CI run `25518723986`: passed, including Ubuntu Python 3.11 rendered UI regression and the cross-platform startup validation matrix.
@@ -318,7 +319,7 @@ Validation implications:
 
 1. Keep expanding targeted coverage where browser and macOS copy or status affordances intentionally mirror each other.
 2. Run the broader validation set again after the next cross-surface UI or prompt-behaviour change.
-3. Add targeted tests for model-name normalisation (CLI-style rows) and in-progress pull handling so serve/discover regressions are caught early.
+3. Add targeted tests for in-progress pull handling so serve-while-downloading regressions are caught early. (Model-name normalisation and CLI-style row parsing are now covered by tests added in de9d904.)
 
 ## Longer-term steps
 
@@ -337,4 +338,4 @@ Validation implications:
 
 ---
 
-Last updated: 2026-05-08 16:36
+Last updated: 2026-05-08 18:10
