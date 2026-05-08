@@ -120,7 +120,9 @@ const diagnosticsRuntimeState = document.getElementById("diag-runtime-state");
 const diagnosticsFakeMailState = document.getElementById("diag-fakemail-state");
 const messageHelpButtons = Array.from(document.querySelectorAll(".message-help-btn"));
 const messageExplainerModal = document.getElementById("message-explainer-modal");
+const messageExplainerTitle = document.getElementById("message-explainer-title");
 const messageExplainerBody = document.getElementById("message-explainer-body");
+const messageExplainerCloseBtn = document.getElementById("message-explainer-close");
 
 const api = createApiClient({
   getBaseUrl,
@@ -1024,8 +1026,10 @@ async function refreshDownloadCatalog() {
     }
 
     setCatalogStatus(`Loaded ${models.length} downloadable models from the Ollama catalogue.`);
+    return models.length;
   } catch (error) {
     setCatalogStatus(`Catalogue refresh failed: ${error.message}`, true);
+    return 0;
   }
 }
 
@@ -1115,8 +1119,10 @@ async function refreshModelOptions() {
     } else {
       setOllamaStatus(`Loaded ${options.length} suggested models for ${result.provider}.`);
     }
+    return options.length;
   } catch (error) {
     setOllamaStatus(`Model refresh failed: ${error.message}`, true);
+    return 0;
   }
 }
 
@@ -1265,23 +1271,37 @@ function updateHelpButton(isHelpActive) {
 }
 
 function openMessageExplainer(kind) {
-  if (!messageExplainerModal || !messageExplainerBody) {
+  if (!messageExplainerModal || !messageExplainerBody || !messageExplainerTitle) {
     return;
   }
 
   const copy = {
-    runtime:
-      "Runtime status tells you whether the local Ollama service is installed, reachable, and ready to answer requests. " +
-      "If it says running but not ready, model warm-up may still be in progress or may have failed.",
-    models:
-      "Model status reflects local model availability and refresh results from the configured provider. " +
-      "If refresh fails, check backend connectivity, provider choice, and whether Ollama is running.",
-    catalog:
-      "Catalogue status reports whether downloadable models were fetched successfully. " +
-      "An empty catalogue can be normal for connectivity issues, offline mode, or provider-side lookup limits.",
+    runtime: {
+      title: "Runtime Status Help",
+      body:
+        "Runtime status tells you whether the local Ollama service is installed, reachable, and ready to answer requests. " +
+        "If it says running but not ready, model warm-up may still be in progress or may have failed.",
+    },
+    models: {
+      title: "Model Status Help",
+      body:
+        "Model status reflects local model availability and refresh results from the configured provider. " +
+        "If refresh fails, check backend connectivity, provider choice, and whether Ollama is running.",
+    },
+    catalog: {
+      title: "Catalogue Status Help",
+      body:
+        "Catalogue status reports whether downloadable models were fetched successfully. " +
+        "An empty catalogue can be normal for connectivity issues, offline mode, or provider-side lookup limits.",
+    },
   };
 
-  messageExplainerBody.textContent = copy[kind] || "Status help is not available for this message yet.";
+  const details = copy[kind] || {
+    title: "Status Message Help",
+    body: "Status help is not available for this message yet.",
+  };
+  messageExplainerTitle.textContent = details.title;
+  messageExplainerBody.textContent = details.body;
   messageExplainerModal.classList.remove("is-hidden");
 }
 
@@ -1336,15 +1356,11 @@ function wireEvents() {
     });
   });
 
-  document.addEventListener("click", (event) => {
-    if (!messageExplainerModal || messageExplainerModal.classList.contains("is-hidden")) {
-      return;
+  messageExplainerCloseBtn?.addEventListener("click", closeMessageExplainer);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeMessageExplainer();
     }
-    const target = event.target;
-    if (target instanceof Element && target.closest(".message-help-btn")) {
-      return;
-    }
-    closeMessageExplainer();
   });
 
   const loadSettings = async () => {
@@ -1550,7 +1566,11 @@ function wireEvents() {
     }
   });
 
-  refreshModelsBtn.addEventListener("click", refreshModelOptions);
+  refreshModelsBtn.addEventListener("click", async () => {
+    setStatus("Refreshing available models...");
+    const modelCount = await refreshModelOptions();
+    setStatus(`Available models refreshed (${modelCount}).`);
+  });
   refreshRuntimeStatusBtn?.addEventListener("click", async () => {
     try {
       await refreshRuntimeStatus();
@@ -1603,7 +1623,11 @@ function wireEvents() {
   toggleBackendKeyBtn?.addEventListener("click", () => toggleSecretField(backendApiKeyInput, toggleBackendKeyBtn));
   toggleImapPasswordBtn?.addEventListener("click", () => toggleSecretField(imapPasswordInput, toggleImapPasswordBtn));
   toggleSmtpPasswordBtn?.addEventListener("click", () => toggleSecretField(smtpPasswordInput, toggleSmtpPasswordBtn));
-  refreshCatalogBtn.addEventListener("click", refreshDownloadCatalog);
+  refreshCatalogBtn.addEventListener("click", async () => {
+    setStatus("Discovering downloadable models...");
+    const modelCount = await refreshDownloadCatalog();
+    setStatus(`Discover models completed (${modelCount}).`);
+  });
   downloadModelBtn.addEventListener("click", downloadSelectedModel);
   stopMailSummariserBtn?.addEventListener("click", async () => {
     const confirmed = window.confirm("Stop the connected mail_summariser backend now?");
