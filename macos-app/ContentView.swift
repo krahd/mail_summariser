@@ -104,6 +104,46 @@ struct BrandSectionTitle: View {
     }
 }
 
+struct BrandFooterStatusStrip: View {
+    let statusText: String
+    let mailboxText: String
+    let providerText: String
+    let runtimeText: String
+    let fakeMailText: String
+    let jobText: String
+    let messagesText: String
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Text(statusText)
+                .font(.subheadline)
+                .foregroundStyle(BrandPalette.ink)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack(spacing: 8) {
+                BrandStatusPill(text: mailboxText)
+                BrandStatusPill(text: providerText)
+                BrandStatusPill(text: runtimeText)
+                BrandStatusPill(text: fakeMailText)
+                BrandStatusPill(text: jobText)
+                BrandStatusPill(text: messagesText)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(BrandPalette.panelStrong)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(BrandPalette.line, lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 4)
+    }
+}
+
 struct ContentView: View {
     @Environment(\.openURL) private var openURL
     @EnvironmentObject private var appState: AppState
@@ -152,6 +192,16 @@ struct ContentView: View {
                         .stroke(BrandPalette.line, lineWidth: 1)
                 )
                 .shadow(color: Color.black.opacity(0.05), radius: 16, x: 0, y: 8)
+
+                BrandFooterStatusStrip(
+                    statusText: appState.statusText,
+                    mailboxText: appState.settings.dummyMode ? "Mailbox: Sample" : "Mailbox: Live",
+                    providerText: "Provider: \(providerDisplayName)",
+                    runtimeText: runtimeHealthText,
+                    fakeMailText: fakeMailHealthText,
+                    jobText: appState.selectedJobId.isEmpty ? "Job: none" : "Job: \(appState.selectedJobId)",
+                    messagesText: "Messages: \(appState.currentMessages.count)"
+                )
             }
             .padding(22)
         }
@@ -182,6 +232,11 @@ struct ContentView: View {
         do {
             try await appState.loadSettings()
             try await appState.loadRuntimeStatus()
+            do {
+                try await appState.loadFakeMailStatus()
+            } catch {
+                // Dev fake-mail tools can be disabled; keep bootstrap successful.
+            }
             showStartupPrompt = shouldPromptForOllama
         } catch {
             appState.statusText = "Failed to load settings: \(error.localizedDescription)"
@@ -192,6 +247,39 @@ struct ContentView: View {
         let provider = appState.settings.llmProvider.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let action = appState.runtimeStatus.ollama.startupAction
         return provider == "ollama" && (action == "install" || action == "start")
+    }
+
+    private var providerDisplayName: String {
+        switch appState.settings.llmProvider.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "openai":
+            return "OpenAI"
+        case "anthropic":
+            return "Anthropic"
+        default:
+            return "Ollama"
+        }
+    }
+
+    private var runtimeHealthText: String {
+        let provider = appState.settings.llmProvider.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if provider != "ollama" {
+            return "Runtime: n/a"
+        }
+
+        if appState.runtimeStatus.ollama.startupAction == "install" {
+            return "Runtime: install needed"
+        }
+        if appState.runtimeStatus.ollama.startupAction == "start" || !appState.runtimeStatus.ollama.running {
+            return "Runtime: stopped"
+        }
+        return "Runtime: running"
+    }
+
+    private var fakeMailHealthText: String {
+        if !appState.fakeMailStatus.enabled {
+            return "Fake Mail: off"
+        }
+        return appState.fakeMailStatus.running ? "Fake Mail: running" : "Fake Mail: stopped"
     }
 
     private func startOllamaFromPrompt() async {
