@@ -92,3 +92,15 @@ This starts isolated backend and static-web instances, verifies the sample mailb
 ## Dependency note
 
 The project depends on the external `modelito` package for LLM helper utilities.
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).
+
+## Contributing
+
+Contributions are welcome. Open an issue to discuss significant changes before submitting a pull request. Please keep changes focused, ensure `pytest -q` passes, and update `STATUS.md` when behaviour changes.
+
+## Disclaimer
+
+This software is provided as-is, without warranty of any kind, express or implied. Use at your own risk. The authors accept no liability for data loss, mailbox corruption, unintended message actions, or any other damages arising from its use. Live IMAP/SMTP mode operates on real mailboxes — review configuration carefully before enabling it.
