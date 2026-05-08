@@ -401,6 +401,22 @@ main {
   gap: 6px;
 }
 
+.action-scope-status {
+  font-style: italic;
+}
+
+.action-checklist {
+  display: grid;
+  gap: 6px;
+}
+
+.action-option {
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-muted);
+}
+
 .studio-main {
   display: grid;
   gap: 12px;
@@ -681,6 +697,7 @@ main {
 }
 
 .checkbox {
+  display: grid;
   grid-template-columns: auto 1fr;
   gap: 10px;
   align-items: center;
@@ -1127,6 +1144,32 @@ td[colspan] {
   border-left: 4px solid rgba(13, 117, 103, 0.18);
 }
 
+.ollama-layout {
+  display: grid;
+  gap: 10px;
+}
+
+.ollama-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fbfcfc;
+}
+
+.ollama-panel h4 {
+  font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
+  font-size: 0.98rem;
+  letter-spacing: -0.01em;
+  color: var(--accent-strong);
+}
+
+.ollama-toggle-grid {
+  display: grid;
+  gap: 6px;
+}
+
 .mode-summary {
   display: grid;
   gap: 6px;
@@ -1232,11 +1275,13 @@ td[colspan] {
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
+  box-shadow: none;
 }
 
 .message-help-btn:hover {
   background: var(--accent-soft);
   border-color: var(--accent);
+  box-shadow: none;
 }
 
 .message-explainer-modal {
@@ -1267,6 +1312,11 @@ td[colspan] {
 
 .message-explainer-card p {
   line-height: 1.5;
+}
+
+.message-explainer-close {
+  margin-left: auto;
+  min-width: 90px;
 }
 
 .is-hidden {

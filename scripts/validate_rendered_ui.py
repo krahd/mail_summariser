@@ -148,6 +148,38 @@ def _assert_text_absent(page, text: str) -> None:
         raise RuntimeError(f"Unexpected rendered text found: {text}")
 
 
+def _assert_message_explainer_modal_behaviour(page) -> None:
+    modal = page.locator("#message-explainer-modal")
+    title = page.locator("#message-explainer-title")
+    body = page.locator("#message-explainer-body")
+    close_button = page.locator("#message-explainer-close")
+
+    expected_by_kind = {
+        "runtime": ("Runtime Status Help", "Runtime status"),
+        "models": ("Model Status Help", "Model status"),
+        "catalog": ("Catalogue Status Help", "Catalogue status"),
+    }
+
+    for kind, expected_values in expected_by_kind.items():
+        expected_title, expected_text = expected_values
+        page.locator(f".message-help-btn[data-message-help='{kind}']").click()
+        modal.wait_for(state="visible", timeout=5_000)
+        title.wait_for(state="visible", timeout=5_000)
+        if title.inner_text(timeout=5_000).strip() != expected_title:
+            raise RuntimeError(f"Unexpected explainer title for {kind} status.")
+        body_text = body.inner_text(timeout=5_000)
+        if expected_text not in body_text:
+            raise RuntimeError(
+                f"Explainer body for {kind} status did not include expected text: {expected_text}"
+            )
+
+        close_button.click()
+        page.wait_for_function(
+            "() => document.querySelector('#message-explainer-modal')?.classList.contains('is-hidden')",
+            timeout=5_000,
+        )
+
+
 def _run_desktop_flow(browser, web_url: str, backend_url: str, screenshot_dir: Path) -> dict[str, str]:
     console_messages: list[str] = []
     context = browser.new_context(viewport={"width": 1440, "height": 960})
@@ -227,6 +259,7 @@ def _run_desktop_flow(browser, web_url: str, backend_url: str, screenshot_dir: P
     page.locator("#settings-advanced-screen:not(.is-hidden)").wait_for(timeout=5_000)
     if page.locator("#llm-provider").input_value() != "openai":
         raise RuntimeError("Rendered settings did not load the OpenAI fallback provider.")
+    _assert_message_explainer_modal_behaviour(page)
     _assert_no_horizontal_overflow(page, "desktop settings")
 
     page.wait_for_timeout(350)

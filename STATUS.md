@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-05-07 19:26
+Last updated: 2026-05-07 23:11
 
 ## Purpose
 
@@ -213,7 +213,11 @@ python scripts/validate_rendered_ui.py
 - Backend CORS now accepts localhost/127.0.0.1 dev origins on arbitrary ports via `ALLOWED_ORIGIN_REGEX`, preventing runtime/model preflight `OPTIONS` failures on the default webapp port (`8000`).
 - Desktop studio layout now uses a narrower actions column to reduce overlap pressure against the central review column on wider main-screen sessions.
 - Desktop actions panel spacing is slightly denser (reduced internal padding and action-button gap) to keep controls compact without reducing text readability.
-- Ollama runtime/model/catalog status lines now include `?` explainers that open a lightweight modal; clicking anywhere closes the explainer.
+- Main-screen actions checkboxes now align correctly with labels, and the scope-status helper text is italicised for clearer emphasis.
+- Advanced settings now groups Ollama controls into Runtime, Local Models, and Discover/Download panels so statuses and controls are easier to scan.
+- Ollama runtime/model/catalog status lines keep `?` explainers beside each status line, without button shadows; explainers now close via explicit Close control (and Escape) rather than click-anywhere behaviour.
+- Refresh Available Models and Discover Models now provide explicit completion feedback in the global status line with refreshed item counts.
+- Rendered UI validation now asserts the status-message explainer modal opens for runtime/models/catalog help and closes through the explicit Close control.
 - The obsolete approval-stage files under `mockups/temporary/` have been removed after their useful web UI decisions were implemented or overtaken by the shipped interface.
 - `tag_summarised` actions and undo now honour the saved `summarisedTag` by storing the actual tag in undo payloads.
 - Browser backend target initialisation now preserves the browser-selected backend URL during settings loads.
@@ -249,6 +253,8 @@ Recent verification:
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after narrowing the desktop actions column in the main studio grid.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after tightening actions panel internal spacing.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after adding status-message `?` explainers and click-anywhere close behaviour.
+- `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after adding explicit rendered assertions for explainer modal open/close behaviour.
+- `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after action-panel alignment fixes, advanced Ollama-section redesign, explicit explainer Close control, and model refresh/discover status feedback updates.
 - `backend/.venv/bin/python scripts/validate_full_stack.py --attempts 5 --delay 0.5`: passed with local port binding allowed. A first sandboxed run failed because selecting and binding a loopback port was not permitted.
 - `./scripts/validate_full_stack.sh`: passed when run with local port binding allowed. A first sandboxed run failed because local binding to `127.0.0.1:8766` was not permitted.
 - GitHub CI run `25518723986`: passed, including Ubuntu Python 3.11 rendered UI regression and the cross-platform startup validation matrix.
@@ -282,12 +288,13 @@ Validation implications:
 
 ## Pending tasks
 
-- No immediate post-push blockers. Continue recurring tasks as workflows evolve.
+- None currently.
 
 ## Next steps
 
-1. Add rendered UI assertions for the new status-message explainer modal so its open/close behaviour is regression-tested.
-2. Review the macOS client for any remaining `dummyMode` user-facing copy that should match the browser's "Sample Mailbox" terminology more precisely.
+1. Audit, analyse, research, and improve the system messages and prompts.
+2. Evaluate adding a status bar at the bottom of the screen that shows what's happening, and what the situation is.
+3. Review the macOS client for any remaining `dummyMode` user-facing copy that should match the browser's "Sample Mailbox" terminology more precisely.
 
 ## Longer-term steps
 
@@ -306,4 +313,4 @@ Validation implications:
 
 ---
 
-Last updated: 2026-05-07 19:26
+Last updated: 2026-05-07 23:11
