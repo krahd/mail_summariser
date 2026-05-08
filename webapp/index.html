@@ -327,6 +327,10 @@
               <textarea id="provider-system-message" rows="8" placeholder="Instruction sent as the provider system message."></textarea>
             </label>
             <p id="provider-system-message-note" class="field-note">This prompt is stored separately for each provider. Switching providers swaps the text shown here.</p>
+            <div class="prompt-guidance" aria-label="Prompt guidance">
+              <strong>Prompt checklist</strong>
+              <p class="field-note">Prioritise deadlines, approvals, blockers, and reply-needed items. Group related threads, avoid filler, and do not invent facts.</p>
+            </div>
             <textarea name="ollamaSystemMessage" class="is-hidden"></textarea>
             <textarea name="openaiSystemMessage" class="is-hidden"></textarea>
             <textarea name="anthropicSystemMessage" class="is-hidden"></textarea>
@@ -357,13 +361,17 @@
               </div>
             </div>
             <div class="ollama-layout">
+              <section class="ollama-panel ollama-status-panel">
+                <h4>Current Status</h4>
+                <div class="status-help-row">
+                  <p id="ollama-status-summary" class="status-line">Runtime status not loaded yet.</p>
+                  <button type="button" class="message-help-btn" data-message-help="ollama" aria-label="Explain Ollama status messages">?</button>
+                </div>
+              </section>
+
               <section class="ollama-panel">
                 <h4>Runtime</h4>
                 <label>Ollama Host <input name="ollamaHost" type="url" placeholder="http://127.0.0.1:11434" required /></label>
-                <div class="status-help-row">
-                  <p id="ollama-runtime-status" class="status-line">Runtime status not loaded yet.</p>
-                  <button type="button" class="message-help-btn" data-message-help="runtime" aria-label="Explain runtime status message">?</button>
-                </div>
                 <div class="inline-actions">
                   <button id="runtime-ollama-install" type="button" class="secondary">Install Ollama</button>
                   <button id="runtime-ollama-action" type="button" class="secondary is-hidden">Start Ollama</button>
@@ -379,15 +387,15 @@
 
               <section class="ollama-panel">
                 <h4>Local Models</h4>
-                <label>Model Name <input name="modelName" required /></label>
+                <label>Model Name
+                  <select id="local-model-name" name="modelName" required>
+                    <option value="">Loading available models...</option>
+                  </select>
+                </label>
                 <div class="inline-actions">
                   <button id="refresh-models" type="button" class="secondary">Refresh Available Models</button>
                   <button id="serve-model" type="button" class="secondary">Serve Selected Model</button>
                   <button id="delete-model" type="button" class="secondary">Delete Local Model</button>
-                </div>
-                <div class="status-help-row">
-                  <p id="ollama-status" class="status-line">Model list not loaded yet.</p>
-                  <button type="button" class="message-help-btn" data-message-help="models" aria-label="Explain model status message">?</button>
                 </div>
               </section>
 
@@ -401,10 +409,6 @@
                 <div class="inline-actions">
                   <button id="refresh-catalog" type="button" class="secondary">Discover Models</button>
                   <button id="download-model" type="button">Download Selected Model</button>
-                </div>
-                <div class="status-help-row">
-                  <p id="catalog-status" class="status-line">Catalogue not loaded yet.</p>
-                  <button type="button" class="message-help-btn" data-message-help="catalog" aria-label="Explain catalogue status message">?</button>
                 </div>
               </section>
             </div>
@@ -546,13 +550,20 @@
     </section>
   </main>
 
+  <footer class="bottom-status-bar" aria-live="polite">
+    <p id="bottom-status-text" class="bottom-status-text">Ready</p>
+    <div class="bottom-status-meta">
+      <span id="bottom-status-mailbox" class="bottom-status-chip">Mailbox: Sample</span>
+      <span id="bottom-status-provider" class="bottom-status-chip">Provider: Ollama</span>
+      <span id="bottom-status-job" class="bottom-status-chip">Job: none</span>
+      <span id="bottom-status-messages" class="bottom-status-chip">Messages: 0</span>
+    </div>
+  </footer>
+
   <div id="message-explainer-modal" class="message-explainer-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="message-explainer-title">
     <article class="message-explainer-card">
       <h3 id="message-explainer-title">Status Message Help</h3>
       <p id="message-explainer-body"></p>
-      <div class="inline-actions">
-        <button id="message-explainer-close" type="button" class="secondary message-explainer-close">Close</button>
-      </div>
     </article>
   </div>
 

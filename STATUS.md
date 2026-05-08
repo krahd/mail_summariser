@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-05-07 23:11
+Last updated: 2026-05-07 23:56
 
 ## Purpose
 
@@ -214,10 +214,17 @@ python scripts/validate_rendered_ui.py
 - Desktop studio layout now uses a narrower actions column to reduce overlap pressure against the central review column on wider main-screen sessions.
 - Desktop actions panel spacing is slightly denser (reduced internal padding and action-button gap) to keep controls compact without reducing text readability.
 - Main-screen actions checkboxes now align correctly with labels, and the scope-status helper text is italicised for clearer emphasis.
-- Advanced settings now groups Ollama controls into Runtime, Local Models, and Discover/Download panels so statuses and controls are easier to scan.
-- Ollama runtime/model/catalog status lines keep `?` explainers beside each status line, without button shadows; explainers now close via explicit Close control (and Escape) rather than click-anywhere behaviour.
-- Refresh Available Models and Discover Models now provide explicit completion feedback in the global status line with refreshed item counts.
-- Rendered UI validation now asserts the status-message explainer modal opens for runtime/models/catalog help and closes through the explicit Close control.
+- Advanced settings now groups Ollama controls into Runtime, Local Models, and Discover/Download panels, plus a central status panel that consolidates runtime/model/catalog messages with a single `?` explainer.
+- The Ollama explainer `?` button is now smaller and placed immediately next to the central status line; help-button shadows are removed.
+- The explainer modal now closes via click-anywhere behaviour (and Escape), and no longer shows a dedicated Close button.
+- Refresh Available Models and Discover Models now disable while running and report explicit success/failure outcomes in the global status line so button activity is visible.
+- Local model selection in advanced settings is now a true dropdown populated from available model options.
+- Rendered UI validation now asserts the central Ollama explainer opens and closes via click-anywhere modal behaviour.
+- Default provider system messages now give clearer guidance about deadlines, blockers, reply-needed items, grouping related threads, and avoiding invented details.
+- Backend prompt construction now explicitly asks for grouped, factual, action-oriented output with short next-step cues when useful.
+- Browser advanced settings now includes a prompt checklist beside the editable provider system message.
+- The browser UI now includes a bottom status bar that keeps the current status text, mailbox mode, provider, job id, and message count visible.
+- macOS Settings now uses clearer Sample Mailbox wording and includes the same prompt checklist guidance as the browser advanced settings screen.
 - The obsolete approval-stage files under `mockups/temporary/` have been removed after their useful web UI decisions were implemented or overtaken by the shipped interface.
 - `tag_summarised` actions and undo now honour the saved `summarisedTag` by storing the actual tag in undo payloads.
 - Browser backend target initialisation now preserves the browser-selected backend URL during settings loads.
@@ -246,6 +253,7 @@ Recent verification:
 - `./scripts/check_repo_hygiene.sh`: passed.
 - `git diff --check`: passed.
 - `backend/.venv/bin/python -m py_compile scripts/validate_rendered_ui.py scripts/validate_full_stack.py`: passed.
+- `backend/.venv/bin/python -m py_compile backend/config.py backend/summary_service.py scripts/validate_rendered_ui.py`: passed.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed with local port binding and Chromium launch allowed. Screenshots were written to `/var/folders/z_/872qmw6s5_d1qlyd3xdgsl5r0000gn/T/mail_summariser_rendered_ui/`.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after frontend API backend-URL/error-handling changes.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after backend URL settings input guidance and format updates.
@@ -254,7 +262,8 @@ Recent verification:
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after tightening actions panel internal spacing.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after adding status-message `?` explainers and click-anywhere close behaviour.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after adding explicit rendered assertions for explainer modal open/close behaviour.
-- `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after action-panel alignment fixes, advanced Ollama-section redesign, explicit explainer Close control, and model refresh/discover status feedback updates.
+- `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after centralising Ollama status/help into one panel, restoring click-anywhere explainer close behaviour, reducing help-button size, converting local-model input to dropdown, and strengthening refresh/discover button feedback.
+- `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after improving default prompt guidance, adding the bottom browser status bar, and aligning macOS/browser Sample Mailbox wording.
 - `backend/.venv/bin/python scripts/validate_full_stack.py --attempts 5 --delay 0.5`: passed with local port binding allowed. A first sandboxed run failed because selecting and binding a loopback port was not permitted.
 - `./scripts/validate_full_stack.sh`: passed when run with local port binding allowed. A first sandboxed run failed because local binding to `127.0.0.1:8766` was not permitted.
 - GitHub CI run `25518723986`: passed, including Ubuntu Python 3.11 rendered UI regression and the cross-platform startup validation matrix.
@@ -292,9 +301,9 @@ Validation implications:
 
 ## Next steps
 
-1. Audit, analyse, research, and improve the system messages and prompts.
-2. Evaluate adding a status bar at the bottom of the screen that shows what's happening, and what the situation is.
-3. Review the macOS client for any remaining `dummyMode` user-facing copy that should match the browser's "Sample Mailbox" terminology more precisely.
+1. Add targeted tests for the updated default system-message text and prompt-building rules so prompt regressions are caught without relying only on rendered checks.
+2. Expand rendered UI assertions for the bottom status bar so provider, job, and message-count updates are regression-tested beyond initial load.
+3. Review the macOS main screen for whether a persistent status strip or footer should mirror the browser's new bottom-status visibility.
 
 ## Longer-term steps
 
@@ -313,4 +322,4 @@ Validation implications:
 
 ---
 
-Last updated: 2026-05-07 23:11
+Last updated: 2026-05-07 23:56

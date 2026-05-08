@@ -152,32 +152,20 @@ def _assert_message_explainer_modal_behaviour(page) -> None:
     modal = page.locator("#message-explainer-modal")
     title = page.locator("#message-explainer-title")
     body = page.locator("#message-explainer-body")
-    close_button = page.locator("#message-explainer-close")
+    page.locator(".message-help-btn[data-message-help='ollama']").click()
+    modal.wait_for(state="visible", timeout=5_000)
+    title.wait_for(state="visible", timeout=5_000)
+    if title.inner_text(timeout=5_000).strip() != "Ollama Status Help":
+        raise RuntimeError("Unexpected explainer title for Ollama status.")
+    body_text = body.inner_text(timeout=5_000)
+    if "combines runtime, local-model, and catalogue status" not in body_text:
+        raise RuntimeError("Explainer body for Ollama status did not include expected text.")
 
-    expected_by_kind = {
-        "runtime": ("Runtime Status Help", "Runtime status"),
-        "models": ("Model Status Help", "Model status"),
-        "catalog": ("Catalogue Status Help", "Catalogue status"),
-    }
-
-    for kind, expected_values in expected_by_kind.items():
-        expected_title, expected_text = expected_values
-        page.locator(f".message-help-btn[data-message-help='{kind}']").click()
-        modal.wait_for(state="visible", timeout=5_000)
-        title.wait_for(state="visible", timeout=5_000)
-        if title.inner_text(timeout=5_000).strip() != expected_title:
-            raise RuntimeError(f"Unexpected explainer title for {kind} status.")
-        body_text = body.inner_text(timeout=5_000)
-        if expected_text not in body_text:
-            raise RuntimeError(
-                f"Explainer body for {kind} status did not include expected text: {expected_text}"
-            )
-
-        close_button.click()
-        page.wait_for_function(
-            "() => document.querySelector('#message-explainer-modal')?.classList.contains('is-hidden')",
-            timeout=5_000,
-        )
+    page.locator("#message-explainer-modal").click()
+    page.wait_for_function(
+        "() => document.querySelector('#message-explainer-modal')?.classList.contains('is-hidden')",
+        timeout=5_000,
+    )
 
 
 def _run_desktop_flow(browser, web_url: str, backend_url: str, screenshot_dir: Path) -> dict[str, str]:
@@ -197,6 +185,9 @@ def _run_desktop_flow(browser, web_url: str, backend_url: str, screenshot_dir: P
     page.locator("#health-mode").wait_for(state="visible", timeout=5_000)
     if "Mailbox: Sample" not in page.locator("#health-mode").inner_text():
         raise RuntimeError("Sample mailbox health chip was not rendered.")
+    page.locator("#bottom-status-mailbox").wait_for(state="visible", timeout=5_000)
+    if "Mailbox: Sample" not in page.locator("#bottom-status-mailbox").inner_text():
+        raise RuntimeError("Bottom status bar did not render Sample mailbox state.")
     _assert_text_absent(page, "Dummy Mode")
     _assert_text_absent(page, "Dummy mode")
     _assert_no_horizontal_overflow(page, "desktop initial")

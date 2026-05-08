@@ -70,17 +70,17 @@ struct AppSettings: Codable {
     var ollamaAutoStart: Bool = true
     var ollamaStartOnStartup: Bool = false
     var ollamaStopOnExit: Bool = false
-    var ollamaSystemMessage: String = "You create compact, practical email digests that focus on priorities, deadlines, and follow-up actions."
-    var openaiSystemMessage: String = "You are an assistant that creates compact, practical email digests."
-    var anthropicSystemMessage: String = "You create practical, concise email summaries with action cues."
+    var ollamaSystemMessage: String = "Create compact, practical email digests that focus on priorities, deadlines, blockers, and follow-up actions. Group related messages, keep the output scannable, and prefer specific next steps over generic commentary."
+    var openaiSystemMessage: String = "Create compact, practical email digests. Prioritise deadlines, requests, blockers, and follow-up actions. Group related threads, avoid greetings and filler, do not invent facts, and make the next step obvious when one exists."
+    var anthropicSystemMessage: String = "Create concise, practical email summaries with clear action cues. Highlight deadlines, owners, approvals, risks, and reply-needed items. Keep wording neutral, specific, and free of invented details."
     var modelName: String = "llama3.2:latest"
     var backendBaseURL: String = "http://127.0.0.1:8766"
 }
 
 struct SystemMessageDefaultsResponse: Codable {
-    var ollamaSystemMessage: String = "You create compact, practical email digests that focus on priorities, deadlines, and follow-up actions."
-    var openaiSystemMessage: String = "You are an assistant that creates compact, practical email digests."
-    var anthropicSystemMessage: String = "You create practical, concise email summaries with action cues."
+    var ollamaSystemMessage: String = "Create compact, practical email digests that focus on priorities, deadlines, blockers, and follow-up actions. Group related messages, keep the output scannable, and prefer specific next steps over generic commentary."
+    var openaiSystemMessage: String = "Create compact, practical email digests. Prioritise deadlines, requests, blockers, and follow-up actions. Group related threads, avoid greetings and filler, do not invent facts, and make the next step obvious when one exists."
+    var anthropicSystemMessage: String = "Create concise, practical email summaries with clear action cues. Highlight deadlines, owners, approvals, risks, and reply-needed items. Keep wording neutral, specific, and free of invented details."
 }
 
 struct EmptyResponse: Codable {
