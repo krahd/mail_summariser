@@ -19,6 +19,16 @@ It supports:
 
 ## Quick start
 
+### Homebrew (macOS)
+
+```bash
+brew tap krahd/tap
+brew install mail-summariser
+mail_summariser
+```
+
+This installs the pre-built backend binary. Serve the `webapp/` folder separately (see Web app below) or use the macOS app from the release page.
+
 ### Backend
 
 ```bash
