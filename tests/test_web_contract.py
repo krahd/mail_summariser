@@ -115,6 +115,34 @@ class WebContractTests(unittest.TestCase):
         self.assertNotIn("Mail-Summariser", docs_index)
         self.assertNotIn("Mail-Summariser", site_js)
 
+    def test_health_strip_copy_mirrors_macos_footer_strip(self) -> None:
+        """Browser health strip labels must match the macOS BrandFooterStatusStrip labels."""
+        app_js = (REPO_ROOT / "webapp" / "app.js").read_text(encoding="utf-8")
+        content_view = (REPO_ROOT / "macos-app" / "ContentView.swift").read_text(encoding="utf-8")
+
+        # app.js builds the label via a template literal; check the prefix and both branches.
+        self.assertIn("Mailbox: ${", app_js)
+        self.assertIn('"Sample"', app_js)
+        self.assertIn('"Live"', app_js)
+
+        # macOS footer strip uses the same full label strings as string literals.
+        self.assertIn('"Mailbox: Sample"', content_view)
+        self.assertIn('"Mailbox: Live"', content_view)
+
+        # Neither surface should use old "Dummy Mode" user-facing copy.
+        self.assertNotIn("Dummy Mode", app_js)
+        self.assertNotIn("Dummy mode", app_js)
+        self.assertNotIn("Dummy Mode", content_view)
+        self.assertNotIn("Dummy mode", content_view)
+
+    def test_macos_settings_uses_sample_mailbox_copy(self) -> None:
+        """SettingsView.swift must present the capability as 'Sample Mailbox', not 'Dummy Mode'."""
+        settings_view = (REPO_ROOT / "macos-app" / "SettingsView.swift").read_text(encoding="utf-8")
+
+        self.assertIn("Sample Mailbox", settings_view)
+        self.assertNotIn("Dummy Mode", settings_view)
+        self.assertNotIn("Dummy mode", settings_view)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -273,3 +273,53 @@ def test_models_catalog_returns_error_when_empty() -> None:
     assert payload['count'] == 0
     assert payload['models'] == []
     assert 'error' in payload
+
+
+def test_serve_ollama_model_returns_error_when_pull_in_progress() -> None:
+    """serve_ollama_model must report a clear message when the model is still downloading."""
+    with mock.patch.object(
+        model_provider_service,
+        'get_pull_status',
+        return_value={'name': 'llama3.2:latest', 'status': 'downloading', 'message': 'Downloading'},
+    ):
+        ok, message = model_provider_service.serve_ollama_model(
+            'http://127.0.0.1:11434', 'llama3.2:latest'
+        )
+
+    assert ok is False
+    assert 'downloading' in message.lower() or 'pull' in message.lower()
+
+
+def test_serve_endpoint_reports_error_when_model_is_downloading() -> None:
+    """POST /models/serve must propagate the still-downloading error through the HTTP layer."""
+    downloading_msg = 'Model llama3.2:latest is still downloading. Wait for pull to finish.'
+    with (
+        mock.patch.object(model_provider_service, 'serve_ollama_model',
+                          return_value=(False, downloading_msg)),
+        mock.patch.object(top_level_provider, 'serve_ollama_model',
+                          return_value=(False, downloading_msg)),
+    ):
+        with TestClient(backend_app.app) as client:
+            response = client.post('/models/serve', json={'name': 'llama3.2:latest'})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload['status'] == 'error'
+    assert 'downloading' in payload['message'].lower()
+
+
+def test_pull_ollama_model_does_not_double_start_active_download() -> None:
+    """pull_ollama_model must not start a second thread when one is already alive."""
+    alive_thread = mock.MagicMock()
+    alive_thread.is_alive.return_value = True
+
+    with mock.patch.dict(
+        model_provider_service._download_threads,  # type: ignore[attr-defined]
+        {'llama3.2:latest': alive_thread},
+    ), mock.patch.object(
+        model_provider_service, 'is_ollama_installed', return_value=True
+    ):
+        ok, message = model_provider_service.pull_ollama_model('llama3.2:latest')
+
+    assert ok is True
+    assert 'already downloading' in message.lower()
