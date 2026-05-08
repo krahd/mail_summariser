@@ -165,26 +165,6 @@ def _assert_bottom_status(page, *, text: str | None = None, mailbox: str | None 
             raise RuntimeError("Bottom status bar did not update with the active job id.")
 
 
-def _assert_message_explainer_modal_behaviour(page) -> None:
-    modal = page.locator("#message-explainer-modal")
-    title = page.locator("#message-explainer-title")
-    body = page.locator("#message-explainer-body")
-    page.locator(".message-help-btn[data-message-help='ollama']").click()
-    modal.wait_for(state="visible", timeout=5_000)
-    title.wait_for(state="visible", timeout=5_000)
-    if title.inner_text(timeout=5_000).strip() != "Ollama Status Help":
-        raise RuntimeError("Unexpected explainer title for Ollama status.")
-    body_text = body.inner_text(timeout=5_000)
-    if "combines runtime, local-model, and catalogue status" not in body_text:
-        raise RuntimeError("Explainer body for Ollama status did not include expected text.")
-
-    page.locator("#message-explainer-modal").click()
-    page.wait_for_function(
-        "() => document.querySelector('#message-explainer-modal')?.classList.contains('is-hidden')",
-        timeout=5_000,
-    )
-
-
 def _run_desktop_flow(browser, web_url: str, backend_url: str, screenshot_dir: Path) -> dict[str, str]:
     console_messages: list[str] = []
     context = browser.new_context(viewport={"width": 1440, "height": 960})
@@ -286,7 +266,6 @@ def _run_desktop_flow(browser, web_url: str, backend_url: str, screenshot_dir: P
     page.locator("#settings-advanced-screen:not(.is-hidden)").wait_for(timeout=5_000)
     if page.locator("#llm-provider").input_value() != "openai":
         raise RuntimeError("Rendered settings did not load the OpenAI fallback provider.")
-    _assert_message_explainer_modal_behaviour(page)
     _assert_no_horizontal_overflow(page, "desktop settings")
 
     page.wait_for_timeout(350)

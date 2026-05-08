@@ -361,14 +361,6 @@
               </div>
             </div>
             <div class="ollama-layout">
-              <section class="ollama-panel ollama-status-panel">
-                <h4>Current Status</h4>
-                <div class="status-help-row">
-                  <p id="ollama-status-summary" class="status-line">Runtime status not loaded yet.</p>
-                  <button type="button" class="message-help-btn" data-message-help="ollama" aria-label="Explain Ollama status messages">?</button>
-                </div>
-              </section>
-
               <section class="ollama-panel">
                 <h4>Runtime</h4>
                 <label>Ollama Host <input name="ollamaHost" type="url" placeholder="http://127.0.0.1:11434" required /></label>
@@ -559,13 +551,6 @@
       <span id="bottom-status-messages" class="bottom-status-chip">Messages: 0</span>
     </div>
   </footer>
-
-  <div id="message-explainer-modal" class="message-explainer-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="message-explainer-title">
-    <article class="message-explainer-card">
-      <h3 id="message-explainer-title">Status Message Help</h3>
-      <p id="message-explainer-body"></p>
-    </article>
-  </div>
 
   <script type="module" src="app.js"></script>
 </body>
