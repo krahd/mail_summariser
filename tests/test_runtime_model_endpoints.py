@@ -208,3 +208,68 @@ def test_runtime_ollama_admin_routes() -> None:
     assert pull.json()['status'] == 'ok'
     assert pull_status.json()['status'] == 'completed'
     assert delete.json()['status'] == 'ok'
+
+
+def test_list_online_ollama_models_parses_string_catalog_entries() -> None:
+    with mock.patch.object(
+        model_provider_service,
+        'list_remote_model_catalog',
+        return_value=['llama3.2:latest 4.7GB 2 days ago', 'mistral:latest'],
+    ):
+        models = model_provider_service.list_online_ollama_models('http://127.0.0.1:11434', limit=10)
+
+    assert models == ['llama3.2:latest', 'mistral:latest']
+
+
+def test_list_online_ollama_models_falls_back_when_remote_catalog_is_empty() -> None:
+    with mock.patch.object(
+        model_provider_service,
+        'list_remote_model_catalog',
+        return_value=[],
+    ), mock.patch.object(model_provider_service, 'urlopen', side_effect=OSError('offline')):
+        models = model_provider_service.list_online_ollama_models('http://127.0.0.1:11434', limit=4)
+
+    assert models == [
+        'llama3.2:latest',
+        'llama3.1:8b',
+        'mistral:latest',
+        'qwen2.5:latest',
+    ]
+
+
+def test_list_online_ollama_models_uses_library_html_fallback() -> None:
+    html = (
+        '<a href="/library/llama3.2">Llama</a>'
+        '<a href="/library/mistral">Mistral</a>'
+        '<a href="/library/deepseek-r1:8b">DeepSeek</a>'
+    )
+
+    mock_response = mock.MagicMock()
+    mock_response.read.return_value = html.encode('utf-8')
+    mock_urlopen = mock.MagicMock()
+    mock_urlopen.return_value.__enter__.return_value = mock_response
+
+    with mock.patch.object(
+        model_provider_service,
+        'list_remote_model_catalog',
+        return_value=[],
+    ), mock.patch.object(model_provider_service, 'urlopen', mock_urlopen):
+        models = model_provider_service.list_online_ollama_models('http://127.0.0.1:11434', limit=10)
+
+    assert models == ['llama3.2:latest', 'mistral:latest', 'deepseek-r1:8b']
+
+
+def test_models_catalog_returns_error_when_empty() -> None:
+    with (
+        mock.patch.object(model_provider_service, 'list_online_ollama_models', return_value=[]),
+        mock.patch.object(top_level_provider, 'list_online_ollama_models', return_value=[]),
+    ):
+        with TestClient(backend_app.app) as client:
+            response = client.get('/models/catalog', params={'limit': 20})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload['provider'] == 'ollama'
+    assert payload['count'] == 0
+    assert payload['models'] == []
+    assert 'error' in payload

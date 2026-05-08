@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-05-08 00:31
+Last updated: 2026-05-08 16:36
 
 ## Purpose
 
@@ -214,12 +214,16 @@ python scripts/validate_rendered_ui.py
 - Desktop studio layout now uses a narrower actions column to reduce overlap pressure against the central review column on wider main-screen sessions.
 - Desktop actions panel spacing is slightly denser (reduced internal padding and action-button gap) to keep controls compact without reducing text readability.
 - Main-screen actions checkboxes now align correctly with labels, and the scope-status helper text is italicised for clearer emphasis.
-- Advanced settings now groups Ollama controls into Runtime, Local Models, and Discover/Download panels, plus a central status panel that consolidates runtime/model/catalog messages with a single `?` explainer.
-- The Ollama explainer `?` button is now smaller and placed immediately next to the central status line; help-button shadows are removed.
-- The explainer modal now closes via click-anywhere behaviour (and Escape), and no longer shows a dedicated Close button.
+- Advanced settings now groups Ollama controls into Runtime, Local Models, and Discover/Download panels and relies on the existing bottom status bar for runtime/model/catalog feedback.
 - Refresh Available Models and Discover Models now disable while running and report explicit success/failure outcomes in the global status line so button activity is visible.
 - Local model selection in advanced settings is now a true dropdown populated from available model options.
-- Rendered UI validation now asserts the central Ollama explainer opens and closes via click-anywhere modal behaviour.
+- Ollama catalog discovery now surfaces backend/provider errors instead of silently reporting a successful zero-model refresh.
+- Remote catalog parsing now accepts dict/object payload shapes so Discover Models returns actual names when provider data is available.
+- Remote catalog parsing now also accepts plain string payload entries and normalises CLI-style rows that include trailing metadata columns.
+- Discover Models now falls back to parsing the Ollama public library page when the CLI remote listing is unavailable, then uses a curated default list only as a final offline fallback.
+- Serve/Delete model actions now normalise model identifiers and strip CLI metadata suffixes, avoiding false serve failures when a selected model row includes digest/size/date columns.
+- Serving a model now reports a clear "still downloading" state when a pull is in progress, instead of a generic serve failure.
+- Discover Models now reports failure when the backend returns an empty catalogue and no longer reports a successful zero-model completion.
 - Default provider system messages now give clearer guidance about deadlines, blockers, reply-needed items, grouping related threads, and avoiding invented details.
 - Backend prompt construction now explicitly asks for grouped, factual, action-oriented output with short next-step cues when useful.
 - Targeted backend tests now lock the updated default system-message copy and `_build_prompt()` guardrails so prompt regressions are caught without relying only on rendered UI coverage.
@@ -258,6 +262,10 @@ Recent verification:
 - `backend/.venv/bin/python -m py_compile scripts/validate_rendered_ui.py scripts/validate_full_stack.py`: passed.
 - `backend/.venv/bin/python -m py_compile backend/config.py backend/summary_service.py scripts/validate_rendered_ui.py`: passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_system_message_settings.py tests/test_summary_service_provider_library.py tests/test_web_contract.py`: passed.
+- `backend/.venv/bin/python -m pytest -q tests/test_runtime_model_endpoints.py tests/test_web_contract.py`: passed with 7 passed.
+- `backend/.venv/bin/python -m pytest -q tests/test_runtime_model_endpoints.py tests/test_web_contract.py`: passed with 9 passed.
+- `backend/.venv/bin/python -m pytest -q tests/test_runtime_model_endpoints.py tests/test_web_contract.py`: passed with 10 passed.
+- `backend/.venv/bin/python -m pytest -q tests/test_runtime_model_endpoints.py tests/test_web_contract.py`: passed with 11 passed.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed with local port binding and Chromium launch allowed. Screenshots were written to `/var/folders/z_/872qmw6s5_d1qlyd3xdgsl5r0000gn/T/mail_summariser_rendered_ui/`.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after frontend API backend-URL/error-handling changes.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after backend URL settings input guidance and format updates.
@@ -269,6 +277,7 @@ Recent verification:
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after centralising Ollama status/help into one panel, restoring click-anywhere explainer close behaviour, reducing help-button size, converting local-model input to dropdown, and strengthening refresh/discover button feedback.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after improving default prompt guidance, adding the bottom browser status bar, and aligning macOS/browser Sample Mailbox wording.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after extending bottom-status assertions beyond initial load and adding the macOS footer status strip.
+- `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after removing the dedicated Ollama status panel/modal and using bottom-status-only runtime/model/catalog feedback.
 - `backend/.venv/bin/python scripts/validate_full_stack.py --attempts 5 --delay 0.5`: passed with local port binding allowed. A first sandboxed run failed because selecting and binding a loopback port was not permitted.
 - `./scripts/validate_full_stack.sh`: passed when run with local port binding allowed. A first sandboxed run failed because local binding to `127.0.0.1:8766` was not permitted.
 - GitHub CI run `25518723986`: passed, including Ubuntu Python 3.11 rendered UI regression and the cross-platform startup validation matrix.
@@ -309,7 +318,7 @@ Validation implications:
 
 1. Keep expanding targeted coverage where browser and macOS copy or status affordances intentionally mirror each other.
 2. Run the broader validation set again after the next cross-surface UI or prompt-behaviour change.
-3. Consider whether runtime/fake-mail health labels should include richer transitional states (for example warming or unavailable) without adding noise.
+3. Add targeted tests for model-name normalisation (CLI-style rows) and in-progress pull handling so serve/discover regressions are caught early.
 
 ## Longer-term steps
 
@@ -328,4 +337,4 @@ Validation implications:
 
 ---
 
-Last updated: 2026-05-08 00:31
+Last updated: 2026-05-08 16:36

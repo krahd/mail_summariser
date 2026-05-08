@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import re
 import threading
 from dataclasses import dataclass
 from typing import List
 from urllib.parse import urlparse
+from urllib.request import urlopen
 
 from modelito import (
     clear_model_lifecycle_state,
@@ -52,6 +54,52 @@ class _RuntimeState:
 
 _runtime_state = _RuntimeState()
 
+_DEFAULT_REMOTE_MODEL_CATALOG: tuple[str, ...] = (
+    'llama3.2:latest',
+    'llama3.1:8b',
+    'mistral:latest',
+    'qwen2.5:latest',
+    'phi3:latest',
+    'gemma2:latest',
+    'deepseek-r1:latest',
+    'nomic-embed-text:latest',
+)
+
+
+def _list_ollama_library_models(query_text: str, limit: int) -> list[str]:
+    try:
+        with urlopen('https://ollama.com/library', timeout=8) as response:
+            html = response.read().decode('utf-8', errors='ignore')
+    except OSError:
+        return []
+
+    names: list[str] = []
+    seen: set[str] = set()
+    for raw_name in re.findall(r'href=["\']?/library/([A-Za-z0-9._:-]+)["\']', html):
+        name = raw_name.strip()
+        if not name:
+            continue
+        if ':' not in name:
+            name = f'{name}:latest'
+        if query_text and query_text not in name.lower():
+            continue
+        if name in seen:
+            continue
+        names.append(name)
+        seen.add(name)
+        if len(names) >= limit:
+            break
+    return names
+
+
+def _normalize_model_name(raw: str) -> str:
+    """Return a clean model identifier from UI/CLI style model strings."""
+    value = str(raw or '').strip()
+    if not value:
+        return ''
+    # Some providers/CLIs include digest/size/date columns after the name.
+    return value.split()[0].strip()
+
 
 def _normalized_ollama_endpoint(host: str) -> tuple[str, str, int]:
     parsed = urlparse(host if '://' in host else f'http://{host}')
@@ -84,22 +132,56 @@ def list_ollama_models(host: str) -> List[str]:
         models = list_local_models()
     except (OSError, TypeError, ValueError):
         return []
-    return [m.strip() for m in models if m and m.strip()]
+
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for entry in models:
+        name = _normalize_model_name(entry)
+        if name and name not in seen:
+            normalized.append(name)
+            seen.add(name)
+    return normalized
 
 
 def list_online_ollama_models(host: str, query: str = '', limit: int = 20) -> List[str]:
     del host
-    try:
-        catalog = list_remote_model_catalog(query=query.strip() or None)
-    except (OSError, TypeError, ValueError):
-        return []
+    normalized_query = query.strip().lower()
+    catalog = list_remote_model_catalog(query=query.strip() or None)
     max_items = max(1, int(limit))
     names: list[str] = []
-    for entry in catalog[:max_items]:
-        name = getattr(entry, 'name', '')
-        if name:
-            names.append(name)
-    return names
+    seen: set[str] = set()
+    for entry in catalog:
+        name = ''
+        if isinstance(entry, dict):
+            name = str(entry.get('name', '')).strip()
+        elif isinstance(entry, str):
+            name = entry.strip()
+        else:
+            name = str(getattr(entry, 'name', '')).strip()
+        name = _normalize_model_name(name)
+        if not name or name in seen:
+            continue
+        names.append(name)
+        seen.add(name)
+        if len(names) >= max_items:
+            break
+    if names:
+        return names
+
+    library_names = _list_ollama_library_models(normalized_query, max_items)
+    if library_names:
+        return library_names
+
+    # Keep Discover Models usable when the upstream remote catalog endpoint
+    # returns an empty list despite a healthy local runtime.
+    fallback: list[str] = []
+    for model_name in _DEFAULT_REMOTE_MODEL_CATALOG:
+        if normalized_query and normalized_query not in model_name.lower():
+            continue
+        fallback.append(model_name)
+        if len(fallback) >= max_items:
+            break
+    return fallback
 
 
 def install_ollama() -> tuple[bool, str]:
@@ -225,16 +307,22 @@ def stop_managed_ollama(only_owned: bool) -> tuple[bool, str]:  # pylint: disabl
 
 
 def serve_ollama_model(ollama_host: str, model_name: str) -> tuple[bool, str]:
-    if not model_name.strip():
+    normalized_model = _normalize_model_name(model_name)
+    if not normalized_model:
         return False, 'Model name is required'
 
     host, base_url, port = _normalized_ollama_endpoint(ollama_host)
+
+    pull_state = get_pull_status(normalized_model)
+    if pull_state.get('status') == 'downloading':
+        return False, f'Model {normalized_model} is still downloading. Wait for pull to finish.'
+
     started, message = ensure_ollama_running(host, auto_start=True)
     if not started:
         return False, message
 
     ready = ensure_model_ready(
-        model_name.strip(),
+        normalized_model,
         host=base_url,
         port=port,
         auto_start=True,
@@ -242,9 +330,12 @@ def serve_ollama_model(ollama_host: str, model_name: str) -> tuple[bool, str]:
         timeout=120.0,
     )
     if not ready:
-        return False, f'Failed to serve model {model_name.strip()}'
-    _runtime_state.last_message_model = model_name.strip()
-    _runtime_state.last_message = f'Model {model_name.strip()} is warmed and ready'
+        local_models = list_ollama_models(host)
+        if normalized_model not in local_models:
+            return False, f'Model {normalized_model} is not available locally yet. Download it first.'
+        return False, f'Failed to serve model {normalized_model}'
+    _runtime_state.last_message_model = normalized_model
+    _runtime_state.last_message = f'Model {normalized_model} is warmed and ready'
     _runtime_state.last_message_host = host
     _runtime_state.last_message_warning = False
     return True, _runtime_state.last_message
