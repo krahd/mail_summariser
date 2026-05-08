@@ -170,8 +170,15 @@ def models_catalog(query: str | None = None, limit: int | None = 20) -> dict:
         'ollamaHost', 'http://127.0.0.1:11434'))
     try:
         models = provider.list_online_ollama_models(host, query=query or '', limit=int(limit or 20))
-    except (AttributeError, TypeError, OSError):
-        models = []
+    except (AttributeError, TypeError, OSError, ValueError) as exc:
+        return {'provider': 'ollama', 'models': [], 'count': 0, 'error': str(exc)}
+    if not models:
+        return {
+            'provider': 'ollama',
+            'models': [],
+            'count': 0,
+            'error': 'No models returned from the Ollama catalogue. Check provider connectivity.',
+        }
     return {'provider': 'ollama', 'models': models, 'count': len(models)}
 
 

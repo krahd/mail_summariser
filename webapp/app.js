@@ -123,11 +123,6 @@ const bottomStatusMailbox = document.getElementById("bottom-status-mailbox");
 const bottomStatusProvider = document.getElementById("bottom-status-provider");
 const bottomStatusJob = document.getElementById("bottom-status-job");
 const bottomStatusMessages = document.getElementById("bottom-status-messages");
-const messageHelpButtons = Array.from(document.querySelectorAll(".message-help-btn"));
-const messageExplainerModal = document.getElementById("message-explainer-modal");
-const messageExplainerTitle = document.getElementById("message-explainer-title");
-const messageExplainerBody = document.getElementById("message-explainer-body");
-const ollamaStatusSummaryLine = document.getElementById("ollama-status-summary");
 
 let ollamaRuntimeStatusState = { message: "Runtime status not loaded yet.", isError: false };
 let ollamaModelStatusState = { message: "Model list not loaded yet.", isError: false };
@@ -672,57 +667,17 @@ function syncDummyModeUI(enabled) {
 
 function setOllamaStatus(message, isError = false) {
   ollamaModelStatusState = { message, isError };
-  if (ollamaStatusLine) {
-    ollamaStatusLine.textContent = message;
-    ollamaStatusLine.style.color = isError ? "var(--danger-ink)" : "var(--success-ink)";
-  }
-  updateOllamaStatusSummary();
+  setStatus(`Models: ${message}`, isError);
 }
 
 function setOllamaRuntimeStatus(message, isError = false) {
   ollamaRuntimeStatusState = { message, isError };
-  if (ollamaRuntimeStatusLine) {
-    ollamaRuntimeStatusLine.textContent = message;
-    ollamaRuntimeStatusLine.style.color = isError ? "var(--danger-ink)" : "var(--success-ink)";
-  }
-  updateOllamaStatusSummary();
+  setStatus(`Runtime: ${message}`, isError);
 }
 
 function setCatalogStatus(message, isError = false) {
   ollamaCatalogStatusState = { message, isError };
-  if (catalogStatusLine) {
-    catalogStatusLine.textContent = message;
-    catalogStatusLine.style.color = isError ? "var(--danger-ink)" : "var(--success-ink)";
-  }
-  updateOllamaStatusSummary();
-}
-
-function updateOllamaStatusSummary() {
-  if (!ollamaStatusSummaryLine) {
-    return;
-  }
-
-  const lines = [
-    { label: "Runtime", ...ollamaRuntimeStatusState },
-    { label: "Models", ...ollamaModelStatusState },
-    { label: "Catalogue", ...ollamaCatalogStatusState },
-  ];
-
-  const seen = new Set();
-  const deduped = [];
-  for (const entry of lines) {
-    const normalized = String(entry.message || "").trim().toLowerCase();
-    if (!normalized || seen.has(normalized)) {
-      continue;
-    }
-    seen.add(normalized);
-    deduped.push(`${entry.label}: ${entry.message}`);
-  }
-
-  ollamaStatusSummaryLine.textContent = deduped.join(" | ") || "Status not available yet.";
-  ollamaStatusSummaryLine.style.color = lines.some((entry) => entry.isError)
-    ? "var(--danger-ink)"
-    : "var(--success-ink)";
+  setStatus(`Catalogue: ${message}`, isError);
 }
 
 function selectedProvider() {
@@ -908,7 +863,7 @@ async function handleRuntimeAction() {
 }
 
 async function serveConfiguredModel() {
-  const modelName = selectedModelName();
+  const modelName = selectedModelName().split(/\s+/)[0] || "";
   if (!modelName) {
     setOllamaStatus("Choose a model name before serving.", true);
     return;
@@ -923,7 +878,7 @@ async function serveConfiguredModel() {
 }
 
 async function deleteConfiguredModel() {
-  const modelName = selectedModelName();
+  const modelName = selectedModelName().split(/\s+/)[0] || "";
   if (!modelName) {
     setOllamaStatus("Choose a model name before deleting.", true);
     return;
@@ -1071,7 +1026,13 @@ function toggleSecretField(input, button) {
 async function refreshDownloadCatalog() {
   try {
     const result = await api.getModelCatalog("", 80);
+    if (result?.error) {
+      throw new Error(result.error);
+    }
     const models = Array.isArray(result.models) ? result.models : [];
+    if (models.length === 0) {
+      throw new Error("No models returned from the Ollama catalogue.");
+    }
 
     if (downloadableModelSelect) {
       downloadableModelSelect.innerHTML = "";
@@ -1351,36 +1312,6 @@ function updateHelpButton(isHelpActive) {
   }
 }
 
-function openMessageExplainer(kind) {
-  if (!messageExplainerModal || !messageExplainerBody || !messageExplainerTitle) {
-    return;
-  }
-
-  const copy = {
-    ollama: {
-      title: "Ollama Status Help",
-      body:
-        "This panel combines runtime, local-model, and catalogue status into one view. " +
-        "Use Refresh Ollama Status to update runtime state, Refresh Available Models to reload local models, and Discover Models to reload downloadable model entries.",
-    },
-  };
-
-  const details = copy[kind] || {
-    title: "Status Message Help",
-    body: "Status help is not available for this message yet.",
-  };
-  messageExplainerTitle.textContent = details.title;
-  messageExplainerBody.textContent = details.body;
-  messageExplainerModal.classList.remove("is-hidden");
-}
-
-function closeMessageExplainer() {
-  if (!messageExplainerModal) {
-    return;
-  }
-  messageExplainerModal.classList.add("is-hidden");
-}
-
 async function loadInitialData() {
   try {
     const [logs, settings, defaults] = await Promise.all([
@@ -1418,30 +1349,6 @@ async function runJobAction(action) {
 }
 
 function wireEvents() {
-  messageHelpButtons.forEach((button) => {
-    button.addEventListener("click", (event) => {
-      event.stopPropagation();
-      openMessageExplainer(button.dataset.messageHelp || "");
-    });
-  });
-
-  document.addEventListener("click", (event) => {
-    if (!messageExplainerModal || messageExplainerModal.classList.contains("is-hidden")) {
-      return;
-    }
-    const target = event.target;
-    if (target instanceof Element && target.closest(".message-help-btn")) {
-      return;
-    }
-    closeMessageExplainer();
-  });
-
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      closeMessageExplainer();
-    }
-  });
-
   const loadSettings = async () => {
     try {
       const settings = await api.getSettings();
