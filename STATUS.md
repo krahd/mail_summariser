@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-05-08 18:39
+Last updated: 2026-05-09 14:14
 
 ## Purpose
 
@@ -317,10 +317,7 @@ Validation implications:
 
 ## Next steps
 
-- No outstanding next steps. All three items from the previous cycle are now implemented and verified:
-  - In-progress pull handling tests added and passing (`test_runtime_model_endpoints.py`).
-  - Browser/macOS copy mirroring tests added and passing (`test_web_contract.py`).
-  - Full suite: **101 passed, 1 skipped**.
+None currently. The previous cycle was completed and verified with targeted coverage for in-progress pull handling, cross-surface browser/macOS copy mirroring, and a full test run of 101 passed and 1 skipped.
 
 ## Longer-term steps
 
@@ -339,4 +336,4 @@ Validation implications:
 
 ---
 
-Last updated: 2026-05-08 18:39
+Last updated: 2026-05-09 14:14
