@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-05-09 14:14
+Last updated: 2026-05-10 17:45
 
 ## Purpose
 
@@ -236,6 +236,7 @@ python scripts/validate_rendered_ui.py
 - `tag_summarised` actions and undo now honour the saved `summarisedTag` by storing the actual tag in undo payloads.
 - Browser backend target initialisation now preserves the browser-selected backend URL during settings loads.
 - Dependency declarations and CI install steps now use the project runtime dependency set instead of the stale TestPyPI `modelito==0.1.1` workaround.
+- Backend model-provider imports now include compatibility wrappers for older `modelito` Ollama helpers so PyInstaller release binaries still start cleanly when lifecycle/catalog helper exports are missing.
 - Repository hygiene now ignores/removes local `.env` state and flags tracked exact `.env` and backend SQLite files.
 - Browser rendered validation used Safari screenshot and API checks because Safari WebDriver JavaScript execution is disabled locally.
 
@@ -266,6 +267,9 @@ Recent verification:
 - `backend/.venv/bin/python -m pytest -q tests/test_runtime_model_endpoints.py tests/test_web_contract.py`: passed with 9 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_runtime_model_endpoints.py tests/test_web_contract.py`: passed with 10 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_runtime_model_endpoints.py tests/test_web_contract.py`: passed with 11 passed.
+- `backend/.venv/bin/python -m pytest -q tests/test_runtime_model_endpoints.py tests/test_modelito_basic.py`: passed with 14 passed.
+- `python3 scripts/build_backend_binary.py --platform macos --arch arm64`: passed and produced `dist/mail_summariser-backend-macos-arm64`.
+- Local packaged binary smoke test on `dist/mail_summariser-backend-macos-arm64 --host 127.0.0.1 --port 8879`: passed with `{"status":"ok"}` from `GET /health`.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed with local port binding and Chromium launch allowed. Screenshots were written to `/var/folders/z_/872qmw6s5_d1qlyd3xdgsl5r0000gn/T/mail_summariser_rendered_ui/`.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after frontend API backend-URL/error-handling changes.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after backend URL settings input guidance and format updates.
@@ -279,6 +283,7 @@ Recent verification:
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after extending bottom-status assertions beyond initial load and adding the macOS footer status strip.
 - `backend/.venv/bin/python scripts/validate_rendered_ui.py`: passed after removing the dedicated Ollama status panel/modal and using bottom-status-only runtime/model/catalog feedback.
 - `backend/.venv/bin/python -m pytest -q`: passed with 96 passed, 1 skipped.
+- `backend/.venv/bin/python -m pytest -q`: passed with 101 passed, 1 skipped.
 - `backend/.venv/bin/python scripts/validate_full_stack.py --attempts 5 --delay 0.5`: passed with local port binding allowed. A first sandboxed run failed because selecting and binding a loopback port was not permitted.
 - `./scripts/validate_full_stack.sh`: passed when run with local port binding allowed. A first sandboxed run failed because local binding to `127.0.0.1:8766` was not permitted.
 - GitHub CI run `25518723986`: passed, including Ubuntu Python 3.11 rendered UI regression and the cross-platform startup validation matrix.
@@ -336,4 +341,4 @@ None currently. The previous cycle was completed and verified with targeted cove
 
 ---
 
-Last updated: 2026-05-09 14:14
+Last updated: 2026-05-10 17:45
