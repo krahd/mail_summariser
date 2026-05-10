@@ -68,16 +68,25 @@ jobs:
         if: matrix.platform != 'windows'
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
           BIN="dist/mail_summariser-backend-${{ matrix.platform }}-${{ matrix.arch }}"
           "$BIN" --host 127.0.0.1 --port 8766 > /tmp/backend.log 2>&1 &
           PID=$!
+          ok=0
           for i in {1..20}; do
             if curl -fsS "http://127.0.0.1:8766/health" >/dev/null; then
+              ok=1
               break
             fi
             sleep 1
           done
+          if [ "$ok" -ne 1 ]; then
+            echo "::group::backend.log"
+            cat /tmp/backend.log || true
+            echo "::endgroup::"
+            kill "$PID" 2>/dev/null || true
+            exit 1
+          fi
           curl -fsS "http://127.0.0.1:8766/health"
           kill "$PID"
 
@@ -86,7 +95,8 @@ jobs:
         shell: pwsh
         run: |
           $bin = "dist/mail_summariser-backend-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.binary_ext }}"
-          $process = Start-Process -FilePath $bin -ArgumentList "--host", "127.0.0.1", "--port", "8766" -PassThru
+          $log = "$env:RUNNER_TEMP/backend.log"
+          $process = Start-Process -FilePath $bin -ArgumentList "--host", "127.0.0.1", "--port", "8766" -PassThru -RedirectStandardOutput $log -RedirectStandardError "$log.err"
           $ok = $false
           for ($i = 0; $i -lt 30; $i++) {
             try {
@@ -98,7 +108,11 @@ jobs:
             }
           }
           if (-not $ok) {
-            Stop-Process -Id $process.Id -Force
+            Write-Host "::group::backend.log"
+            if (Test-Path $log) { Get-Content $log }
+            if (Test-Path "$log.err") { Get-Content "$log.err" }
+            Write-Host "::endgroup::"
+            try { Stop-Process -Id $process.Id -Force } catch { }
             throw "Windows binary did not pass health smoke test"
           }
           Invoke-WebRequest -Uri "http://127.0.0.1:8766/health" -UseBasicParsing | Out-Null

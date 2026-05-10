@@ -70,6 +70,8 @@ def main() -> int:
         "--onefile",
         "--name",
         binary_name,
+        "--paths",
+        str(REPO_ROOT),
         "--add-data",
         add_data,
         "backend/main.py",
