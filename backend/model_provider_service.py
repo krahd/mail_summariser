@@ -1,27 +1,92 @@
 from __future__ import annotations
 
 import re
+import shutil
+import sys
 import threading
 from dataclasses import dataclass
 from typing import List
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
-from modelito import (
-    clear_model_lifecycle_state,
-    delete_model,
-    detect_install_method,
-    download_model,
-    ensure_model_ready,
-    ensure_ollama_running_verbose,
-    get_model_lifecycle_state,
-    install_ollama as modelito_install_ollama,
-    list_local_models,
-    list_remote_model_catalog,
-    ollama_installed,
-    server_is_up,
-    stop_ollama,
-)
+from modelito import ollama_service as modelito_ollama_service
+
+
+delete_model = modelito_ollama_service.delete_model
+download_model = modelito_ollama_service.download_model
+ensure_ollama_running_verbose = modelito_ollama_service.ensure_ollama_running_verbose
+list_local_models = modelito_ollama_service.list_local_models
+modelito_install_ollama = modelito_ollama_service.install_ollama
+ollama_installed = modelito_ollama_service.ollama_installed
+server_is_up = modelito_ollama_service.server_is_up
+stop_ollama = modelito_ollama_service.stop_ollama
+
+
+def detect_install_method() -> str:
+    func = getattr(modelito_ollama_service, 'detect_install_method', None)
+    if callable(func):
+        return str(func())
+    if sys.platform.startswith('win'):
+        return 'choco' if shutil.which('choco') else 'powershell'
+    if sys.platform == 'darwin':
+        return 'brew' if shutil.which('brew') else 'script'
+    return 'apt' if shutil.which('apt-get') else 'script'
+
+
+def ensure_model_ready(model_name: str, **kwargs) -> bool:
+    func = getattr(modelito_ollama_service, 'ensure_model_ready', None)
+    if callable(func):
+        return bool(func(model_name, **kwargs))
+
+    fallback = getattr(modelito_ollama_service, 'ensure_model_available', None)
+    if callable(fallback):
+        allow_download = bool(kwargs.get('allow_download', False))
+        timeout = float(kwargs.get('timeout', 600.0))
+        return bool(fallback(model_name, allow_download=allow_download, timeout=timeout))
+
+    preload = getattr(modelito_ollama_service, 'preload_model', None)
+    if callable(preload):
+        host = str(kwargs.get('host', 'http://127.0.0.1')).rstrip('/')
+        port = int(kwargs.get('port', 11434))
+        preload(host, port, model_name, timeout=float(kwargs.get('timeout', 120.0)))
+        return True
+
+    return False
+
+
+def get_model_lifecycle_state(model_name: str):
+    func = getattr(modelito_ollama_service, 'get_model_lifecycle_state', None)
+    if callable(func):
+        return func(model_name)
+    return None
+
+
+def clear_model_lifecycle_state(model_name: str) -> bool:
+    func = getattr(modelito_ollama_service, 'clear_model_lifecycle_state', None)
+    if callable(func):
+        return bool(func(model_name))
+    return False
+
+
+def list_remote_model_catalog(query: str | None = None):
+    func = getattr(modelito_ollama_service, 'list_remote_model_catalog', None)
+    if callable(func):
+        return func(query=query)
+
+    fallback = getattr(modelito_ollama_service, 'list_remote_models', None)
+    if not callable(fallback):
+        return []
+
+    names = []
+    needle = (query or '').strip().lower()
+    for name in fallback():
+        value = str(name or '').strip()
+        if not value:
+            continue
+        if needle and needle not in value.lower():
+            continue
+        names.append({'name': value})
+    return names
 
 
 # Minimal runtime state and managed-process tracking used by tests
