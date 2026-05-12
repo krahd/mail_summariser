@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-05-10 17:45
+Last updated: 2026-05-12 12:00
 
 ## Purpose
 
@@ -171,7 +171,7 @@ python scripts/validate_rendered_ui.py
 - Writing masked sentinel values (for example `__MASKED__`) does not overwrite persisted secrets.
 - Provider error messages are redacted before fallback text or metadata is returned.
 - Dev fake-mail routes are gated by `MAIL_SUMMARISER_ENABLE_DEV_TOOLS`.
-- `pyproject.toml` and `backend/requirements.txt` are aligned on runtime dependencies, including `modelito==1.2.2`, FastAPI, Pydantic, Uvicorn, OpenAI, and Anthropic.
+- `pyproject.toml` and `backend/requirements.txt` are aligned on runtime dependencies, including `modelito==1.4.1`, FastAPI, Pydantic, Uvicorn, OpenAI, and Anthropic.
 - Local `.env` files are ignored. The previously tracked `.env` file has been removed from the working tree, and the hygiene guard flags exact tracked `.env` files and tracked backend SQLite databases.
 
 ## Important files
@@ -341,4 +341,4 @@ None currently. The previous cycle was completed and verified with targeted cove
 
 ---
 
-Last updated: 2026-05-10 17:45
+Last updated: 2026-05-12 12:00
