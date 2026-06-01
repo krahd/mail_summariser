@@ -22,6 +22,21 @@ class MailServiceError(RuntimeError):
     pass
 
 
+def _redact_error_message(message: str, password: str | None = None) -> str:
+    """Redact passwords and other sensitive values from error messages."""
+    if not message:
+        return message
+    redacted = message
+    # Redact any obvious password patterns or actual password value if provided
+    if password and len(password) > 0:
+        redacted = redacted.replace(password, '***')
+    # Redact IMAP4 standard error patterns that might contain credentials
+    if 'LOGIN' in redacted and 'failed' in redacted.lower():
+        # Keep the error but redact any credentials-like parts
+        redacted = 'IMAP authentication failed'
+    return redacted
+
+
 DEFAULT_DUMMY_MESSAGES = [
     {
         'id': 'msg-001',
@@ -140,9 +155,14 @@ def _imap_connection(host: str, port: int, use_ssl: bool, username: str | None, 
         if username:
             try:
                 imap.login(username, password or '')
-            except imaplib.IMAP4.error:
-                pass
-        imap.select('INBOX')
+            except imaplib.IMAP4.error as exc:
+                raise MailServiceError(_redact_error_message(
+                    'IMAP authentication failed', password)) from exc
+        try:
+            imap.select('INBOX')
+        except imaplib.IMAP4.error as exc:
+            raise MailServiceError(_redact_error_message(
+                f'Could not select mailbox INBOX: {exc}', password)) from exc
         yield imap
     finally:
         try:
@@ -202,22 +222,26 @@ def _check_imap_connection(host: str | None, port: int, use_ssl: bool, username:
             return True, 'IMAP OK'
         try:
             imap = _open_imap(host, port, use_ssl)
-            if username:
-                try:
-                    imap.login(username, password or '')
-                except imaplib.IMAP4.error as exc:
-                    return False, str(exc)
-            return True, 'IMAP OK'
-        finally:
             try:
-                imap.logout()
-            except Exception:
-                pass
+                if username:
+                    try:
+                        imap.login(username, password or '')
+                    except imaplib.IMAP4.error:
+                        return False, _redact_error_message('IMAP authentication failed', password)
+                imap.select('INBOX')
+                return True, 'IMAP OK'
+            finally:
+                try:
+                    imap.logout()
+                except Exception:
+                    pass
+        except (imaplib.IMAP4.error, OSError) as exc:
+            return False, _redact_error_message(str(exc), password)
     except (imaplib.IMAP4.error, OSError) as exc:
-        return False, str(exc)
+        return False, _redact_error_message(str(exc), password)
 
 
-def _check_smtp_connection(host: str | None, port: int, use_ssl: bool) -> tuple[bool, str]:
+def _check_smtp_connection(host: str | None, port: int, use_ssl: bool, username: str | None = None, password: str | None = None) -> tuple[bool, str]:
     if host is None:
         return False, 'No SMTP host configured'
     try:
@@ -230,6 +254,11 @@ def _check_smtp_connection(host: str | None, port: int, use_ssl: bool) -> tuple[
             smtp = smtplib.SMTP(host, port)
         try:
             smtp.ehlo()
+            if username and password:
+                try:
+                    smtp.login(username, password)
+                except smtplib.SMTPException:
+                    return False, _redact_error_message('SMTP authentication failed', password)
             return True, 'SMTP OK'
         finally:
             try:
@@ -237,7 +266,7 @@ def _check_smtp_connection(host: str | None, port: int, use_ssl: bool) -> tuple[
             except Exception:
                 pass
     except (smtplib.SMTPException, OSError) as exc:
-        return False, str(exc)
+        return False, _redact_error_message(str(exc), password)
 
 
 def _add_tag_to_env(env: Any, normalized_tag: str, message_ids: list[str]) -> list[str]:
@@ -380,15 +409,18 @@ def mark_messages_read(message_ids: list[str], settings: dict[str, Any]) -> dict
         raise MailServiceError('IMAP host not configured')
 
     try:
+        changed_ids: list[str] = []
+        failed_ids: list[str] = []
         with _imap_connection(host, port, use_ssl, username, password) as imap:
             for uid in message_ids:
                 try:
                     imap.uid('STORE', str(uid), '+FLAGS', '(\\Seen)')
+                    changed_ids.append(str(uid))
                 except (imaplib.IMAP4.error, OSError):
-                    pass
+                    failed_ids.append(str(uid))
     except (imaplib.IMAP4.error, OSError) as exc:
-        raise MailServiceError(str(exc)) from exc
-    return {'restore_unread_ids': []}
+        raise MailServiceError(_redact_error_message(str(exc), password)) from exc
+    return {'restore_unread_ids': changed_ids, 'failed_message_ids': failed_ids}
 
 
 def restore_messages_unread(message_ids: list[str], settings: dict[str, Any]) -> None:
@@ -422,7 +454,7 @@ def restore_messages_unread(message_ids: list[str], settings: dict[str, Any]) ->
                 except (imaplib.IMAP4.error, OSError):
                     pass
     except (imaplib.IMAP4.error, OSError) as exc:
-        raise MailServiceError(str(exc)) from exc
+        raise MailServiceError(_redact_error_message(str(exc), password)) from exc
 
 
 def add_keyword_tag(message_ids: list[str], tag: str, settings: dict[str, Any]) -> dict[str, Any]:
@@ -453,7 +485,7 @@ def add_keyword_tag(message_ids: list[str], tag: str, settings: dict[str, Any]) 
         added_message_ids = _imap_add_flag(
             host, port, use_ssl, username, password, message_ids, normalized_tag)
     except (imaplib.IMAP4.error, OSError) as exc:
-        raise MailServiceError(str(exc)) from exc
+        raise MailServiceError(_redact_error_message(str(exc), password)) from exc
     return {'added_message_ids': added_message_ids}
 
 
@@ -477,7 +509,7 @@ def remove_keyword_tag(message_ids: list[str], tag: str, settings: dict[str, Any
     try:
         _imap_remove_flag(host, port, use_ssl, username, password, message_ids, normalized_tag)
     except (imaplib.IMAP4.error, OSError) as exc:
-        raise MailServiceError(str(exc)) from exc
+        raise MailServiceError(_redact_error_message(str(exc), password)) from exc
 
 
 def send_summary_email(recipient: str, subject: str, body: str, settings: dict[str, Any]) -> None:
@@ -511,8 +543,9 @@ def send_summary_email(recipient: str, subject: str, body: str, settings: dict[s
             if username and password:
                 try:
                     smtp.login(username, password)
-                except smtplib.SMTPException:
-                    pass
+                except smtplib.SMTPException as exc:
+                    raise MailServiceError(_redact_error_message(
+                        'SMTP authentication failed', password)) from exc
             smtp.send_message(msg)
         finally:
             try:
@@ -520,7 +553,7 @@ def send_summary_email(recipient: str, subject: str, body: str, settings: dict[s
             except (smtplib.SMTPException, OSError):
                 pass
     except (smtplib.SMTPException, OSError) as exc:
-        raise MailServiceError(str(exc)) from exc
+        raise MailServiceError(_redact_error_message(str(exc), password)) from exc
 
 
 def test_mail_connection(settings: dict[str, Any]) -> dict[str, Any]:
@@ -542,8 +575,12 @@ def test_mail_connection(settings: dict[str, Any]) -> dict[str, Any]:
         host, port, use_ssl, settings.get('username'), settings.get('imapPassword'))
     smtp_ok = False
     smtp_message = ''
-    smtp_ok, smtp_message = _check_smtp_connection(settings.get('smtpHost'), int(
-        settings.get('smtpPort') or 25), bool(settings.get('smtpUseSSL')))
+    smtp_ok, smtp_message = _check_smtp_connection(
+        settings.get('smtpHost'),
+        int(settings.get('smtpPort') or 25),
+        bool(settings.get('smtpUseSSL')),
+        settings.get('username'),
+        settings.get('smtpPassword') or settings.get('imapPassword'))
     return {
         'status': 'ok' if (imap_ok and smtp_ok) else 'warning',
         'mode': 'imap',
