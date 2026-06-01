@@ -79,6 +79,7 @@ DEFAULT_SETTINGS = {
     'anthropicSystemMessage': DEFAULT_ANTHROPIC_SYSTEM_MESSAGE,
     'modelName': os.getenv('MODEL_NAME', 'llama3.2:latest'),
     'backendBaseURL': os.getenv('BACKEND_BASE_URL', 'http://127.0.0.1:8766'),
+    'mailAccounts': [],
 }
 
 legacy_llm_api_key = os.getenv('LLM_API_KEY', '').strip()

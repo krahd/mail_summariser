@@ -3,6 +3,22 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 
+class MailAccountSettings(BaseModel):
+    id: str
+    displayName: str = ''
+    enabled: bool = True
+    imapHost: str = ''
+    imapPort: int = 993
+    imapUseSSL: bool = True
+    username: str = ''
+    imapPassword: str = ''
+    smtpHost: str = ''
+    smtpPort: int = 465
+    smtpUseSSL: bool = True
+    smtpPassword: str = ''
+    recipientEmail: str = ''
+
+
 class SearchCriteria(BaseModel):
     keyword: str = ''
     rawSearch: str = ''
@@ -84,6 +100,7 @@ class AppSettings(BaseModel):
     anthropicSystemMessage: str
     modelName: str
     backendBaseURL: str
+    mailAccounts: list[MailAccountSettings] = []
 
 
 class DummyModeUpdate(BaseModel):

@@ -129,7 +129,9 @@ app.include_router(actions_router)
 app.include_router(devtools_router)
 app.include_router(runtime_models_router)
 
+# Legacy top-level secret keys and account-level secret keys
 SECRET_SETTING_KEYS = ('openaiApiKey', 'anthropicApiKey', 'imapPassword', 'smtpPassword')
+ACCOUNT_SECRET_KEYS = ('imapPassword', 'smtpPassword')
 
 
 # Expose a mutable flag at module level so tests can toggle dev tools.
@@ -225,6 +227,21 @@ def _masked_settings_payload() -> dict[str, Any]:
     for key_name in SECRET_SETTING_KEYS:
         if merged.get(key_name, ''):
             merged[key_name] = '__MASKED__'
+
+    # Mask secrets within mailAccounts list
+    if isinstance(merged.get('mailAccounts'), list):
+        masked_accounts = []
+        for account in merged['mailAccounts']:
+            if isinstance(account, dict):
+                masked_account = account.copy()
+                for secret_key in ACCOUNT_SECRET_KEYS:
+                    if masked_account.get(secret_key, ''):
+                        masked_account[secret_key] = '__MASKED__'
+                masked_accounts.append(masked_account)
+            else:
+                masked_accounts.append(account)
+        merged['mailAccounts'] = masked_accounts
+
     return merged
 
 
