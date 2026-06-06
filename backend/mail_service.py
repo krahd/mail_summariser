@@ -588,3 +588,123 @@ def test_mail_connection(settings: dict[str, Any]) -> dict[str, Any]:
         'smtp': {'status': 'ok' if smtp_ok else 'error', 'message': smtp_message or 'SMTP OK'},
         'details': {'messageCount': 0},
     }
+
+
+def _parse_list_response(line: bytes | str) -> tuple[list[str], str | None, str | None]:
+    """Parse a single IMAP LIST response line.
+
+    Returns (flags_list, delimiter, mailbox_path). Returns empty values on
+    unparseable lines. This is intentionally defensive: IMAP server LIST
+    responses vary across implementations.
+    """
+    if isinstance(line, bytes):
+        try:
+            line = line.decode('utf-8', errors='replace')
+        except (AttributeError, UnicodeDecodeError):
+            line = str(line)
+
+    # Typical format: (\Flag \Flag2) "/" "INBOX" or (\Flag) "/" INBOX
+    line = line.strip()
+    if not line:
+        return [], None, None
+
+    flags: list[str] = []
+    delimiter: str | None = None
+    path: str | None = None
+
+    # Extract flags: content between the first '(' and matching ')'
+    flag_start = line.find('(')
+    flag_end = line.find(')', flag_start)
+    if flag_start != -1 and flag_end != -1:
+        flags_str = line[flag_start + 1:flag_end].strip()
+        flags = [f.strip() for f in flags_str.split() if f.strip()] if flags_str else []
+        remainder = line[flag_end + 1:].strip()
+    else:
+        remainder = line
+
+    # Extract delimiter and path from remainder.  Both may be quoted.
+    parts = remainder.split(None, 1)
+    if not parts:
+        return flags, None, None
+
+    raw_delim = parts[0]
+    delimiter = raw_delim.strip('"') if raw_delim != 'NIL' else None
+
+    if len(parts) < 2:
+        return flags, delimiter, None
+
+    raw_path = parts[1].strip()
+    # Strip surrounding quotes
+    if raw_path.startswith('"') and raw_path.endswith('"') and len(raw_path) >= 2:
+        path = raw_path[1:-1]
+    else:
+        path = raw_path
+
+    return flags, delimiter, path
+
+
+def discover_mailboxes_for_account(account: dict[str, Any]) -> list[dict[str, Any]]:
+    """Discover IMAP mailboxes for the given account configuration.
+
+    Returns a list of mailbox dicts with keys: path, delimiter, flags, selectable.
+    Raises MailServiceError on connection or authentication failure.
+    """
+    host: str | None = account.get('imapHost') or None
+    if not host:
+        raise MailServiceError('IMAP host not configured for account')
+
+    port = int(account.get('imapPort') or 993)
+    use_ssl = bool(account.get('imapUseSSL', True))
+    username: str | None = account.get('username') or None
+    password: str | None = account.get('imapPassword') or None
+
+    # Check for fake mail environment
+    _env = _get_fake_env_for_host_port(host, port)
+    if _env is not None:
+        results = []
+        for mbox in getattr(_env, 'mailboxes', []):
+            results.append({
+                'path': mbox.get('path', ''),
+                'delimiter': mbox.get('delimiter'),
+                'flags': list(mbox.get('flags', [])),
+                'selectable': mbox.get('selectable', True),
+            })
+        return results
+
+    imap = _open_imap(host, port, use_ssl)
+    try:
+        if username:
+            try:
+                imap.login(username, password or '')
+            except imaplib.IMAP4.error as exc:
+                raise MailServiceError(_redact_error_message(
+                    'IMAP authentication failed', password)) from exc
+
+        try:
+            typ, data = imap.list('""', '*')
+        except imaplib.IMAP4.error as exc:
+            raise MailServiceError(_redact_error_message(str(exc), password)) from exc
+
+        if typ != 'OK' or not data:
+            return []
+
+        results: list[dict[str, Any]] = []
+        for item in data:
+            if item is None:
+                continue
+            flags, delimiter, path = _parse_list_response(item)
+            if path is None:
+                continue
+            noselect = any(f.lower() == '\\noselect' for f in flags)
+            results.append({
+                'path': path,
+                'delimiter': delimiter,
+                'flags': flags,
+                'selectable': not noselect,
+            })
+        return results
+    finally:
+        try:
+            imap.logout()
+        except (imaplib.IMAP4.error, OSError):
+            pass

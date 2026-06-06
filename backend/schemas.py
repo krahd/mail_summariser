@@ -3,6 +3,15 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 
+class MailboxInfo(BaseModel):
+    accountId: str
+    path: str
+    delimiter: str | None = None
+    selectable: bool = True
+    flags: list[str] = []
+    displayName: str = ''
+
+
 class MailAccountSettings(BaseModel):
     id: str
     displayName: str = ''

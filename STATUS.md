@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-06-01 14:30
+Last updated: 2026-06-01 13:55
 
 ## Purpose
 
@@ -249,11 +249,13 @@ python scripts/validate_rendered_ui.py
 - Backend model-provider imports now include compatibility wrappers for older `modelito` Ollama helpers so PyInstaller release binaries still start cleanly when lifecycle/catalog helper exports are missing.
 - Repository hygiene now ignores/removes local `.env` state and flags tracked exact `.env` and backend SQLite files.
 - Browser rendered validation used Safari screenshot and API checks because Safari WebDriver JavaScript execution is disabled locally.
+- Mailbox discovery endpoints now expose per-account and aggregated IMAP mailbox lists, and the app/lifetime test harness now resets backend DB path state so top-level `db` imports do not leak across tests.
 
 ## Verification status
 
 Recent verification:
 
+- `backend/.venv/bin/python -m pytest -q`: passed with 136 passed, 1 skipped, 1 warning.
 - `backend/.venv/bin/python -m pytest -q tests/test_validate_full_stack_script.py`: passed with 3 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_web_contract.py tests/test_validate_full_stack_script.py`: passed with 6 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_fuzz_runtime_models_payloads.py`: passed with 11 passed.
@@ -397,4 +399,4 @@ Hardened the current single-account live IMAP/SMTP implementation to fail loudly
 
 ---
 
-Last updated: 2026-06-01 14:30
+Last updated: 2026-06-01 13:55

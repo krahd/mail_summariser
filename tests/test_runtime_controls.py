@@ -81,6 +81,7 @@ class RuntimeControlTests(unittest.TestCase):
         globals()["backend_app"] = importlib.import_module("app")
 
         self.temp_dir = tempfile.TemporaryDirectory()
+        self.original_db_path = db.DB_PATH
         db.DB_PATH = Path(self.temp_dir.name) / "mail_summariser.sqlite3"
         self.original_defaults = backend_app.DEFAULT_SETTINGS.copy()
         self.original_dev_tools_enabled = backend_app.ENABLE_DEV_TOOLS
@@ -107,6 +108,7 @@ class RuntimeControlTests(unittest.TestCase):
         backend_app._fake_mail_manager.shutdown()
         backend_app._reset_dummy_sandbox()
         model_provider_service._clear_managed_process()
+        db.DB_PATH = self.original_db_path
         self.temp_dir.cleanup()
 
     def _client(self) -> TestClient:

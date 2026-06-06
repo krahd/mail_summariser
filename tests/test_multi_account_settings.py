@@ -79,13 +79,13 @@ def test_post_settings_persists_mail_accounts() -> None:
             'smtpPassword': 'work-smtp-password',
             'recipientEmail': 'user@company.com',
         }
-        
+
         payload = _base_settings()
         payload['mailAccounts'] = [account1, account2]
-        
+
         response = client.post('/settings', json=payload)
         assert response.status_code == 200
-        
+
         # Retrieve and verify persistence
         settings_response = client.get('/settings')
         assert settings_response.status_code == 200
@@ -113,12 +113,12 @@ def test_account_secrets_masked_in_read() -> None:
             'smtpPassword': 'secret-smtp-pass',
             'recipientEmail': 'testuser@example.com',
         }
-        
+
         payload = _base_settings()
         payload['mailAccounts'] = [account]
-        
+
         client.post('/settings', json=payload)
-        
+
         # Read settings and verify secrets are masked
         response = client.get('/settings')
         assert response.status_code == 200
@@ -149,31 +149,31 @@ def test_masked_account_secret_write_preserves_stored_secret() -> None:
             'smtpPassword': 'original-smtp-secret',
             'recipientEmail': 'testuser@example.com',
         }
-        
+
         payload1 = _base_settings()
         payload1['mailAccounts'] = [account1]
         assert client.post('/settings', json=payload1).status_code == 200
-        
+
         # Verify original secrets were stored (by updating with different secrets)
         account1_updated = account1.copy()
         account1_updated['displayName'] = 'Updated Name'
         payload2 = _base_settings()
         payload2['mailAccounts'] = [account1_updated]
         assert client.post('/settings', json=payload2).status_code == 200
-        
+
         # Now read and get masked values
         response = client.get('/settings')
         retrieved = response.json()
         assert retrieved['mailAccounts'][0]['imapPassword'] == '__MASKED__'
         assert retrieved['mailAccounts'][0]['smtpPassword'] == '__MASKED__'
-        
+
         # Send update with masked values back
         account_update_with_masked = retrieved['mailAccounts'][0].copy()
         # Keep masked sentinel values
         payload3 = _base_settings()
         payload3['mailAccounts'] = [account_update_with_masked]
         assert client.post('/settings', json=payload3).status_code == 200
-        
+
         # Read again and verify __MASKED__ writes didn't erase the original secrets
         # We can't directly read the secrets (they're masked), but if they were erased,
         # the account would have empty secrets. Instead, verify the account still exists
@@ -196,10 +196,10 @@ def test_legacy_imap_settings_still_work() -> None:
         payload['username'] = 'legacyuser@example.com'
         payload['imapPassword'] = 'legacy-secret-pass'
         payload['recipientEmail'] = 'legacyuser@example.com'
-        
+
         response = client.post('/settings', json=payload)
         assert response.status_code == 200
-        
+
         # Retrieve and verify legacy fields
         settings_response = client.get('/settings')
         assert settings_response.status_code == 200
@@ -230,26 +230,26 @@ def test_legacy_and_multi_account_coexist() -> None:
             'smtpPassword': 'pass1-smtp',
             'recipientEmail': 'user1@example.com',
         }
-        
+
         payload = _base_settings()
         payload['imapHost'] = 'legacy.imap.example.com'  # Legacy field
         payload['username'] = 'legacyuser@example.com'  # Legacy field
         payload['imapPassword'] = 'legacy-pass'  # Legacy field
         payload['mailAccounts'] = [account]  # New multi-account field
-        
+
         response = client.post('/settings', json=payload)
         assert response.status_code == 200
-        
+
         # Retrieve and verify both coexist
         settings_response = client.get('/settings')
         assert settings_response.status_code == 200
         settings_payload = settings_response.json()
-        
+
         # Legacy fields present
         assert settings_payload['imapHost'] == 'legacy.imap.example.com'
         assert settings_payload['username'] == 'legacyuser@example.com'
         assert settings_payload['imapPassword'] == '__MASKED__'
-        
+
         # Multi-account field present
         assert len(settings_payload['mailAccounts']) == 1
         assert settings_payload['mailAccounts'][0]['id'] == 'account1'
@@ -273,12 +273,12 @@ def test_empty_account_passwords_not_masked() -> None:
             'smtpPassword': '',  # Empty, not a secret
             'recipientEmail': 'user@example.com',
         }
-        
+
         payload = _base_settings()
         payload['mailAccounts'] = [account]
-        
+
         client.post('/settings', json=payload)
-        
+
         # Read and verify empty passwords are not masked
         response = client.get('/settings')
         assert response.status_code == 200
@@ -321,18 +321,18 @@ def test_multiple_accounts_each_masked_independently() -> None:
             'smtpPassword': 'account2-smtp-secret',
             'recipientEmail': 'user2@example.com',
         }
-        
+
         payload = _base_settings()
         payload['mailAccounts'] = [account1, account2]
-        
+
         client.post('/settings', json=payload)
-        
+
         # Read and verify both are masked independently
         response = client.get('/settings')
         assert response.status_code == 200
         settings_payload = response.json()
         assert len(settings_payload['mailAccounts']) == 2
-        
+
         for i, account in enumerate(settings_payload['mailAccounts'], 1):
             assert account['imapPassword'] == '__MASKED__'
             assert account['smtpPassword'] == '__MASKED__'

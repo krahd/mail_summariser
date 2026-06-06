@@ -33,7 +33,8 @@ ALLOWED_ORIGIN_REGEX = os.getenv(
     'ALLOWED_ORIGIN_REGEX',
     r'^https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$',
 ).strip()
-ENABLE_DEV_TOOLS = os.getenv('MAIL_SUMMARISER_ENABLE_DEV_TOOLS', 'false').lower() in ('1', 'true', 'yes', 'on')
+ENABLE_DEV_TOOLS = os.getenv('MAIL_SUMMARISER_ENABLE_DEV_TOOLS',
+                             'false').lower() in ('1', 'true', 'yes', 'on')
 
 DEFAULT_OPENAI_SYSTEM_MESSAGE = os.getenv(
     'OPENAI_SYSTEM_MESSAGE',
