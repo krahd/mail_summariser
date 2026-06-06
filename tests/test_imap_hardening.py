@@ -36,6 +36,7 @@ class IMAPHardeningTests(unittest.TestCase):
         globals()["schemas"] = importlib.import_module("schemas")
 
         self.temp_dir = tempfile.TemporaryDirectory()
+        self.original_db_path = db.DB_PATH
         db.DB_PATH = Path(self.temp_dir.name) / "mail_summariser.sqlite3"
         self.original_dev_tools_enabled = backend_app.ENABLE_DEV_TOOLS
         backend_app.DEFAULT_SETTINGS["ollamaAutoStart"] = False
@@ -47,6 +48,7 @@ class IMAPHardeningTests(unittest.TestCase):
         backend_app.ENABLE_DEV_TOOLS = self.original_dev_tools_enabled
         backend_app._fake_mail_manager.shutdown()
         backend_app._reset_dummy_sandbox()
+        db.DB_PATH = self.original_db_path
         self.temp_dir.cleanup()
 
     def _client(self) -> TestClient:

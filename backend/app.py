@@ -21,6 +21,7 @@ from backend import dummy_state
 from backend.config import (
     ALLOWED_ORIGINS,
     ALLOWED_ORIGIN_REGEX,
+    DB_PATH as DEFAULT_DB_PATH,
     DEFAULT_SETTINGS,
     ENABLE_DEV_TOOLS as _CONFIG_ENABLE_DEV_TOOLS,
 )
@@ -40,6 +41,7 @@ from backend.schemas import (
 from backend import model_provider_service
 from backend.routers_actions import router as actions_router
 from backend.routers_devtools import router as devtools_router
+from backend.routers_mailboxes import router as mailboxes_router
 from backend.routers_runtime_models import router as runtime_models_router
 from backend.routers_settings import router as settings_router
 from backend.routers_summaries import router as summaries_router
@@ -66,7 +68,10 @@ async def lifespan(_: FastAPI):
         try:
             # Import inside lifespan to respect test-time top-level patching
             from backend import db as _backend_db  # pylint: disable=import-outside-toplevel
-            _backend_db.DB_PATH = _sys.modules['db'].DB_PATH
+            # Preserve per-test backend.db.DB_PATH overrides. Only inherit the
+            # top-level db path when backend.db is still at its default location.
+            if _backend_db.DB_PATH == DEFAULT_DB_PATH:
+                _backend_db.DB_PATH = _sys.modules['db'].DB_PATH
         except (ImportError, AttributeError):
             pass
     init_db()
@@ -111,7 +116,14 @@ async def lifespan(_: FastAPI):
                 pass
     except (AttributeError, TypeError):
         pass
-    yield
+    try:
+        yield
+    finally:
+        try:
+            from backend import db as _backend_db  # pylint: disable=import-outside-toplevel
+            _backend_db.DB_PATH = DEFAULT_DB_PATH
+        except (ImportError, AttributeError):
+            pass
 
 
 app = FastAPI(title='mail_summariser backend', version='0.0.5', lifespan=lifespan)
@@ -128,6 +140,7 @@ app.include_router(summaries_router)
 app.include_router(actions_router)
 app.include_router(devtools_router)
 app.include_router(runtime_models_router)
+app.include_router(mailboxes_router)
 
 # Legacy top-level secret keys and account-level secret keys
 SECRET_SETTING_KEYS = ('openaiApiKey', 'anthropicApiKey', 'imapPassword', 'smtpPassword')

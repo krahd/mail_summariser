@@ -39,6 +39,13 @@ class FakeMailEnvironment:  # pylint: disable=too-many-instance-attributes
             },
         }
         self.sent_messages: list[dict[str, str]] = []
+        self.mailboxes: list[dict] = [
+            {'path': 'INBOX', 'delimiter': '/', 'flags': [], 'selectable': True},
+            {'path': 'Archive', 'delimiter': '/', 'flags': [], 'selectable': True},
+            {'path': 'Lists/Fing', 'delimiter': '/', 'flags': [], 'selectable': True},
+            {'path': 'Deleted Messages', 'delimiter': '/', 'flags': [], 'selectable': True},
+            {'path': 'Junk', 'delimiter': '/', 'flags': [], 'selectable': True},
+        ]
         self.settings_payload = {
             'dummyMode': False,
             'imapHost': self.host,

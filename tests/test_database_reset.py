@@ -28,6 +28,7 @@ class DatabaseResetTests(unittest.TestCase):
         globals()["dummy_state"] = importlib.import_module("dummy_state")
 
         self.temp_dir = tempfile.TemporaryDirectory()
+        self.original_db_path = db.DB_PATH
         self.original_defaults = backend_app.DEFAULT_SETTINGS.copy()
         self.original_dev_tools_enabled = backend_app.ENABLE_DEV_TOOLS
         db.DB_PATH = Path(self.temp_dir.name) / "mail_summariser.sqlite3"
@@ -43,6 +44,7 @@ class DatabaseResetTests(unittest.TestCase):
         backend_app._backend_shutdown_requested = False
         backend_app._fake_mail_manager.shutdown()
         backend_app._reset_dummy_sandbox()
+        db.DB_PATH = self.original_db_path
         self.temp_dir.cleanup()
 
     def _client(self) -> TestClient:
