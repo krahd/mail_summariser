@@ -12,3 +12,4 @@ dist/
 release_artifacts/
 *.egg-info/
 *.xcarchive/
+ignore/
