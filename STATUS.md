@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-06-01 13:55
+Last updated: 2026-06-06 23:07
 
 ## Purpose
 
@@ -173,6 +173,7 @@ python scripts/validate_rendered_ui.py
 - Dev fake-mail routes are gated by `MAIL_SUMMARISER_ENABLE_DEV_TOOLS`.
 - `pyproject.toml` and `backend/requirements.txt` are aligned on runtime dependencies, including `modelito==1.4.3`, FastAPI, Pydantic, Uvicorn, OpenAI, and Anthropic.
 - Local `.env` files are ignored. The previously tracked `.env` file has been removed from the working tree, and the hygiene guard flags exact tracked `.env` files and tracked backend SQLite databases.
+- The local `ignore/` scratch directory is ignored so prompt-pack notes and other ad hoc material stay out of git.
 
 ## Important files
 
@@ -399,4 +400,4 @@ Hardened the current single-account live IMAP/SMTP implementation to fail loudly
 
 ---
 
-Last updated: 2026-06-01 13:55
+Last updated: 2026-06-06 23:07
