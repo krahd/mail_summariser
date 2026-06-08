@@ -22,11 +22,24 @@ class MailServiceError(RuntimeError):
     pass
 
 
-def _redact_error_message(message: str, password: str | None = None) -> str:
+def _response_text(message: Any) -> str:
+    if message is None:
+        return ''
+    if isinstance(message, bytes):
+        return message.decode('utf-8', errors='replace')
+    if isinstance(message, bytearray):
+        return bytes(message).decode('utf-8', errors='replace')
+    if isinstance(message, (list, tuple)):
+        parts = [_response_text(item) for item in message if item is not None]
+        return ' '.join(part for part in parts if part).strip()
+    return str(message)
+
+
+def _redact_error_message(message: Any, password: str | None = None) -> str:
     """Redact passwords and other sensitive values from error messages."""
     if not message:
-        return message
-    redacted = message
+        return ''
+    redacted = _response_text(message)
     # Redact any obvious password patterns or actual password value if provided
     if password and len(password) > 0:
         redacted = redacted.replace(password, '***')
@@ -148,6 +161,175 @@ def _env_messages_from_env(env: Any) -> list[dict[str, Any]]:
     return env_messages
 
 
+def _find_dummy_message(message_id: str) -> dict[str, Any] | None:
+    for message in _dummy_mailbox:
+        if str(message.get('id', '')) == str(message_id):
+            return message
+    return None
+
+
+def _find_env_message(env: Any, message_id: str) -> dict[str, Any] | None:
+    for message in env.messages.values():
+        if str(message.get('id', '')) == str(message_id):
+            return message
+    return None
+
+
+def _select_inbox_or_raise(imap: Any, password: str | None) -> None:
+    try:
+        typ, data = imap.select('INBOX')
+    except imaplib.IMAP4.error as exc:
+        raise MailServiceError(
+            _redact_error_message(f'Could not select mailbox INBOX: {exc}', password)
+        ) from exc
+    if str(typ).upper() != 'OK':
+        reason = _response_text(data)
+        message = 'Could not select mailbox INBOX'
+        if reason:
+            message = f'{message}: {_redact_error_message(reason, password)}'
+        raise MailServiceError(message)
+
+
+def _store_message_flags(
+    imap: Any,
+    message_ids: list[str],
+    command: str,
+    flag: str,
+) -> tuple[list[str], list[str]]:
+    changed_ids: list[str] = []
+    failed_ids: list[str] = []
+    for uid in message_ids:
+        try:
+            typ, _ = imap.uid('STORE', str(uid), command, flag)
+            if str(typ).upper() == 'OK':
+                changed_ids.append(str(uid))
+            else:
+                failed_ids.append(str(uid))
+        except (imaplib.IMAP4.error, OSError):
+            failed_ids.append(str(uid))
+    return changed_ids, failed_ids
+
+
+def _mark_dummy_messages_read(message_ids: list[str]) -> tuple[list[str], list[str]]:
+    changed_ids: list[str] = []
+    failed_ids: list[str] = []
+    for uid in message_ids:
+        message = _find_dummy_message(uid)
+        if message is None:
+            failed_ids.append(str(uid))
+            continue
+        if message.get('unread'):
+            message['unread'] = False
+            changed_ids.append(str(message.get('id', uid)))
+    return changed_ids, failed_ids
+
+
+def _restore_dummy_messages_unread(message_ids: list[str]) -> tuple[list[str], list[str]]:
+    changed_ids: list[str] = []
+    failed_ids: list[str] = []
+    for uid in message_ids:
+        message = _find_dummy_message(uid)
+        if message is None:
+            failed_ids.append(str(uid))
+            continue
+        if not message.get('unread'):
+            message['unread'] = True
+            changed_ids.append(str(message.get('id', uid)))
+    return changed_ids, failed_ids
+
+
+def _mark_env_messages_read(env: Any, message_ids: list[str]) -> tuple[list[str], list[str]]:
+    changed_ids: list[str] = []
+    failed_ids: list[str] = []
+    for uid in message_ids:
+        message = _find_env_message(env, uid)
+        if message is None:
+            failed_ids.append(str(uid))
+            continue
+        if '\\Seen' not in message['flags']:
+            message['flags'].add('\\Seen')
+            changed_ids.append(str(message.get('id', uid)))
+    return changed_ids, failed_ids
+
+
+def _restore_env_messages_unread(env: Any, message_ids: list[str]) -> tuple[list[str], list[str]]:
+    changed_ids: list[str] = []
+    failed_ids: list[str] = []
+    for uid in message_ids:
+        message = _find_env_message(env, uid)
+        if message is None:
+            failed_ids.append(str(uid))
+            continue
+        if '\\Seen' in message['flags']:
+            message['flags'].discard('\\Seen')
+            changed_ids.append(str(message.get('id', uid)))
+    return changed_ids, failed_ids
+
+
+def _add_dummy_tag(message_ids: list[str], normalized_tag: str) -> tuple[list[str], list[str]]:
+    added_ids: list[str] = []
+    failed_ids: list[str] = []
+    for uid in message_ids:
+        message = _find_dummy_message(uid)
+        if message is None:
+            failed_ids.append(str(uid))
+            continue
+        current = _normalized_keywords(message)
+        if normalized_tag.lower() not in [item.lower() for item in current]:
+            current.append(normalized_tag)
+            message['keywords'] = current
+            added_ids.append(str(message.get('id', uid)))
+    return added_ids, failed_ids
+
+
+def _remove_dummy_tag(message_ids: list[str], normalized_tag: str) -> tuple[list[str], list[str]]:
+    removed_ids: list[str] = []
+    failed_ids: list[str] = []
+    for uid in message_ids:
+        message = _find_dummy_message(uid)
+        if message is None:
+            failed_ids.append(str(uid))
+            continue
+        before = _normalized_keywords(message)
+        after = [kw for kw in before if kw.lower() != normalized_tag.lower()]
+        if after != before:
+            message['keywords'] = after
+            removed_ids.append(str(message.get('id', uid)))
+    return removed_ids, failed_ids
+
+
+def _add_env_tag(env: Any, normalized_tag: str, message_ids: list[str]) -> tuple[list[str], list[str]]:
+    added: list[str] = []
+    failed: list[str] = []
+    for uid in message_ids:
+        message = _find_env_message(env, uid)
+        if message is None:
+            failed.append(str(uid))
+            continue
+        current = [kw for kw in message['flags'] if not kw.startswith('\\')]
+        if normalized_tag.lower() not in [item.lower() for item in current]:
+            message['flags'].add(normalized_tag)
+            added.append(str(message.get('id', uid)))
+    return added, failed
+
+
+def _remove_env_tag(env: Any, normalized_tag: str, message_ids: list[str]) -> tuple[list[str], list[str]]:
+    removed: list[str] = []
+    failed: list[str] = []
+    for uid in message_ids:
+        message = _find_env_message(env, uid)
+        if message is None:
+            failed.append(str(uid))
+            continue
+        to_remove = [kw for kw in list(message['flags']) if not kw.startswith(
+            '\\') and kw.lower() == normalized_tag.lower()]
+        if to_remove:
+            for kw in to_remove:
+                message['flags'].discard(kw)
+            removed.append(str(message.get('id', uid)))
+    return removed, failed
+
+
 @contextmanager
 def _imap_connection(host: str, port: int, use_ssl: bool, username: str | None, password: str | None) -> Any:
     imap = _open_imap(host, port, use_ssl)
@@ -158,11 +340,7 @@ def _imap_connection(host: str, port: int, use_ssl: bool, username: str | None, 
             except imaplib.IMAP4.error as exc:
                 raise MailServiceError(_redact_error_message(
                     'IMAP authentication failed', password)) from exc
-        try:
-            imap.select('INBOX')
-        except imaplib.IMAP4.error as exc:
-            raise MailServiceError(_redact_error_message(
-                f'Could not select mailbox INBOX: {exc}', password)) from exc
+        _select_inbox_or_raise(imap, password)
         yield imap
     finally:
         try:
@@ -228,13 +406,15 @@ def _check_imap_connection(host: str | None, port: int, use_ssl: bool, username:
                         imap.login(username, password or '')
                     except imaplib.IMAP4.error:
                         return False, _redact_error_message('IMAP authentication failed', password)
-                imap.select('INBOX')
+                _select_inbox_or_raise(imap, password)
                 return True, 'IMAP OK'
             finally:
                 try:
                     imap.logout()
                 except Exception:
                     pass
+        except MailServiceError as exc:
+            return False, str(exc)
         except (imaplib.IMAP4.error, OSError) as exc:
             return False, _redact_error_message(str(exc), password)
     except (imaplib.IMAP4.error, OSError) as exc:
@@ -270,50 +450,29 @@ def _check_smtp_connection(host: str | None, port: int, use_ssl: bool, username:
 
 
 def _add_tag_to_env(env: Any, normalized_tag: str, message_ids: list[str]) -> list[str]:
-    added: list[str] = []
-    for uid in message_ids:
-        for m in env.messages.values():
-            if str(m.get('id')) == str(uid):
-                current = [kw for kw in m['flags'] if not kw.startswith('\\')]
-                if normalized_tag.lower() not in [item.lower() for item in current]:
-                    m['flags'].add(normalized_tag)
-                    added.append(str(m.get('id')))
+    added, _failed = _add_env_tag(env, normalized_tag, message_ids)
     return added
 
 
 def _remove_tag_from_env(env: Any, normalized_tag: str, message_ids: list[str]) -> None:
-    for uid in message_ids:
-        for m in env.messages.values():
-            if str(m.get('id')) == str(uid):
-                to_remove = [kw for kw in list(m['flags']) if not kw.startswith(
-                    '\\') and kw.lower() == normalized_tag.lower()]
-                for kw in to_remove:
-                    m['flags'].discard(kw)
+    _remove_env_tag(env, normalized_tag, message_ids)
 
 
-def _imap_add_flag(host: str | None, port: int, use_ssl: bool, username: str | None, password: str | None, message_ids: list[str], normalized_tag: str) -> list[str]:
+def _imap_add_flag(host: str | None, port: int, use_ssl: bool, username: str | None, password: str | None, message_ids: list[str], normalized_tag: str) -> tuple[list[str], list[str]]:
     added: list[str] = []
+    failed: list[str] = []
     if host is None:
-        return added
+        return added, failed
     with _imap_connection(host, port, use_ssl, username, password) as imap:
-        for uid in message_ids:
-            try:
-                imap.uid('STORE', str(uid), '+FLAGS', f'({normalized_tag})')
-                added.append(str(uid))
-            except (imaplib.IMAP4.error, OSError):
-                pass
-    return added
+        added, failed = _store_message_flags(imap, message_ids, '+FLAGS', f'({normalized_tag})')
+    return added, failed
 
 
-def _imap_remove_flag(host: str | None, port: int, use_ssl: bool, username: str | None, password: str | None, message_ids: list[str], normalized_tag: str) -> None:
+def _imap_remove_flag(host: str | None, port: int, use_ssl: bool, username: str | None, password: str | None, message_ids: list[str], normalized_tag: str) -> tuple[list[str], list[str]]:
     if host is None:
-        return
+        return [], []
     with _imap_connection(host, port, use_ssl, username, password) as imap:
-        for uid in message_ids:
-            try:
-                imap.uid('STORE', str(uid), '-FLAGS', f'({normalized_tag})')
-            except (imaplib.IMAP4.error, OSError):
-                pass
+        return _store_message_flags(imap, message_ids, '-FLAGS', f'({normalized_tag})')
 
 
 def _open_imap(host: str, port: int, use_ssl: bool) -> imaplib.IMAP4 | imaplib.IMAP4_SSL:
@@ -382,12 +541,8 @@ def search_messages(criteria: SearchCriteria, settings: dict[str, Any]) -> list[
 
 def mark_messages_read(message_ids: list[str], settings: dict[str, Any]) -> dict[str, Any]:
     if is_dummy_mode(settings):
-        changed_ids: list[str] = []
-        for message in _find_dummy_messages(message_ids):
-            if message.get('unread'):
-                message['unread'] = False
-                changed_ids.append(message['id'])
-        return {'restore_unread_ids': changed_ids}
+        changed_ids, failed_ids = _mark_dummy_messages_read(message_ids)
+        return {'restore_unread_ids': changed_ids, 'failed_message_ids': failed_ids}
     host = settings.get('imapHost')
     port = int(settings.get('imapPort') or 993)
     use_ssl = bool(settings.get('imapUseSSL'))
@@ -396,14 +551,8 @@ def mark_messages_read(message_ids: list[str], settings: dict[str, Any]) -> dict
 
     _env = _get_fake_env_for_host_port(host, port)
     if _env is not None:
-        changed_ids: list[str] = []
-        for mid in message_ids:
-            for m in _env.messages.values():
-                if str(m.get('id')) == str(mid):
-                    if '\\Seen' not in m['flags']:
-                        m['flags'].add('\\Seen')
-                        changed_ids.append(str(m.get('id')))
-        return {'restore_unread_ids': changed_ids}
+        changed_ids, failed_ids = _mark_env_messages_read(_env, message_ids)
+        return {'restore_unread_ids': changed_ids, 'failed_message_ids': failed_ids}
 
     if host is None:
         raise MailServiceError('IMAP host not configured')
@@ -412,22 +561,16 @@ def mark_messages_read(message_ids: list[str], settings: dict[str, Any]) -> dict
         changed_ids: list[str] = []
         failed_ids: list[str] = []
         with _imap_connection(host, port, use_ssl, username, password) as imap:
-            for uid in message_ids:
-                try:
-                    imap.uid('STORE', str(uid), '+FLAGS', '(\\Seen)')
-                    changed_ids.append(str(uid))
-                except (imaplib.IMAP4.error, OSError):
-                    failed_ids.append(str(uid))
+            changed_ids, failed_ids = _store_message_flags(imap, message_ids, '+FLAGS', '(\\Seen)')
     except (imaplib.IMAP4.error, OSError) as exc:
         raise MailServiceError(_redact_error_message(str(exc), password)) from exc
     return {'restore_unread_ids': changed_ids, 'failed_message_ids': failed_ids}
 
 
-def restore_messages_unread(message_ids: list[str], settings: dict[str, Any]) -> None:
+def restore_messages_unread(message_ids: list[str], settings: dict[str, Any]) -> dict[str, Any]:
     if is_dummy_mode(settings):
-        for message in _find_dummy_messages(message_ids):
-            message['unread'] = True
-        return
+        changed_ids, failed_ids = _restore_dummy_messages_unread(message_ids)
+        return {'restore_unread_ids': changed_ids, 'failed_message_ids': failed_ids}
     host = settings.get('imapHost')
     port = int(settings.get('imapPort') or 993)
     use_ssl = bool(settings.get('imapUseSSL'))
@@ -436,40 +579,29 @@ def restore_messages_unread(message_ids: list[str], settings: dict[str, Any]) ->
 
     _env = _get_fake_env_for_host_port(host, port)
     if _env is not None:
-        for uid in message_ids:
-            for m in _env.messages.values():
-                if str(m.get('id')) == str(uid):
-                    if '\\Seen' in m['flags']:
-                        m['flags'].discard('\\Seen')
-        return
+        changed_ids, failed_ids = _restore_env_messages_unread(_env, message_ids)
+        return {'restore_unread_ids': changed_ids, 'failed_message_ids': failed_ids}
 
     if host is None:
         raise MailServiceError('IMAP host not configured')
 
     try:
         with _imap_connection(host, port, use_ssl, username, password) as imap:
-            for uid in message_ids:
-                try:
-                    imap.uid('STORE', str(uid), '-FLAGS', '(\\Seen)')
-                except (imaplib.IMAP4.error, OSError):
-                    pass
+            changed_ids, failed_ids = _store_message_flags(imap, message_ids, '-FLAGS', '(\\Seen)')
     except (imaplib.IMAP4.error, OSError) as exc:
         raise MailServiceError(_redact_error_message(str(exc), password)) from exc
+    return {'restore_unread_ids': changed_ids, 'failed_message_ids': failed_ids}
 
 
 def add_keyword_tag(message_ids: list[str], tag: str, settings: dict[str, Any]) -> dict[str, Any]:
     normalized_tag = tag.strip()
     if not normalized_tag:
-        return {'added_message_ids': []}
+        return {'added_message_ids': [], 'failed_message_ids': []}
     added_message_ids: list[str] = []
+    failed_message_ids: list[str] = []
     if is_dummy_mode(settings):
-        for message in _find_dummy_messages(message_ids):
-            current = _normalized_keywords(message)
-            if normalized_tag.lower() not in [item.lower() for item in current]:
-                current.append(normalized_tag)
-                message['keywords'] = current
-                added_message_ids.append(message['id'])
-        return {'added_message_ids': added_message_ids}
+        added_message_ids, failed_message_ids = _add_dummy_tag(message_ids, normalized_tag)
+        return {'added_message_ids': added_message_ids, 'failed_message_ids': failed_message_ids}
     # Live IMAP mode: use STORE to add flag
     host = settings.get('imapHost')
     port = int(settings.get('imapPort') or 993)
@@ -478,24 +610,24 @@ def add_keyword_tag(message_ids: list[str], tag: str, settings: dict[str, Any]) 
     password = settings.get('imapPassword')
     _env = _get_fake_env_for_host_port(host, port)
     if _env is not None:
-        added_message_ids = _add_tag_to_env(_env, normalized_tag, message_ids)
-        return {'added_message_ids': added_message_ids}
+        added_message_ids, failed_message_ids = _add_env_tag(_env, normalized_tag, message_ids)
+        return {'added_message_ids': added_message_ids, 'failed_message_ids': failed_message_ids}
 
     try:
-        added_message_ids = _imap_add_flag(
+        added_message_ids, failed_message_ids = _imap_add_flag(
             host, port, use_ssl, username, password, message_ids, normalized_tag)
     except (imaplib.IMAP4.error, OSError) as exc:
         raise MailServiceError(_redact_error_message(str(exc), password)) from exc
-    return {'added_message_ids': added_message_ids}
+    return {'added_message_ids': added_message_ids, 'failed_message_ids': failed_message_ids}
 
 
-def remove_keyword_tag(message_ids: list[str], tag: str, settings: dict[str, Any]) -> None:
+def remove_keyword_tag(message_ids: list[str], tag: str, settings: dict[str, Any]) -> dict[str, Any]:
     normalized_tag = tag.strip()
+    if not normalized_tag:
+        return {'removed_message_ids': [], 'failed_message_ids': []}
     if is_dummy_mode(settings):
-        for message in _find_dummy_messages(message_ids):
-            message['keywords'] = [kw for kw in _normalized_keywords(
-                message) if kw.lower() != normalized_tag.lower()]
-        return
+        removed_message_ids, failed_message_ids = _remove_dummy_tag(message_ids, normalized_tag)
+        return {'removed_message_ids': removed_message_ids, 'failed_message_ids': failed_message_ids}
     host = settings.get('imapHost')
     port = int(settings.get('imapPort') or 993)
     use_ssl = bool(settings.get('imapUseSSL'))
@@ -503,13 +635,15 @@ def remove_keyword_tag(message_ids: list[str], tag: str, settings: dict[str, Any
     password = settings.get('imapPassword')
     _env = _get_fake_env_for_host_port(host, port)
     if _env is not None:
-        _remove_tag_from_env(_env, normalized_tag, message_ids)
-        return
+        removed_message_ids, failed_message_ids = _remove_env_tag(_env, normalized_tag, message_ids)
+        return {'removed_message_ids': removed_message_ids, 'failed_message_ids': failed_message_ids}
 
     try:
-        _imap_remove_flag(host, port, use_ssl, username, password, message_ids, normalized_tag)
+        removed_message_ids, failed_message_ids = _imap_remove_flag(
+            host, port, use_ssl, username, password, message_ids, normalized_tag)
     except (imaplib.IMAP4.error, OSError) as exc:
         raise MailServiceError(_redact_error_message(str(exc), password)) from exc
+    return {'removed_message_ids': removed_message_ids, 'failed_message_ids': failed_message_ids}
 
 
 def send_summary_email(recipient: str, subject: str, body: str, settings: dict[str, Any]) -> None:

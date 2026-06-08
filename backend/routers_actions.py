@@ -23,6 +23,10 @@ def _summarised_tag(settings: dict) -> str:
         'summarisedTag', 'summarised'))
 
 
+def _result_payload(result: object) -> dict:
+    return result if isinstance(result, dict) else {}
+
+
 @router.post('/actions/mark-read')
 def actions_mark_read(payload: dict) -> dict:
     app_module = get_app_module()
@@ -34,13 +38,18 @@ def actions_mark_read(payload: dict) -> dict:
         if job is None:
             raise HTTPException(status_code=404, detail='Job not found')
         message_ids = [m.get('id') for m in job.get('messages_json', [])]
-        mark_messages_read(message_ids, settings)
-        details = f"marked_read {len(message_ids)} messages"
+        result = _result_payload(mark_messages_read(message_ids, settings))
+        restored_ids = result.get('restore_unread_ids', []) or []
+        failed_ids = result.get('failed_message_ids', []) or []
+        details = f"marked_read success={len(restored_ids)} failed={len(failed_ids)}"
+        if failed_ids:
+            details += f" failed_message_ids={failed_ids}"
         log_id = app_module._record_log('mark_read', 'ok', details,
                                         job_id=job_id, settings=settings)
-        app_module._push_undo({'action': 'mark_read', 'log_id': log_id,
-                              'job_id': job_id, 'message_ids': message_ids})
-        return {'status': 'ok'}
+        if restored_ids:
+            app_module._push_undo({'action': 'mark_read', 'log_id': log_id,
+                                  'job_id': job_id, 'message_ids': restored_ids})
+        return {'status': 'ok', **result}
     except HTTPException:
         raise
     except Exception as exc:  # pylint: disable=broad-except
@@ -59,13 +68,18 @@ def actions_tag_summarised(payload: dict) -> dict:
             raise HTTPException(status_code=404, detail='Job not found')
         message_ids = [m.get('id') for m in job.get('messages_json', [])]
         tag = _summarised_tag(settings)
-        add_keyword_tag(message_ids, tag, settings)
-        details = f"tagged_summarised {len(message_ids)} messages"
+        result = _result_payload(add_keyword_tag(message_ids, tag, settings))
+        added_ids = result.get('added_message_ids', []) or []
+        failed_ids = result.get('failed_message_ids', []) or []
+        details = f"tagged_summarised success={len(added_ids)} failed={len(failed_ids)}"
+        if failed_ids:
+            details += f" failed_message_ids={failed_ids}"
         log_id = app_module._record_log('tag_summarised', 'ok', details,
                                         job_id=job_id, settings=settings)
-        app_module._push_undo({'action': 'tag_summarised', 'log_id': log_id,
-                              'job_id': job_id, 'message_ids': message_ids, 'tag': tag})
-        return {'status': 'ok'}
+        if added_ids:
+            app_module._push_undo({'action': 'tag_summarised', 'log_id': log_id,
+                                  'job_id': job_id, 'message_ids': added_ids, 'tag': tag})
+        return {'status': 'ok', **result}
     except HTTPException:
         raise
     except Exception as exc:  # pylint: disable=broad-except
@@ -110,15 +124,24 @@ def actions_undo_log(log_id: str) -> dict:
         job_id = payload.get('job_id')
         message_ids = payload.get('message_ids', []) or []
         if action == 'mark_read':
-            restore_messages_unread(message_ids, settings)
+            result = _result_payload(restore_messages_unread(message_ids, settings))
+            restored_ids = result.get('restore_unread_ids', []) or []
+            failed_ids = result.get('failed_message_ids', []) or []
+            details = f"restored {len(restored_ids)} messages"
+            if failed_ids:
+                details += f" failed_message_ids={failed_ids}"
             app_module._record_log(
-                'undo', 'ok', f'restored {len(message_ids)} messages', job_id=job_id, settings=settings)
+                'undo', 'ok', details, job_id=job_id, settings=settings)
         elif action == 'tag_summarised':
             tag = str(payload.get('tag') or _summarised_tag(settings))
-            for mid in message_ids:
-                remove_keyword_tag([mid], tag, settings)
+            result = _result_payload(remove_keyword_tag(message_ids, tag, settings))
+            removed_ids = result.get('removed_message_ids', []) or []
+            failed_ids = result.get('failed_message_ids', []) or []
+            details = f"removed tags from {len(removed_ids)} messages"
+            if failed_ids:
+                details += f" failed_message_ids={failed_ids}"
             app_module._record_log(
-                'undo', 'ok', f'removed tags from {len(message_ids)} messages', job_id=job_id, settings=settings)
+                'undo', 'ok', details, job_id=job_id, settings=settings)
         else:
             app_module._record_log(
                 'undo', 'ok', f'performed undo for action {action}', job_id=job_id, settings=settings)
@@ -143,15 +166,24 @@ def actions_undo() -> dict:
         job_id = payload.get('job_id')
         message_ids = payload.get('message_ids', []) or []
         if action == 'mark_read':
-            restore_messages_unread(message_ids, settings)
+            result = _result_payload(restore_messages_unread(message_ids, settings))
+            restored_ids = result.get('restore_unread_ids', []) or []
+            failed_ids = result.get('failed_message_ids', []) or []
+            details = f"restored {len(restored_ids)} messages"
+            if failed_ids:
+                details += f" failed_message_ids={failed_ids}"
             app_module._record_log(
-                'undo', 'ok', f'restored {len(message_ids)} messages', job_id=job_id, settings=settings)
+                'undo', 'ok', details, job_id=job_id, settings=settings)
         elif action == 'tag_summarised':
             tag = str(payload.get('tag') or _summarised_tag(settings))
-            for mid in message_ids:
-                remove_keyword_tag([mid], tag, settings)
+            result = _result_payload(remove_keyword_tag(message_ids, tag, settings))
+            removed_ids = result.get('removed_message_ids', []) or []
+            failed_ids = result.get('failed_message_ids', []) or []
+            details = f"removed tags from {len(removed_ids)} messages"
+            if failed_ids:
+                details += f" failed_message_ids={failed_ids}"
             app_module._record_log(
-                'undo', 'ok', f'removed tags from {len(message_ids)} messages', job_id=job_id, settings=settings)
+                'undo', 'ok', details, job_id=job_id, settings=settings)
         else:
             app_module._record_log(
                 'undo', 'ok', f'performed undo for action {action}', job_id=job_id, settings=settings)

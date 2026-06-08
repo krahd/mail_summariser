@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-06-06 23:07
+Last updated: 2026-06-08 15:52
 
 ## Purpose
 
@@ -35,6 +35,7 @@ Key implemented backend areas:
 - provider abstraction in `backend/llm_provider_clients.py`
 - summary orchestration and fallback handling in `backend/summary_service.py`
 - runtime/provider operations in `backend/model_provider_service.py`
+- live IMAP/SMTP mailbox handling in `backend/mail_service.py`, including explicit authentication and mailbox-selection failure reporting plus per-message action failure tracking
 
 ## Active focus
 
@@ -44,6 +45,7 @@ Current focus is stability, safety, and product clarity of the local-first workf
 - keeping fake-mail dev tooling strictly gated
 - maintaining alignment between backend, browser client, and macOS client
 - continuing malformed-input hardening and endpoint-level fuzz coverage
+- keeping live IMAP/SMTP failures explicit so authentication, mailbox selection, and per-message action errors are surfaced instead of being swallowed
 - keeping end-user surfaces focused on the sample mailbox and live mailbox concepts rather than internal dummy-mode naming
 - keeping the browser first-run path grounded in real sample messages and explicit empty-result handling
 
@@ -194,6 +196,14 @@ python scripts/validate_rendered_ui.py
 
 ## Recent audit status
 
+**Phase 01 — Live IMAP hardening before architecture changes (2026-06-08):**
+- Hardened `_imap_connection(...)` so IMAP login is attempted whenever a username is present, login failures raise `MailServiceError`, and `select('INBOX')` non-OK responses fail explicitly instead of being treated as empty mailboxes.
+- Hardened SMTP sending so configured credentials trigger `smtp.login(...)`, login failures raise `MailServiceError`, and password values stay redacted in error text.
+- Extended per-message action handling so mark-read, restore-unread, add-tag, and remove-tag paths report `failed_message_ids` while keeping best-effort success for the messages that did update.
+- Updated action routes to return the new optional failure metadata without breaking existing `status: ok` responses or undo behaviour.
+- Added regression coverage for bad IMAP login, mailbox selection failure, SMTP login failure, password redaction, failed message IDs, and the summary route returning HTTP 400 on IMAP auth errors.
+- Validation completed: `pytest -q tests/test_imap_hardening.py`, `pytest -q tests/test_backend_mail_flow.py`, `pytest -q tests/test_fuzz_summary_payloads.py`, `pytest -q tests/test_fuzz_settings_actions_payloads.py`, `pytest -q`, `./scripts/check_repo_hygiene.sh`, and `git diff --check` all passed.
+
 **Phase 02 — Multi-account settings model (2026-06-01):**
 - Added `MailAccountSettings` schema for individual IMAP/SMTP accounts.
 - Added `mailAccounts: list[MailAccountSettings]` to `AppSettings` schema.
@@ -335,7 +345,7 @@ Validation implications:
 
 ## Next steps
 
-None currently. The previous cycle was completed and verified with targeted coverage for in-progress pull handling, cross-surface browser/macOS copy mirroring, and a full test run of 101 passed and 1 skipped.
+None currently. Live IMAP hardening is complete and verified with targeted regression coverage and a full test run of 140 passed and 1 skipped.
 
 ## Longer-term steps
 
@@ -351,53 +361,4 @@ None currently. The previous cycle was completed and verified with targeted cove
 - Provider failures should degrade gracefully to deterministic fallback summaries.
 - Dev-only tooling remains explicit and gated.
 - Empty message sets should not be sent to LLM providers.
-
-## Phase 01 — Live IMAP Hardening
-
-**Completed 2026-06-01**
-
-Hardened the current single-account live IMAP/SMTP implementation to fail loudly on authentication and connection errors before multi-account and mailbox-discovery features.
-
-### Changes
-
-**backend/mail_service.py**:
-- Added `_redact_error_message()` helper to redact passwords and sensitive values from error messages.
-- Modified `_imap_connection()` to raise `MailServiceError` on IMAP login failure instead of silently continuing.
-- Modified `_imap_connection()` to raise `MailServiceError` on mailbox selection failure instead of silently continuing.
-- Updated `_check_imap_connection()` to test login if credentials are provided and redact error messages.
-- Updated `_check_smtp_connection()` to test login if credentials are provided, redact error messages, and accept username/password parameters.
-- Modified `send_summary_email()` to raise `MailServiceError` on SMTP login failure instead of silently continuing.
-- Updated `test_mail_connection()` to pass username and password to SMTP connection test.
-- Updated `mark_messages_read()` to track and return failed message IDs in addition to successful ones.
-- Updated `restore_messages_unread()` to redact passwords in error messages.
-- Updated `add_keyword_tag()` and `remove_keyword_tag()` to redact passwords in error messages.
-
-**tests/test_imap_hardening.py** (new file):
-- Added 9 comprehensive tests for IMAP/SMTP hardening:
-  - IMAP login failure raises error
-  - IMAP select failure raises error
-  - SMTP login failure raises error
-  - IMAP login failure in test-connection endpoint
-  - Password redaction in error messages
-  - Dummy mode unaffected by hardening
-  - Mark messages read with connection failure
-  - Add keyword tag with connection failure
-  - Mark read tracks failed message IDs
-
-### Verification
-
-- All 9 new hardening tests pass.
-- All 7 existing backend mail flow tests pass.
-- Full test suite: 110 passed, 1 skipped.
-- Repository hygiene check passed.
-
-### Backward compatibility
-
-- `dummyMode` remains unchanged and working.
-- Dummy mailbox operations continue to work without any changes.
-- Fake-mail test environment continues to work.
-- Existing API contracts remain unchanged; only new error reporting added.
-
----
-
-Last updated: 2026-06-06 23:07
+Last updated: 2026-06-08 15:52
