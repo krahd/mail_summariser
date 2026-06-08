@@ -88,6 +88,9 @@ class WebContractTests(unittest.TestCase):
         api_js = (REPO_ROOT / "webapp" / "api.js").read_text(encoding="utf-8")
         self.assertIn("mailAccounts", api_js)
         self.assertIn("MailAccountSettings", api_js)
+        self.assertIn("MailboxInfo", api_js)
+        self.assertIn("getAccountMailboxes", api_js)
+        self.assertIn("getAllMailboxes", api_js)
         self.assertIn("Loading message body...", app_js)
         self.assertIn("message-detail-shell", (REPO_ROOT / "webapp" /
                       "index.html").read_text(encoding="utf-8"))

@@ -28,6 +28,8 @@ def test_decomposed_router_endpoints_are_registered() -> None:
         ("POST", "/actions/undo"),
         ("POST", "/actions/undo/logs/{log_id}"),
         ("GET", "/logs"),
+        ("GET", "/mail/accounts/{account_id}/mailboxes"),
+        ("GET", "/mail/mailboxes"),
         ("GET", "/dev/fake-mail/status"),
         ("POST", "/dev/fake-mail/start"),
         ("POST", "/dev/fake-mail/stop"),

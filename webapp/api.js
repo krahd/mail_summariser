@@ -101,6 +101,16 @@
  */
 
 /**
+ * @typedef {Object} MailboxInfo
+ * @property {string} accountId
+ * @property {string} path
+ * @property {string|null} delimiter
+ * @property {boolean} selectable
+ * @property {string[]} flags
+ * @property {string} displayName
+ */
+
+/**
  * @typedef {Object} SystemMessageDefaultsResponse
  * @property {string} ollamaSystemMessage
  * @property {string} openaiSystemMessage
@@ -280,6 +290,14 @@ export function createApiClient(context) {
     /** @returns {Promise<AppSettings>} */
     getSettings() {
       return request("/settings");
+    },
+    /** @param {string} accountId @returns {Promise<MailboxInfo[]>} */
+    getAccountMailboxes(accountId) {
+      return request(`/mail/accounts/${encodeURIComponent(accountId)}/mailboxes`);
+    },
+    /** @returns {Promise<MailboxInfo[]>} */
+    getAllMailboxes() {
+      return request("/mail/mailboxes");
     },
     /** @returns {Promise<SystemMessageDefaultsResponse>} */
     getSystemMessageDefaults() {

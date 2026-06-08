@@ -8,7 +8,7 @@ class MailboxInfo(BaseModel):
     path: str
     delimiter: str | None = None
     selectable: bool = True
-    flags: list[str] = []
+    flags: list[str] = Field(default_factory=list)
     displayName: str = ''
 
 

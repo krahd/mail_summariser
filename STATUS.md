@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-06-08 16:04
+Last updated: 2026-06-08 16:14
 
 ## Purpose
 
@@ -37,6 +37,7 @@ Key implemented backend areas:
 - runtime/provider operations in `backend/model_provider_service.py`
 - backwards-compatible multi-account settings storage, read masking, and legacy-derived default account rendering in `backend/app.py`, `backend/routers_settings.py`, and `backend/schemas.py`
 - live IMAP/SMTP mailbox handling in `backend/mail_service.py`, including explicit authentication and mailbox-selection failure reporting plus per-message action failure tracking
+- mailbox discovery in `backend/mail_service.py` and `backend/routers_mailboxes.py`, including deterministic sample folders, legacy single-account fallback, and per-account aggregate listing
 
 ## Active focus
 
@@ -49,6 +50,7 @@ Current focus is stability, safety, and product clarity of the local-first workf
 - keeping live IMAP/SMTP failures explicit so authentication, mailbox selection, and per-message action errors are surfaced instead of being swallowed
 - keeping end-user surfaces focused on the sample mailbox and live mailbox concepts rather than internal dummy-mode naming
 - keeping the browser first-run path grounded in real sample messages and explicit empty-result handling
+- keeping mailbox discovery and legacy-account compatibility aligned with later saved-scope work
 
 ## Architecture
 
@@ -214,6 +216,14 @@ python scripts/validate_rendered_ui.py
 - Validation completed: `pytest -q tests/test_multi_account_settings.py`, `pytest -q tests/test_system_message_settings.py`, `pytest -q tests/test_web_contract.py`, `pytest -q tests/test_backend_mail_flow.py`, `pytest -q`, `./scripts/check_repo_hygiene.sh`, and `git diff --check`.
 - No summary behaviour changes yet; mailbox discovery and multi-account summary routing remain out of scope for this phase.
 
+**Phase 03 — IMAP mailbox discovery (2026-06-08):**
+- Added `MailboxInfo` plus mailbox discovery endpoints at `GET /mail/accounts/{account_id}/mailboxes` and `GET /mail/mailboxes`.
+- Hardened LIST parsing to decode quoted names, handle unusual response shapes defensively, treat `\\Noselect` as non-selectable, and raise `MailServiceError` on non-OK LIST responses.
+- Exposed deterministic sample mailboxes in dummy mode and kept legacy single-account settings discoverable as `default` when no explicit account list is stored.
+- Added regression coverage for escaped LIST names, `\\Noselect`, non-OK LIST failures, legacy account discovery, bad-credentials redaction, and route registration.
+- Validation completed: `pytest -q tests/test_mailbox_discovery.py`, `pytest -q tests/test_router_decomposition.py tests/test_web_contract.py`, `pytest -q tests/test_backend_mail_flow.py`, `pytest -q`, `./scripts/check_repo_hygiene.sh`, and `git diff --check`.
+- Summary request shape and INBOX-based summary behaviour were left unchanged.
+
 - Route decomposition remains in place across runtime/models, settings, actions, summaries, and dev-tools modules.
 - Router parity safeguards exist via router-context and route-decomposition tests.
 - Fuzz tests exist for summary, settings/actions, and runtime/model malformed payload contracts.
@@ -260,9 +270,13 @@ python scripts/validate_rendered_ui.py
 - Backend model-provider imports now include compatibility wrappers for older `modelito` Ollama helpers so PyInstaller release binaries still start cleanly when lifecycle/catalog helper exports are missing.
 - Repository hygiene now ignores/removes local `.env` state and flags tracked exact `.env` and backend SQLite files.
 - Browser rendered validation used Safari screenshot and API checks because Safari WebDriver JavaScript execution is disabled locally.
-- Mailbox discovery endpoints now expose per-account and aggregated IMAP mailbox lists, and the app/lifetime test harness now resets backend DB path state so top-level `db` imports do not leak across tests.
+- Mailbox discovery endpoints now expose per-account and aggregated IMAP mailbox lists, including legacy-account fallback and fake-mail sample folders, and the app/lifetime test harness now resets backend DB path state so top-level `db` imports do not leak across tests.
 
 ## Verification status
+
+Historical verification:
+
+- `pytest -q tests/test_mailbox_discovery.py`, `pytest -q tests/test_router_decomposition.py tests/test_web_contract.py`, `pytest -q tests/test_backend_mail_flow.py`, `pytest -q`, `./scripts/check_repo_hygiene.sh`, and `git diff --check`: passed.
 
 Recent verification:
 
@@ -341,11 +355,12 @@ Validation implications:
 
 ## Pending tasks
 
-- None currently.
+- Saved mailbox scopes and a mailbox picker remain unimplemented.
+- Live IMAP summaries still use the existing INBOX-based search behaviour in this phase.
 
 ## Next steps
 
-None currently. Live IMAP hardening is complete and verified with targeted regression coverage and a full test run of 140 passed and 1 skipped.
+Implement saved mailbox scopes and only then consider wiring mailbox selection into summary creation. The new mailbox discovery endpoints are ready for later integration.
 
 ## Longer-term steps
 
@@ -361,4 +376,4 @@ None currently. Live IMAP hardening is complete and verified with targeted regre
 - Provider failures should degrade gracefully to deterministic fallback summaries.
 - Dev-only tooling remains explicit and gated.
 - Empty message sets should not be sent to LLM providers.
-Last updated: 2026-06-08 16:04
+Last updated: 2026-06-08 16:14
