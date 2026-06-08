@@ -95,7 +95,7 @@ class IMAPHardeningTests(unittest.TestCase):
             mock_conn = mock.MagicMock()
             mock_imap.return_value = mock_conn
             mock_conn.login.return_value = ('OK', [])
-            mock_conn.select.side_effect = imaplib.IMAP4.error('Mailbox does not exist')
+            mock_conn.select.return_value = ('NO', [b'Mailbox does not exist'])
 
             settings = {
                 'dummyMode': False,
@@ -173,6 +173,29 @@ class IMAPHardeningTests(unittest.TestCase):
                 result = response.json()
                 self.assertEqual(result['imap']['status'], 'error')
                 self.assertIn('authentication', result['imap']['message'].lower())
+
+    def test_imap_select_failure_test_connection_endpoint(self) -> None:
+        """Mailbox selection failure should be reported by test-connection."""
+        with mock.patch('imaplib.IMAP4_SSL') as mock_imap:
+            mock_conn = mock.MagicMock()
+            mock_imap.return_value = mock_conn
+            mock_conn.login.return_value = ('OK', [])
+            mock_conn.select.return_value = ('NO', [b'Mailbox does not exist'])
+
+            with self._client() as client:
+                settings = client.get("/settings").json()
+                settings['dummyMode'] = False
+                settings['imapHost'] = 'imap.example.com'
+                settings['imapPort'] = 993
+                settings['imapUseSSL'] = True
+                settings['username'] = 'user@example.com'
+                settings['imapPassword'] = 'password'
+
+                response = client.post("/settings/test-connection", json=settings)
+                self.assertEqual(response.status_code, 200)
+                result = response.json()
+                self.assertEqual(result['imap']['status'], 'error')
+                self.assertIn('select', result['imap']['message'].lower())
 
     def test_password_redaction_in_error_messages(self) -> None:
         """Passwords should be redacted from error messages."""
@@ -257,10 +280,10 @@ class IMAPHardeningTests(unittest.TestCase):
             mock_conn.login.return_value = ('OK', [])
             mock_conn.select.return_value = ('OK', [b'5'])
 
-            # First call succeeds, second fails
+            # First call succeeds, second returns a non-OK status, third succeeds.
             mock_conn.uid.side_effect = [
                 ('OK', []),  # First message succeeds
-                imaplib.IMAP4.error('Connection lost'),  # Second message fails
+                ('NO', [b'Connection lost']),  # Second message fails
                 ('OK', []),  # Third message succeeds
             ]
 
@@ -277,6 +300,60 @@ class IMAPHardeningTests(unittest.TestCase):
             self.assertIn('failed_message_ids', result)
             self.assertEqual(result['failed_message_ids'], ['msg-2'])
             self.assertEqual(result['restore_unread_ids'], ['msg-1', 'msg-3'])
+
+    def test_add_keyword_tag_tracks_failed_message_ids(self) -> None:
+        """add_keyword_tag should track and return failed_message_ids."""
+        with mock.patch('imaplib.IMAP4_SSL') as mock_imap:
+            mock_conn = mock.MagicMock()
+            mock_imap.return_value = mock_conn
+            mock_conn.login.return_value = ('OK', [])
+            mock_conn.select.return_value = ('OK', [b'5'])
+            mock_conn.uid.side_effect = [
+                ('OK', []),  # First message succeeds
+                ('NO', [b'Permission denied']),  # Second message fails
+                ('OK', []),  # Third message succeeds
+            ]
+
+            settings = {
+                'dummyMode': False,
+                'imapHost': 'imap.example.com',
+                'imapPort': 993,
+                'imapUseSSL': True,
+                'username': 'user@example.com',
+                'imapPassword': 'password',
+            }
+
+            result = mail_service.add_keyword_tag(['msg-1', 'msg-2', 'msg-3'], 'important', settings)
+            self.assertIn('failed_message_ids', result)
+            self.assertEqual(result['failed_message_ids'], ['msg-2'])
+            self.assertEqual(result['added_message_ids'], ['msg-1', 'msg-3'])
+
+    def test_remove_keyword_tag_tracks_failed_message_ids(self) -> None:
+        """remove_keyword_tag should track and return failed_message_ids."""
+        with mock.patch('imaplib.IMAP4_SSL') as mock_imap:
+            mock_conn = mock.MagicMock()
+            mock_imap.return_value = mock_conn
+            mock_conn.login.return_value = ('OK', [])
+            mock_conn.select.return_value = ('OK', [b'5'])
+            mock_conn.uid.side_effect = [
+                ('OK', []),  # First message succeeds
+                ('OK', []),  # Second message succeeds
+                ('NO', [b'No such message']),  # Third message fails
+            ]
+
+            settings = {
+                'dummyMode': False,
+                'imapHost': 'imap.example.com',
+                'imapPort': 993,
+                'imapUseSSL': True,
+                'username': 'user@example.com',
+                'imapPassword': 'password',
+            }
+
+            result = mail_service.remove_keyword_tag(['msg-1', 'msg-2', 'msg-3'], 'important', settings)
+            self.assertIn('failed_message_ids', result)
+            self.assertEqual(result['failed_message_ids'], ['msg-3'])
+            self.assertEqual(result['removed_message_ids'], ['msg-1', 'msg-2'])
 
 
 if __name__ == '__main__':

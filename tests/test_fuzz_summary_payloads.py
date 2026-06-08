@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from hypothesis import HealthCheck, given, settings, strategies as st
 
 from backend import app as backend_app
+from backend.mail_service import MailServiceError
 from backend import routers_summaries
 
 
@@ -119,6 +120,37 @@ def test_summary_endpoint_clamps_large_summary_length_before_persistence() -> No
     assert response.status_code == 200
     assert response.json()["messages"] == []
     summarize_mock.assert_not_called()
+
+
+def test_summary_endpoint_returns_400_when_mail_auth_fails() -> None:
+    backend_app._reset_dummy_sandbox()
+    payload = {
+        "criteria": {
+            "keyword": "invoice",
+            "rawSearch": "",
+            "sender": "",
+            "recipient": "",
+            "tag": "",
+            "unreadOnly": True,
+            "readOnly": False,
+            "replied": None,
+            "useAnd": True,
+        },
+        "summaryLength": 5,
+    }
+
+    with (
+        TestClient(backend_app.app) as client,
+        mock.patch.object(
+            routers_summaries,
+            "search_messages",
+            side_effect=MailServiceError("IMAP authentication failed"),
+        ),
+    ):
+        response = client.post("/summaries", json=payload)
+
+    assert response.status_code == 400
+    assert "authentication" in response.json()["detail"].lower()
 
 
 @given(payload=summary_payload_shape)
