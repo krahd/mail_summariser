@@ -1,15 +1,22 @@
 import Foundation
 
 struct SearchCriteria: Codable {
+    var accountIds: [String] = []
+    var mailboxes: [String] = []
     var keyword: String = ""
     var rawSearch: String = ""
     var sender: String = ""
     var recipient: String = ""
     var unreadOnly: Bool = true
     var readOnly: Bool = false
+    var flagged: Bool? = nil
+    var since: String = ""
+    var before: String = ""
+    var listId: String = ""
     var replied: Bool? = nil
     var tag: String = ""
     var useAnd: Bool = true
+    var limit: Int = 100
 }
 
 struct SummaryRequest: Codable {

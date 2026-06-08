@@ -1,14 +1,21 @@
 /**
  * @typedef {Object} SearchCriteria
+ * @property {string[]} accountIds
+ * @property {string[]} mailboxes
  * @property {string} keyword
  * @property {string} rawSearch
  * @property {string} sender
  * @property {string} recipient
  * @property {boolean} unreadOnly
  * @property {boolean} readOnly
+ * @property {boolean|null} flagged
+ * @property {string} since
+ * @property {string} before
+ * @property {string} listId
  * @property {boolean|null} replied
  * @property {string} tag
  * @property {boolean} useAnd
+ * @property {number} limit
  */
 
 /**

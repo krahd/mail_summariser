@@ -8,6 +8,7 @@ from typing import Any
 
 import imaplib
 import smtplib
+from email.message import EmailMessage
 
 from fastapi.testclient import TestClient
 
@@ -16,6 +17,70 @@ mail_service: Any = None
 db: Any = None
 backend_app: Any = None
 schemas: Any = None
+
+
+def _make_message_bytes(subject: str, sender: str, recipient: str, date: str, body: str, list_id: str = '') -> bytes:
+    message = EmailMessage()
+    message['Subject'] = subject
+    message['From'] = sender
+    message['To'] = recipient
+    message['Date'] = date
+    if list_id:
+        message['List-Id'] = list_id
+    message.set_content(body)
+    return message.as_bytes()
+
+
+class RecordingImapConnection:
+    def __init__(
+        self,
+        *,
+        search_results: dict[str, bytes] | None = None,
+        message_bodies: dict[tuple[str, str], bytes] | None = None,
+        message_flags: dict[tuple[str, str], list[str]] | None = None,
+        select_failures: dict[str, tuple[str, list[bytes]]] | None = None,
+    ) -> None:
+        self.search_results = search_results or {}
+        self.message_bodies = message_bodies or {}
+        self.message_flags = message_flags or {}
+        self.select_failures = select_failures or {}
+        self.selected_mailbox = ''
+        self.select_calls: list[str] = []
+        self.uid_calls: list[tuple[str, str | None, tuple[str, ...], str]] = []
+        self.login_calls: list[tuple[str, str]] = []
+        self.logout_calls = 0
+
+    def login(self, username: str, password: str) -> tuple[str, list[bytes]]:
+        self.login_calls.append((username, password))
+        return ('OK', [])
+
+    def select(self, mailbox: str) -> tuple[str, list[bytes]]:
+        self.select_calls.append(mailbox)
+        failure = self.select_failures.get(mailbox)
+        if failure is not None:
+            return failure
+        self.selected_mailbox = mailbox
+        return ('OK', [b'1'])
+
+    def uid(self, command: str, uid: str | None, *args: str) -> tuple[str, list[bytes]]:
+        self.uid_calls.append((command, uid, args, self.selected_mailbox))
+        if command == 'search':
+            return ('OK', [self.search_results.get(self.selected_mailbox, b'')])
+        if command == 'fetch' and args:
+            if args[0] == '(BODY.PEEK[])':
+                raw = self.message_bodies.get((self.selected_mailbox, str(uid or '')))
+                if raw is None:
+                    return ('NO', [b'Message not found'])
+                return ('OK', [(f'1 (BODY[] {{{len(raw)}}}'.encode('utf-8'), raw)])
+            if args[0] == '(FLAGS)':
+                flags = self.message_flags.get((self.selected_mailbox, str(uid or '')), [])
+                flags_text = ' '.join(flags)
+                return ('OK', [f'1 (FLAGS ({flags_text}))'])
+        return ('NO', [b'Unsupported command'])
+
+    def logout(self) -> tuple[str, list[bytes]]:
+        self.logout_calls += 1
+        return ('BYE', [])
 
 
 class IMAPHardeningTests(unittest.TestCase):
@@ -53,6 +118,24 @@ class IMAPHardeningTests(unittest.TestCase):
 
     def _client(self) -> TestClient:
         return TestClient(backend_app.app)
+
+    def _live_settings(self, **overrides: Any) -> dict[str, Any]:
+        base = dict(backend_app.DEFAULT_SETTINGS)
+        base.update({
+            'dummyMode': False,
+            'imapHost': 'imap.example.com',
+            'imapPort': 993,
+            'imapUseSSL': True,
+            'imapPassword': 'password',
+            'smtpHost': 'smtp.example.com',
+            'smtpPort': 465,
+            'smtpUseSSL': True,
+            'smtpPassword': 'password',
+            'username': 'user@example.com',
+            'recipientEmail': 'recipient@example.com',
+        })
+        base.update(overrides)
+        return base
 
     def test_imap_login_failure_raises_error(self) -> None:
         """IMAP login failure should raise MailServiceError."""
@@ -354,6 +437,220 @@ class IMAPHardeningTests(unittest.TestCase):
             self.assertIn('failed_message_ids', result)
             self.assertEqual(result['failed_message_ids'], ['msg-3'])
             self.assertEqual(result['removed_message_ids'], ['msg-1', 'msg-2'])
+
+    def test_search_criteria_accepts_new_fields(self) -> None:
+        criteria = schemas.SearchCriteria(
+            accountIds=['acct-1', 'acct-2'],
+            mailboxes=['INBOX', 'Archive'],
+            keyword='invoice',
+            rawSearch='budget',
+            sender='alice@example.com',
+            recipient='team@example.com',
+            unreadOnly=True,
+            readOnly=False,
+            flagged=True,
+            since='01-Jan-2026',
+            before='31-Jan-2026',
+            listId='mailing-list@example.com',
+            replied=False,
+            tag='finance',
+            useAnd=True,
+            limit=42,
+        )
+
+        self.assertEqual(criteria.accountIds, ['acct-1', 'acct-2'])
+        self.assertEqual(criteria.mailboxes, ['INBOX', 'Archive'])
+        self.assertTrue(criteria.flagged)
+        self.assertEqual(criteria.since, '01-Jan-2026')
+        self.assertEqual(criteria.before, '31-Jan-2026')
+        self.assertEqual(criteria.listId, 'mailing-list@example.com')
+        self.assertEqual(criteria.limit, 42)
+
+    def test_search_criteria_limit_is_clamped(self) -> None:
+        low = schemas.SearchCriteria(limit=0)
+        high = schemas.SearchCriteria(limit=10_000)
+
+        self.assertEqual(low.limit, 1)
+        self.assertEqual(high.limit, 500)
+
+    def test_live_search_selects_requested_mailbox(self) -> None:
+        fake_conn = RecordingImapConnection(
+            search_results={'Archive': b'1'},
+            message_bodies={
+                ('Archive', '1'): _make_message_bytes(
+                    'Archive notice',
+                    'archive@example.com',
+                    'user@example.com',
+                    'Mon, 01 Jan 2026 09:00:00 +0000',
+                    'Archive body',
+                ),
+            },
+            message_flags={('Archive', '1'): []},
+        )
+        settings = self._live_settings()
+        criteria = schemas.SearchCriteria(mailboxes=['Archive'])
+
+        with mock.patch('imaplib.IMAP4_SSL', return_value=fake_conn):
+            messages = mail_service.search_messages(criteria, settings)
+
+        self.assertEqual(fake_conn.select_calls, ['Archive'])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages[0]['id'], 'default|Archive|1')
+
+    def test_live_search_uses_unseen_when_unread_only(self) -> None:
+        fake_conn = RecordingImapConnection(
+            search_results={'INBOX': b'1'},
+            message_bodies={
+                ('INBOX', '1'): _make_message_bytes(
+                    'Unread notice',
+                    'sender@example.com',
+                    'user@example.com',
+                    'Mon, 01 Jan 2026 09:00:00 +0000',
+                    'Unread body',
+                ),
+            },
+            message_flags={('INBOX', '1'): []},
+        )
+        settings = self._live_settings()
+        criteria = schemas.SearchCriteria(unreadOnly=True)
+
+        with mock.patch('imaplib.IMAP4_SSL', return_value=fake_conn):
+            messages = mail_service.search_messages(criteria, settings)
+
+        self.assertEqual(fake_conn.uid_calls[0][0], 'search')
+        self.assertEqual(fake_conn.uid_calls[0][2], ('UNSEEN',))
+        self.assertEqual(len(messages), 1)
+
+    def test_live_search_uses_flagged_when_flagged_true(self) -> None:
+        fake_conn = RecordingImapConnection(
+            search_results={'INBOX': b'1'},
+            message_bodies={
+                ('INBOX', '1'): _make_message_bytes(
+                    'Flagged notice',
+                    'sender@example.com',
+                    'user@example.com',
+                    'Mon, 01 Jan 2026 09:00:00 +0000',
+                    'Flagged body',
+                ),
+            },
+            message_flags={('INBOX', '1'): ['\\Flagged']},
+        )
+        settings = self._live_settings()
+        criteria = schemas.SearchCriteria(flagged=True)
+
+        with mock.patch('imaplib.IMAP4_SSL', return_value=fake_conn):
+            messages = mail_service.search_messages(criteria, settings)
+
+        self.assertEqual(fake_conn.uid_calls[0][2], ('FLAGGED',))
+        self.assertEqual(len(messages), 1)
+
+    def test_live_search_uses_keyword_when_tag_provided(self) -> None:
+        fake_conn = RecordingImapConnection(
+            search_results={'INBOX': b'1'},
+            message_bodies={
+                ('INBOX', '1'): _make_message_bytes(
+                    'Tagged notice',
+                    'sender@example.com',
+                    'user@example.com',
+                    'Mon, 01 Jan 2026 09:00:00 +0000',
+                    'Tagged body',
+                ),
+            },
+            message_flags={('INBOX', '1'): ['finance']},
+        )
+        settings = self._live_settings()
+        criteria = schemas.SearchCriteria(tag='finance')
+
+        with mock.patch('imaplib.IMAP4_SSL', return_value=fake_conn):
+            messages = mail_service.search_messages(criteria, settings)
+
+        self.assertEqual(fake_conn.uid_calls[0][2], ('KEYWORD', 'finance'))
+        self.assertEqual(len(messages), 1)
+
+    def test_live_search_returns_composite_ids_without_collisions(self) -> None:
+        fake_conn = RecordingImapConnection(
+            search_results={'INBOX': b'1', 'Archive': b'1'},
+            message_bodies={
+                ('INBOX', '1'): _make_message_bytes(
+                    'Inbox notice',
+                    'inbox@example.com',
+                    'user@example.com',
+                    'Mon, 01 Jan 2026 09:00:00 +0000',
+                    'Inbox body',
+                ),
+                ('Archive', '1'): _make_message_bytes(
+                    'Archive notice',
+                    'archive@example.com',
+                    'user@example.com',
+                    'Mon, 01 Jan 2026 10:00:00 +0000',
+                    'Archive body',
+                ),
+            },
+            message_flags={
+                ('INBOX', '1'): [],
+                ('Archive', '1'): [],
+            },
+        )
+        settings = self._live_settings(
+            mailAccounts=[
+                {
+                    'id': 'acct-1',
+                    'displayName': 'Primary',
+                    'enabled': True,
+                    'imapHost': 'imap.example.com',
+                    'imapPort': 993,
+                    'imapUseSSL': True,
+                    'username': 'user@example.com',
+                    'imapPassword': 'password',
+                    'smtpHost': 'smtp.example.com',
+                    'smtpPort': 465,
+                    'smtpUseSSL': True,
+                    'smtpPassword': 'password',
+                    'recipientEmail': 'recipient@example.com',
+                }
+            ],
+        )
+        criteria = schemas.SearchCriteria(accountIds=['acct-1'], mailboxes=['INBOX', 'Archive'])
+
+        with mock.patch('imaplib.IMAP4_SSL', return_value=fake_conn):
+            messages = mail_service.search_messages(criteria, settings)
+
+        ids = [message['id'] for message in messages]
+        self.assertEqual(len(ids), 2)
+        self.assertEqual(len(set(ids)), 2)
+        self.assertIn('acct-1|INBOX|1', ids)
+        self.assertIn('acct-1|Archive|1', ids)
+        self.assertEqual(fake_conn.select_calls, ['INBOX', 'Archive'])
+
+    def test_live_search_returns_http_400_when_mailbox_selection_fails(self) -> None:
+        fake_conn = RecordingImapConnection(
+            select_failures={'Missing': ('NO', [b'Mailbox does not exist'])},
+        )
+        payload = {
+            'criteria': {'mailboxes': ['Missing']},
+            'summaryLength': 5,
+        }
+
+        with self._client() as client, mock.patch('imaplib.IMAP4_SSL', return_value=fake_conn):
+            client.post('/settings', json=self._live_settings())
+            response = client.post('/summaries', json=payload)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('select', response.json()['detail'].lower())
+
+    def test_dummy_mode_ignores_new_scoping_fields(self) -> None:
+        with self._client() as client:
+            response = client.post('/summaries', json={
+                'criteria': {
+                    'accountIds': ['acct-1'],
+                    'mailboxes': ['Archive'],
+                    'unreadOnly': True,
+                },
+                'summaryLength': 5,
+            })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertGreater(len(response.json()['messages']), 0)
 
 
 if __name__ == '__main__':

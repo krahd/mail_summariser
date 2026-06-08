@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-06-08 16:14
+Last updated: 2026-06-08 16:34
 
 ## Purpose
 
@@ -38,6 +38,7 @@ Key implemented backend areas:
 - backwards-compatible multi-account settings storage, read masking, and legacy-derived default account rendering in `backend/app.py`, `backend/routers_settings.py`, and `backend/schemas.py`
 - live IMAP/SMTP mailbox handling in `backend/mail_service.py`, including explicit authentication and mailbox-selection failure reporting plus per-message action failure tracking
 - mailbox discovery in `backend/mail_service.py` and `backend/routers_mailboxes.py`, including deterministic sample folders, legacy single-account fallback, and per-account aggregate listing
+- server-side IMAP search in `backend/mail_service.py` and mailbox-scoped summary routing in `backend/routers_summaries.py`, including selected-account / selected-mailbox filtering, bounded fetches, and composite live message IDs
 
 ## Active focus
 
@@ -50,7 +51,8 @@ Current focus is stability, safety, and product clarity of the local-first workf
 - keeping live IMAP/SMTP failures explicit so authentication, mailbox selection, and per-message action errors are surfaced instead of being swallowed
 - keeping end-user surfaces focused on the sample mailbox and live mailbox concepts rather than internal dummy-mode naming
 - keeping the browser first-run path grounded in real sample messages and explicit empty-result handling
-- keeping mailbox discovery and legacy-account compatibility aligned with later saved-scope work
+- keeping mailbox discovery, legacy-account compatibility, and composite-ID action handling aligned with later saved-scope work
+- keeping live summary search scoped to selected accounts and mailboxes while the action routes continue to treat composite IDs as opaque until phase 08
 
 ## Architecture
 
@@ -206,6 +208,15 @@ python scripts/validate_rendered_ui.py
 - Updated action routes to return the new optional failure metadata without breaking existing `status: ok` responses or undo behaviour.
 - Added regression coverage for bad IMAP login, mailbox selection failure, SMTP login failure, password redaction, failed message IDs, and the summary route returning HTTP 400 on IMAP auth errors.
 - Validation completed: `pytest -q tests/test_imap_hardening.py`, `pytest -q tests/test_backend_mail_flow.py`, `pytest -q tests/test_fuzz_summary_payloads.py`, `pytest -q tests/test_fuzz_settings_actions_payloads.py`, `pytest -q`, `./scripts/check_repo_hygiene.sh`, and `git diff --check` all passed.
+
+**Phase 04 — Server-side IMAP search and mailbox-scoped summaries (2026-06-08):**
+- Extended `SearchCriteria` with `accountIds`, `mailboxes`, `flagged`, `since`, `before`, `listId`, and a clamped `limit` while preserving the existing keyword / sender / recipient / tag / read-state fields.
+- Added IMAP search-term building for `UNSEEN`, `SEEN`, `FLAGGED`, `UNFLAGGED`, `FROM`, `TO`, `TEXT`, `KEYWORD`, `SINCE`, `BEFORE`, and `HEADER List-Id`, and refactored live search so it selects the requested mailbox before searching.
+- Live summaries now search the selected account and mailbox set, fetch only the bounded result set, and persist composite live message IDs of the form `account_id|mailbox_path|uid` together with account and mailbox metadata for later action parsing.
+- Dummy/sample mailbox behaviour continues to work and ignores the new scoping fields for now, keeping onboarding and offline tests stable.
+- Added regression coverage for new schema fields, limit clamping, mailbox selection, `UNSEEN`/`FLAGGED`/`KEYWORD` search terms, composite IDs, mailbox-selection failures, and dummy-mode compatibility.
+- Validation completed: `pytest -q tests/test_imap_hardening.py`, `pytest -q tests/test_fuzz_summary_payloads.py`, `pytest -q tests/test_web_contract.py`, `pytest -q tests/test_backend_mail_flow.py`, `pytest -q`, `./scripts/check_repo_hygiene.sh`, and `git diff --check` all passed.
+- Known limitation: action routes still treat composite IDs as opaque until phase 08, so live mailbox-scoped summary actions are intentionally not expanded in this phase.
 
 **Phase 02 — Multi-account settings model (2026-06-08):**
 - Added `MailAccountSettings` schema for individual IMAP/SMTP accounts and exposed `mailAccounts` on `AppSettings`.
@@ -376,4 +387,4 @@ Implement saved mailbox scopes and only then consider wiring mailbox selection i
 - Provider failures should degrade gracefully to deterministic fallback summaries.
 - Dev-only tooling remains explicit and gated.
 - Empty message sets should not be sent to LLM providers.
-Last updated: 2026-06-08 16:14
+Last updated: 2026-06-08 16:34

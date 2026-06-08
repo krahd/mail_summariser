@@ -59,6 +59,7 @@ DEFAULT_DUMMY_MESSAGES = [
         'date': '2026-03-10T09:00:00',
         'body': 'The project is on track. Key decisions are pending on budget and the deployment schedule.',
         'unread': True,
+        'flagged': False,
         'replied': False,
         'keywords': ['work'],
     },
@@ -70,6 +71,7 @@ DEFAULT_DUMMY_MESSAGES = [
         'date': '2026-03-10T10:00:00',
         'body': 'Can you confirm the invoice line items and whether travel costs are billable this month?',
         'unread': True,
+        'flagged': False,
         'replied': True,
         'keywords': ['finance'],
     },
@@ -97,6 +99,157 @@ def _normalized_keywords(message: dict[str, Any]) -> list[str]:
     return [str(item) for item in message.get('keywords', []) if str(item).strip()]
 
 
+def _safe_search_limit(criteria: SearchCriteria) -> int:
+    try:
+        value = int(getattr(criteria, 'limit', 100) or 100)
+    except (TypeError, ValueError):
+        return 100
+    return max(1, min(value, 500))
+
+
+def _unique_non_empty_values(values: list[Any]) -> list[str]:
+    unique: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = str(value or '').strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        unique.append(text)
+    return unique
+
+
+def _combine_or_terms(terms: list[list[str]]) -> list[str]:
+    if not terms:
+        return ['ALL']
+    combined = list(terms[0])
+    for term in terms[1:]:
+        combined = ['OR', *combined, *term]
+    return combined
+
+
+def _build_imap_search_terms(criteria: SearchCriteria) -> list[str]:
+    atoms: list[list[str]] = []
+    keyword = str(criteria.keyword or '').strip()
+    raw_search = str(criteria.rawSearch or '').strip()
+    sender = str(criteria.sender or '').strip()
+    recipient = str(criteria.recipient or '').strip()
+    tag = str(criteria.tag or '').strip()
+    since = str(criteria.since or '').strip()
+    before = str(criteria.before or '').strip()
+    list_id = str(criteria.listId or '').strip()
+
+    if criteria.unreadOnly:
+        atoms.append(['UNSEEN'])
+    if criteria.readOnly:
+        atoms.append(['SEEN'])
+    if criteria.flagged is True:
+        atoms.append(['FLAGGED'])
+    elif criteria.flagged is False:
+        atoms.append(['UNFLAGGED'])
+    if criteria.replied is True:
+        atoms.append(['ANSWERED'])
+    elif criteria.replied is False:
+        atoms.append(['UNANSWERED'])
+    if keyword:
+        # TEXT is the broadest conservative server-side search for the existing
+        # subject/body keyword field, and it is only used when the caller asks for it.
+        atoms.append(['TEXT', keyword])
+    if raw_search:
+        atoms.append(['TEXT', raw_search])
+    if sender:
+        atoms.append(['FROM', sender])
+    if recipient:
+        atoms.append(['TO', recipient])
+    if tag:
+        atoms.append(['KEYWORD', tag])
+    if since:
+        atoms.append(['SINCE', since])
+    if before:
+        atoms.append(['BEFORE', before])
+    if list_id:
+        atoms.append(['HEADER', 'List-Id', list_id])
+
+    if not atoms:
+        return ['ALL']
+    if criteria.useAnd:
+        terms: list[str] = []
+        for atom in atoms:
+            terms.extend(atom)
+        return terms
+    return _combine_or_terms(atoms)
+
+
+def _legacy_search_account(settings: dict[str, Any]) -> dict[str, Any] | None:
+    host = str(settings.get('imapHost', '') or '').strip()
+    if not host:
+        return None
+    return {
+        'id': 'default',
+        'imapHost': settings.get('imapHost', ''),
+        'imapPort': int(settings.get('imapPort') or 993),
+        'imapUseSSL': bool(settings.get('imapUseSSL', True)),
+        'username': settings.get('username', ''),
+        'imapPassword': settings.get('imapPassword', ''),
+    }
+
+
+def _explicit_search_accounts(settings: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_accounts = settings.get('mailAccounts') or []
+    if not isinstance(raw_accounts, list):
+        return []
+    return [account for account in raw_accounts if isinstance(account, dict)]
+
+
+def _resolve_search_accounts(settings: dict[str, Any], criteria: SearchCriteria) -> list[dict[str, Any]]:
+    legacy_account = _legacy_search_account(settings)
+    explicit_accounts = _explicit_search_accounts(settings)
+    requested_ids = _unique_non_empty_values(list(getattr(criteria, 'accountIds', []) or []))
+
+    if explicit_accounts and requested_ids:
+        requested = set(requested_ids)
+        selected: list[dict[str, Any]] = []
+        for account in explicit_accounts:
+            account_id = str(account.get('id', '') or '').strip()
+            if account_id and account_id in requested and bool(account.get('enabled', True)):
+                selected.append(account)
+        return selected
+
+    if legacy_account is not None:
+        return [legacy_account]
+    return []
+
+
+def _resolve_search_mailboxes(criteria: SearchCriteria) -> list[str]:
+    raw_mailboxes = list(getattr(criteria, 'mailboxes', []) or [])
+    if raw_mailboxes:
+        requested_mailboxes: list[str] = []
+        seen: set[str] = set()
+        for value in raw_mailboxes:
+            mailbox = str(value or '').strip()
+            if not mailbox:
+                raise MailServiceError('Mailbox path must not be empty')
+            if mailbox in seen:
+                continue
+            seen.add(mailbox)
+            requested_mailboxes.append(mailbox)
+        return requested_mailboxes
+    return ['INBOX']
+
+
+def _account_connection_details(account: dict[str, Any], settings: dict[str, Any]) -> tuple[str | None, int, bool, str | None, str | None]:
+    host = str(account.get('imapHost') or settings.get('imapHost') or '').strip() or None
+    port = int(account.get('imapPort') or settings.get('imapPort') or 993)
+    use_ssl = bool(account.get('imapUseSSL') if 'imapUseSSL' in account else settings.get('imapUseSSL', True))
+    username = str(account.get('username') or settings.get('username') or '').strip() or None
+    password = str(account.get('imapPassword') or settings.get('imapPassword') or '')
+    return host, port, use_ssl, username, password
+
+
+def _compose_message_id(account_id: str, mailbox_path: str, uid: str) -> str:
+    return f'{account_id}|{mailbox_path}|{uid}'
+
+
 def _matches_criteria(message: dict[str, Any], criteria: SearchCriteria) -> bool:
     checks: list[bool] = []
     subject = str(message.get('subject', ''))
@@ -104,12 +257,21 @@ def _matches_criteria(message: dict[str, Any], criteria: SearchCriteria) -> bool
     sender = str(message.get('sender', ''))
     recipient = str(message.get('recipient', ''))
     keywords = [item.lower() for item in _normalized_keywords(message)]
+    account_id = str(message.get('accountId', '') or '').strip()
+    mailbox_path = str(message.get('mailboxPath', '') or '').strip()
+    list_id = str(message.get('listId', '') or '').strip()
 
     if criteria.keyword:
         checks.append(criteria.keyword.lower() in f'{subject} {body}'.lower())
     if criteria.rawSearch:
         hay = f"{subject} {body} {sender} {recipient} {' '.join(keywords)}".lower()
         checks.append(criteria.rawSearch.lower() in hay)
+    if criteria.accountIds and account_id:
+        requested_accounts = {str(item).strip() for item in criteria.accountIds if str(item).strip()}
+        checks.append(account_id in requested_accounts)
+    if criteria.mailboxes and mailbox_path:
+        requested_mailboxes = {str(item).strip() for item in criteria.mailboxes if str(item).strip()}
+        checks.append(mailbox_path in requested_mailboxes)
     if criteria.sender:
         checks.append(criteria.sender.lower() in sender.lower())
     if criteria.recipient:
@@ -120,8 +282,12 @@ def _matches_criteria(message: dict[str, Any], criteria: SearchCriteria) -> bool
         checks.append(bool(message.get('unread')))
     if criteria.readOnly:
         checks.append(not bool(message.get('unread')))
+    if criteria.flagged is not None:
+        checks.append(bool(message.get('flagged')) is criteria.flagged)
     if criteria.replied is not None:
         checks.append(bool(message.get('replied')) is criteria.replied)
+    if criteria.listId and list_id:
+        checks.append(criteria.listId.lower() in list_id.lower())
 
     if not checks:
         return True
@@ -156,6 +322,7 @@ def _env_messages_from_env(env: Any) -> list[dict[str, Any]]:
             'body': msg.get('body', ''),
             'unread': '\\Seen' not in flags,
             'replied': '\\Answered' in flags,
+            'flagged': '\\Flagged' in flags,
             'keywords': [f for f in flags if not f.startswith('\\')],
         })
     return env_messages
@@ -175,19 +342,26 @@ def _find_env_message(env: Any, message_id: str) -> dict[str, Any] | None:
     return None
 
 
-def _select_inbox_or_raise(imap: Any, password: str | None) -> None:
+def _select_mailbox_or_raise(imap: Any, mailbox_path: str, password: str | None) -> None:
+    mailbox = str(mailbox_path or '').strip()
+    if not mailbox:
+        raise MailServiceError('Mailbox path must not be empty')
     try:
-        typ, data = imap.select('INBOX')
+        typ, data = imap.select(mailbox)
     except imaplib.IMAP4.error as exc:
         raise MailServiceError(
-            _redact_error_message(f'Could not select mailbox INBOX: {exc}', password)
+            _redact_error_message(f'Could not select mailbox {mailbox}: {exc}', password)
         ) from exc
     if str(typ).upper() != 'OK':
         reason = _response_text(data)
-        message = 'Could not select mailbox INBOX'
+        message = f'Could not select mailbox {mailbox}'
         if reason:
             message = f'{message}: {_redact_error_message(reason, password)}'
         raise MailServiceError(message)
+
+
+def _select_inbox_or_raise(imap: Any, password: str | None) -> None:
+    _select_mailbox_or_raise(imap, 'INBOX', password)
 
 
 def _store_message_flags(
@@ -331,7 +505,7 @@ def _remove_env_tag(env: Any, normalized_tag: str, message_ids: list[str]) -> tu
 
 
 @contextmanager
-def _imap_connection(host: str, port: int, use_ssl: bool, username: str | None, password: str | None) -> Any:
+def _imap_connection(host: str, port: int, use_ssl: bool, username: str | None, password: str | None, mailbox_path: str = 'INBOX') -> Any:
     imap = _open_imap(host, port, use_ssl)
     try:
         if username:
@@ -340,7 +514,7 @@ def _imap_connection(host: str, port: int, use_ssl: bool, username: str | None, 
             except imaplib.IMAP4.error as exc:
                 raise MailServiceError(_redact_error_message(
                     'IMAP authentication failed', password)) from exc
-        _select_inbox_or_raise(imap, password)
+        _select_mailbox_or_raise(imap, mailbox_path, password)
         yield imap
     finally:
         try:
@@ -367,28 +541,77 @@ def _imap_message_from_uid(imap, uid: str) -> dict[str, Any] | None:
         'sender': msg.get('From', ''),
         'recipient': msg.get('To', ''),
         'date': msg.get('Date', ''),
+        'listId': msg.get('List-Id', ''),
         'body': str(body_text),
         'unread': '\\Seen' not in flags,
         'replied': '\\Answered' in flags,
+        'flagged': '\\Flagged' in flags,
         'keywords': [f for f in flags if not f.startswith('\\')],
     }
 
 
-def _collect_imap_messages(host: str | None, port: int, use_ssl: bool, username: str | None, password: str | None) -> list[dict[str, Any]]:
-    msgs: list[dict[str, Any]] = []
-    if host is None:
-        return msgs
-    with _imap_connection(host, port, use_ssl, username, password) as imap:
-        typ, data = imap.uid('search', None, 'ALL')
-        if typ != 'OK' or not data or not data[0]:
-            return []
-        raw_uids = data[0].split()
-        for raw_uid in raw_uids:
-            uid = raw_uid.decode('utf-8') if isinstance(raw_uid, bytes) else str(raw_uid)
-            m = _imap_message_from_uid(imap, uid)
-            if m is not None:
-                msgs.append(m)
-    return msgs
+def _collect_imap_messages(criteria: SearchCriteria, settings: dict[str, Any]) -> list[dict[str, Any]]:
+    messages: list[dict[str, Any]] = []
+    search_terms = _build_imap_search_terms(criteria)
+    requested_mailboxes = _resolve_search_mailboxes(criteria)
+    limit = _safe_search_limit(criteria)
+
+    candidate_accounts = _resolve_search_accounts(settings, criteria)
+    if not candidate_accounts:
+        legacy_account = _legacy_search_account(settings)
+        candidate_accounts = [legacy_account] if legacy_account is not None else []
+
+    fake_env = None
+    for account in candidate_accounts:
+        host, port, _use_ssl, _username, _password = _account_connection_details(account, settings)
+        fake_env = _get_fake_env_for_host_port(host, port)
+        if fake_env is not None:
+            break
+
+    if fake_env is not None:
+        available_mailboxes = {
+            str(mbox.get('path', '')).strip()
+            for mbox in getattr(fake_env, 'mailboxes', [])
+            if str(mbox.get('path', '')).strip()
+        }
+        for mailbox_path in requested_mailboxes:
+            if mailbox_path not in available_mailboxes:
+                raise MailServiceError(f'Could not select mailbox {mailbox_path}')
+        return [
+            deepcopy(message)
+            for message in _env_messages_from_env(fake_env)
+            if _matches_criteria(message, criteria)
+        ][:limit]
+
+    for account in _resolve_search_accounts(settings, criteria):
+        account_id = str(account.get('id', '') or '').strip() or 'default'
+        host, port, use_ssl, username, password = _account_connection_details(account, settings)
+        if not host:
+            continue
+
+        for mailbox_path in requested_mailboxes:
+            if len(messages) >= limit:
+                return messages
+            with _imap_connection(host, port, use_ssl, username, password, mailbox_path=mailbox_path) as imap:
+                typ, data = imap.uid('search', None, *search_terms)
+                if str(typ).upper() != 'OK' or not data or not data[0]:
+                    continue
+                raw_uids = data[0].split()
+                remaining = limit - len(messages)
+                for raw_uid in raw_uids[:remaining]:
+                    uid = raw_uid.decode('utf-8') if isinstance(raw_uid, bytes) else str(raw_uid)
+                    message = _imap_message_from_uid(imap, uid)
+                    if message is None:
+                        continue
+                    message['accountId'] = account_id
+                    message['mailboxPath'] = mailbox_path
+                    message['uid'] = uid
+                    message['id'] = _compose_message_id(account_id, mailbox_path, uid)
+                    if _matches_criteria(message, criteria):
+                        messages.append(message)
+                        if len(messages) >= limit:
+                            return messages
+    return messages
 
 
 def _check_imap_connection(host: str | None, port: int, use_ssl: bool, username: str | None, password: str | None) -> tuple[bool, str]:
@@ -517,26 +740,10 @@ def _parse_fetched_message(fdata: Any) -> tuple[EmailMessage, str] | None:
 def search_messages(criteria: SearchCriteria, settings: dict[str, Any]) -> list[dict[str, Any]]:
     if is_dummy_mode(settings):
         return [deepcopy(message) for message in _dummy_mailbox if _matches_criteria(message, criteria)]
-
-    # Live IMAP mode: fetch messages from configured IMAP server and filter locally
-    messages: list[dict[str, Any]] = []
-    host = settings.get('imapHost')
-    port = int(settings.get('imapPort') or 993)
-    use_ssl = bool(settings.get('imapUseSSL'))
-    username = settings.get('username')
-    password = settings.get('imapPassword')
-
-    # If a fake mail environment is registered for this host/port, use it instead of making network calls
-    _env = _get_fake_env_for_host_port(host, port)
-    if _env is not None:
-        return [deepcopy(message) for message in _env_messages_from_env(_env) if _matches_criteria(message, criteria)]
-
     try:
-        messages = _collect_imap_messages(host, port, use_ssl, username, password)
+        return _collect_imap_messages(criteria, settings)
     except (imaplib.IMAP4.error, OSError) as exc:
         raise MailServiceError(str(exc)) from exc
-
-    return [deepcopy(message) for message in messages if _matches_criteria(message, criteria)]
 
 
 def mark_messages_read(message_ids: list[str], settings: dict[str, Any]) -> dict[str, Any]:

@@ -91,6 +91,13 @@ class WebContractTests(unittest.TestCase):
         self.assertIn("MailboxInfo", api_js)
         self.assertIn("getAccountMailboxes", api_js)
         self.assertIn("getAllMailboxes", api_js)
+        self.assertIn("accountIds", api_js)
+        self.assertIn("mailboxes", api_js)
+        self.assertIn("flagged", api_js)
+        self.assertIn("since", api_js)
+        self.assertIn("before", api_js)
+        self.assertIn("listId", api_js)
+        self.assertIn("limit", api_js)
         self.assertIn("Loading message body...", app_js)
         self.assertIn("message-detail-shell", (REPO_ROOT / "webapp" /
                       "index.html").read_text(encoding="utf-8"))

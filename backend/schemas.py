@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class MailboxInfo(BaseModel):
@@ -29,6 +29,8 @@ class MailAccountSettings(BaseModel):
 
 
 class SearchCriteria(BaseModel):
+    accountIds: list[str] = Field(default_factory=list)
+    mailboxes: list[str] = Field(default_factory=list)
     keyword: str = ''
     rawSearch: str = ''
     sender: str = ''
@@ -36,8 +38,24 @@ class SearchCriteria(BaseModel):
     tag: str = ''
     unreadOnly: bool = False
     readOnly: bool = False
+    flagged: bool | None = None
+    since: str = ''
+    before: str = ''
+    listId: str = ''
     replied: bool | None = None
     useAnd: bool = True
+    limit: int = 100
+
+    @field_validator('limit', mode='before')
+    @classmethod
+    def _clamp_limit(cls, value: object) -> int:
+        if value in (None, ''):
+            return 100
+        try:
+            numeric = int(value)
+        except (TypeError, ValueError):
+            return value  # type: ignore[return-value]
+        return max(1, min(numeric, 500))
 
 
 class SummaryRequest(BaseModel):
