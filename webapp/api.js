@@ -131,6 +131,43 @@
  */
 
 /**
+ * @typedef {MailIndexMessageSummary & {reasons: string[]}} TriageBucketMessage
+ */
+
+/**
+ * @typedef {Object} TriageBucket
+ * @property {string} id
+ * @property {string} label
+ * @property {string} description
+ * @property {number} count
+ * @property {number | null} thresholdDays
+ * @property {TriageBucketMessage[]} messages
+ */
+
+/**
+ * @typedef {Object} TriageDashboardTotals
+ * @property {number} messages
+ * @property {number} unread
+ * @property {number} flagged
+ */
+
+/**
+ * @typedef {Object} TriageDashboardResponse
+ * @property {string} scopeId
+ * @property {string} generatedAt
+ * @property {TriageDashboardTotals} totals
+ * @property {TriageBucket[]} buckets
+ */
+
+/**
+ * @typedef {Object} TriageBucketSummaryRequest
+ * @property {string} [scopeId]
+ * @property {number} [summaryLength]
+ * @property {number} [limitPerBucket]
+ * @property {number} [staleDays]
+ */
+
+/**
  * @typedef {Object} MailIndexMessageQuery
  * @property {string} [accountId]
  * @property {string} [mailbox]
@@ -594,6 +631,17 @@ export function createApiClient(context) {
     /** @param {string} scopeId @param {SavedScopeSummaryRequest} payload @returns {Promise<SummaryResponse>} */
     createSavedScopeSummary(scopeId, payload) {
       return request(`/mail/scopes/${encodeURIComponent(scopeId)}/summary`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    },
+    /** @param {{scopeId?: string, limitPerBucket?: number, staleDays?: number}} [filters] @returns {Promise<TriageDashboardResponse>} */
+    getTriageDashboard(filters = {}) {
+      return request(`/mail/triage/dashboard${buildQueryString(filters)}`);
+    },
+    /** @param {string} bucketId @param {TriageBucketSummaryRequest} payload @returns {Promise<SummaryResponse>} */
+    createTriageBucketSummary(bucketId, payload) {
+      return request(`/mail/triage/buckets/${encodeURIComponent(bucketId)}/summary`, {
         method: "POST",
         body: JSON.stringify(payload),
       });

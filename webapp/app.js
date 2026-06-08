@@ -17,6 +17,11 @@ let currentLogs = [];
 let activeQuickFilter = "today-unread";
 let backendStopping = false;
 let activeDummyMode = true;
+let currentTriageDashboard = null;
+let currentTriageScopes = [];
+let currentTriageSelectedScopeId = "";
+let currentTriageSelectedMessageId = null;
+let latestTriageMessageDetailRequest = 0;
 
 const statusLine = document.getElementById("status-line");
 const runtimeStartupBanner = document.getElementById("runtime-startup-banner");
@@ -42,6 +47,26 @@ const messageDetailSenderAddress = document.getElementById("message-detail-sende
 const messageDetailRecipientName = document.getElementById("message-detail-recipient-name");
 const messageDetailRecipientAddress = document.getElementById("message-detail-recipient-address");
 const messageDetailBody = document.getElementById("message-detail-body");
+const triageScopeSelect = document.getElementById("triage-scope-select");
+const triageLimitPerBucketInput = document.getElementById("triage-limit-per-bucket");
+const triageStaleDaysInput = document.getElementById("triage-stale-days");
+const triageSummaryLengthInput = document.getElementById("triage-summary-length");
+const refreshTriageDashboardBtn = document.getElementById("refresh-triage-dashboard");
+const reloadTriageScopesBtn = document.getElementById("reload-triage-scopes");
+const triageGeneratedAt = document.getElementById("triage-generated-at");
+const triageTotalMessages = document.getElementById("triage-total-messages");
+const triageTotalUnread = document.getElementById("triage-total-unread");
+const triageTotalFlagged = document.getElementById("triage-total-flagged");
+const triageEmptyState = document.getElementById("triage-empty-state");
+const triageBucketsContainer = document.getElementById("triage-buckets");
+const triageMessageDetailShell = document.getElementById("triage-message-detail-shell");
+const triageMessageDetailSubject = document.getElementById("triage-message-detail-subject");
+const triageMessageDetailDate = document.getElementById("triage-message-detail-date");
+const triageMessageDetailSenderName = document.getElementById("triage-message-detail-sender-name");
+const triageMessageDetailSenderAddress = document.getElementById("triage-message-detail-sender-address");
+const triageMessageDetailRecipientName = document.getElementById("triage-message-detail-recipient-name");
+const triageMessageDetailRecipientAddress = document.getElementById("triage-message-detail-recipient-address");
+const triageMessageDetailBody = document.getElementById("triage-message-detail-body");
 
 const markReadBtn = document.getElementById("mark-read");
 const tagSummaryBtn = document.getElementById("tag-summary");
@@ -60,6 +85,28 @@ const healthSync = document.getElementById("health-sync");
 const digestMetricMessages = document.getElementById("digest-metric-messages");
 const digestMetricSelected = document.getElementById("digest-metric-selected");
 const digestMetricFilter = document.getElementById("digest-metric-filter");
+
+const mainMessageDetailElements = {
+  shell: messageDetailShell,
+  subject: messageDetailSubject,
+  date: messageDetailDate,
+  senderName: messageDetailSenderName,
+  senderAddress: messageDetailSenderAddress,
+  recipientName: messageDetailRecipientName,
+  recipientAddress: messageDetailRecipientAddress,
+  body: messageDetailBody,
+};
+
+const triageMessageDetailElements = {
+  shell: triageMessageDetailShell,
+  subject: triageMessageDetailSubject,
+  date: triageMessageDetailDate,
+  senderName: triageMessageDetailSenderName,
+  senderAddress: triageMessageDetailSenderAddress,
+  recipientName: triageMessageDetailRecipientName,
+  recipientAddress: triageMessageDetailRecipientAddress,
+  body: triageMessageDetailBody,
+};
 
 const logsBody = document.getElementById("logs-body");
 const refreshLogsBtn = document.getElementById("refresh-logs");
@@ -366,6 +413,8 @@ function clearCurrentWorkspaceState() {
   selectedMessageId = null;
   currentMessageDetail = null;
   latestMessageDetailRequest += 1;
+  currentTriageSelectedMessageId = null;
+  latestTriageMessageDetailRequest += 1;
   jobIdLabel.textContent = "No job yet";
   if (summaryCard) {
     summaryCard.dataset.state = "idle";
@@ -380,6 +429,15 @@ function clearCurrentWorkspaceState() {
     recipientName: "",
     recipientAddress: "",
     body: "",
+  });
+  renderTriageMessageDetail(null, {
+    state: "empty",
+    subject: "No message selected",
+    senderName: "",
+    senderAddress: "",
+    recipientName: "",
+    recipientAddress: "",
+    body: "Select a bucket sample to inspect the underlying message.",
   });
   setActionButtons(false);
   updateActionScopePreview();
@@ -486,13 +544,13 @@ function parseMailbox(value, fallbackName, fallbackAddress) {
   };
 }
 
-function renderMessageDetail(detail, options = {}) {
-  if (!messageDetailShell) {
+function renderMessageDetailShell(elements, detail, options = {}) {
+  if (!elements.shell) {
     return;
   }
 
   const state = options.state || (detail ? "ready" : "empty");
-  messageDetailShell.dataset.state = state;
+  elements.shell.dataset.state = state;
   const isEmptyState = state === "empty";
 
   const subject = detail?.subject || options.subject || "No mail selected";
@@ -509,13 +567,21 @@ function renderMessageDetail(detail, options = {}) {
     isEmptyState ? "" : options.recipientAddress || options.recipient || ""
   );
 
-  messageDetailSubject.textContent = subject;
-  messageDetailDate.textContent = date;
-  messageDetailSenderName.textContent = senderMailbox.name;
-  messageDetailSenderAddress.textContent = senderMailbox.address;
-  messageDetailRecipientName.textContent = recipientMailbox.name;
-  messageDetailRecipientAddress.textContent = recipientMailbox.address;
-  messageDetailBody.textContent = body;
+  elements.subject.textContent = subject;
+  elements.date.textContent = date;
+  elements.senderName.textContent = senderMailbox.name;
+  elements.senderAddress.textContent = senderMailbox.address;
+  elements.recipientName.textContent = recipientMailbox.name;
+  elements.recipientAddress.textContent = recipientMailbox.address;
+  elements.body.textContent = body;
+}
+
+function renderMessageDetail(detail, options = {}) {
+  renderMessageDetailShell(mainMessageDetailElements, detail, options);
+}
+
+function renderTriageMessageDetail(detail, options = {}) {
+  renderMessageDetailShell(triageMessageDetailElements, detail, options);
 }
 
 async function selectMessage(messageId) {
@@ -609,6 +675,371 @@ function renderLogs(logs) {
       }
     )
     .join("");
+}
+
+function clampNumber(value, min, max, fallback) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+  return Math.min(max, Math.max(min, Math.trunc(numeric)));
+}
+
+function collectTriageDashboardFilters() {
+  return {
+    scopeId: String(triageScopeSelect?.value || "").trim(),
+    limitPerBucket: clampNumber(triageLimitPerBucketInput?.value, 1, 100, 5),
+    staleDays: clampNumber(triageStaleDaysInput?.value, 1, 365, 14),
+    summaryLength: clampNumber(triageSummaryLengthInput?.value, 1, 24, 5),
+  };
+}
+
+function renderTriageScopeOptions(scopes) {
+  currentTriageScopes = Array.isArray(scopes) ? scopes : [];
+  if (!triageScopeSelect) {
+    return;
+  }
+
+  const previousValue = String(currentTriageSelectedScopeId || triageScopeSelect.value || "").trim();
+  triageScopeSelect.innerHTML = "";
+
+  if (currentTriageScopes.length === 0) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "No saved scopes available";
+    triageScopeSelect.appendChild(option);
+    triageScopeSelect.value = "";
+    currentTriageSelectedScopeId = "";
+    return;
+  }
+
+  currentTriageScopes.forEach((scope) => {
+    const option = document.createElement("option");
+    option.value = scope.id || "";
+    option.textContent = scope.name || scope.id || "Unnamed scope";
+    triageScopeSelect.appendChild(option);
+  });
+
+  const hasPrevious = currentTriageScopes.some((scope) => scope.id === previousValue);
+  const hasDefault = currentTriageScopes.some((scope) => scope.id === "unread_or_flagged_all");
+  const nextValue = hasPrevious
+    ? previousValue
+    : (hasDefault ? "unread_or_flagged_all" : currentTriageScopes[0].id || "");
+  triageScopeSelect.value = nextValue;
+  currentTriageSelectedScopeId = nextValue;
+}
+
+function renderTriageMessagePlaceholder(message, options = {}) {
+  renderTriageMessageDetail(null, {
+    state: options.state || "loading",
+    subject: options.subject || message?.subject || "Loading message",
+    senderName: options.senderName || parseMailbox(message?.sender, "Loading sender", "Loading sender").name,
+    senderAddress: options.senderAddress || parseMailbox(message?.sender, "Loading sender", "Loading sender").address,
+    date: options.date || message?.date || "",
+    recipientName: options.recipientName || "Loading recipient",
+    recipientAddress: options.recipientAddress || "Loading recipient",
+    body: options.body || message?.bodyPreview || "Loading message body...",
+  });
+}
+
+function findTriageMessageSample(messageId) {
+  if (!currentTriageDashboard || !Array.isArray(currentTriageDashboard.buckets)) {
+    return null;
+  }
+
+  for (const bucket of currentTriageDashboard.buckets) {
+    const sample = (bucket.messages || []).find((message) => message.id === messageId);
+    if (sample) {
+      return sample;
+    }
+  }
+  return null;
+}
+
+function renderTriageDashboardError(message) {
+  currentTriageDashboard = null;
+  currentTriageSelectedMessageId = null;
+  latestTriageMessageDetailRequest += 1;
+  if (triageGeneratedAt) {
+    triageGeneratedAt.textContent = "Load failed";
+  }
+  if (triageTotalMessages) {
+    triageTotalMessages.textContent = "0";
+  }
+  if (triageTotalUnread) {
+    triageTotalUnread.textContent = "0";
+  }
+  if (triageTotalFlagged) {
+    triageTotalFlagged.textContent = "0";
+  }
+  if (triageEmptyState) {
+    triageEmptyState.classList.add("is-hidden");
+  }
+  if (triageBucketsContainer) {
+    triageBucketsContainer.innerHTML = (
+      `<article class="card triage-bucket-card triage-bucket-error">` +
+        `<div class="panel-heading">` +
+          `<div>` +
+            `<p class="panel-kicker">Error</p>` +
+            `<h3>Dashboard unavailable</h3>` +
+          `</div>` +
+        `</div>` +
+        `<p class="panel-copy">${escapeHtml(message)}</p>` +
+      `</article>`
+    );
+  }
+  renderTriageMessageDetail(null, {
+    state: "error",
+    subject: "Dashboard unavailable",
+    senderName: "",
+    senderAddress: "",
+    recipientName: "",
+    recipientAddress: "",
+    body: `Could not load the triage dashboard: ${message}`,
+  });
+}
+
+function renderTriageDashboard(dashboard) {
+  currentTriageDashboard = dashboard || null;
+  currentTriageSelectedScopeId = String(dashboard?.scopeId || "").trim();
+
+  if (triageScopeSelect && currentTriageSelectedScopeId) {
+    triageScopeSelect.value = currentTriageSelectedScopeId;
+  }
+  if (triageGeneratedAt) {
+    triageGeneratedAt.textContent = dashboard?.generatedAt
+      ? `Updated ${formatMessageDate(dashboard.generatedAt)}`
+      : "Not loaded";
+  }
+
+  const totals = dashboard?.totals || { messages: 0, unread: 0, flagged: 0 };
+  if (triageTotalMessages) {
+    triageTotalMessages.textContent = String(totals.messages || 0);
+  }
+  if (triageTotalUnread) {
+    triageTotalUnread.textContent = String(totals.unread || 0);
+  }
+  if (triageTotalFlagged) {
+    triageTotalFlagged.textContent = String(totals.flagged || 0);
+  }
+
+  if (triageEmptyState) {
+    triageEmptyState.classList.toggle("is-hidden", (totals.messages || 0) > 0);
+  }
+
+  if (!triageBucketsContainer) {
+    return;
+  }
+
+  const buckets = Array.isArray(dashboard?.buckets) ? dashboard.buckets : [];
+  triageBucketsContainer.innerHTML = buckets
+    .map((bucket) => {
+      const messages = Array.isArray(bucket.messages) ? bucket.messages : [];
+      const thresholdLabel = bucket.thresholdDays ? `Threshold ${bucket.thresholdDays} days` : null;
+      const sampleLabel = bucket.count === 0
+        ? "No matching messages"
+        : `${messages.length} sample${messages.length === 1 ? "" : "s"} shown`;
+      const sampleMarkup = messages.length === 0
+        ? `<p class="triage-message-empty">No sample messages returned for this bucket.</p>`
+        : messages.map((message) => {
+          const preview = message.bodyPreview || message.bodyText || "No preview available.";
+          const reasons = Array.isArray(message.reasons) ? message.reasons : [];
+          const reasonMarkup = reasons.length === 0
+            ? ""
+            : `<div class="triage-message-reasons">${reasons.map((reason) =>
+              `<span class="triage-message-reason">${escapeHtml(reason)}</span>`).join("")}</div>`;
+          return (
+            `<button type="button" class="triage-message-item" data-triage-message-id="${escapeHtml(message.id || "")}">` +
+              `<span class="triage-message-item-top">` +
+                `<strong class="triage-message-item-subject">${escapeHtml(message.subject || "Untitled message")}</strong>` +
+                `<span class="triage-message-item-meta">${escapeHtml(message.sender || "Unknown sender")} · ${escapeHtml(formatMessageDate(message.date) || "")}</span>` +
+              `</span>` +
+              `<span class="triage-message-item-preview">${escapeHtml(preview)}</span>` +
+              `${reasonMarkup}` +
+            `</button>`
+          );
+        }).join("");
+
+      return (
+        `<article class="card triage-bucket-card" data-bucket-id="${escapeHtml(bucket.id || "")}">` +
+          `<div class="panel-heading panel-heading-spread">` +
+            `<div>` +
+              `<p class="panel-kicker">Bucket</p>` +
+              `<h3>${escapeHtml(bucket.label || bucket.id || "Bucket")}</h3>` +
+            `</div>` +
+            `<p class="triage-bucket-count">${escapeHtml(String(bucket.count || 0))} total</p>` +
+          `</div>` +
+          `<p class="panel-copy">${escapeHtml(bucket.description || "")}</p>` +
+          `<div class="triage-bucket-meta">` +
+            `<span class="triage-bucket-chip">${escapeHtml(sampleLabel)}</span>` +
+            `${thresholdLabel ? `<span class="triage-bucket-chip">${escapeHtml(thresholdLabel)}</span>` : ""}` +
+          `</div>` +
+          `<div class="inline-actions">` +
+            `<button type="button" class="secondary triage-summary-btn" data-triage-summary-bucket-id="${escapeHtml(bucket.id || "")}" data-triage-bucket-label="${escapeHtml(bucket.label || bucket.id || "Bucket")}">Summarise bucket</button>` +
+          `</div>` +
+          `<div class="triage-message-list">${sampleMarkup}</div>` +
+        `</article>`
+      );
+    })
+    .join("");
+
+  if (currentTriageSelectedMessageId && findTriageMessageSample(currentTriageSelectedMessageId)) {
+    return;
+  }
+
+  currentTriageSelectedMessageId = null;
+  renderTriageMessageDetail(null, {
+    state: totals.messages === 0 ? "empty" : "empty",
+    subject: "No message selected",
+    senderName: "",
+    senderAddress: "",
+    recipientName: "",
+    recipientAddress: "",
+    body: "Select a bucket sample to inspect the underlying message.",
+  });
+}
+
+async function refreshTriageScopes() {
+  try {
+    const scopes = await api.getSavedScopes();
+    renderTriageScopeOptions(scopes);
+    return scopes;
+  } catch (error) {
+    setStatus(`Triage scopes failed: ${error.message}`, true);
+    return [];
+  }
+}
+
+async function refreshTriageDashboard() {
+  const filters = collectTriageDashboardFilters();
+  try {
+    const dashboard = await api.getTriageDashboard({
+      scopeId: filters.scopeId,
+      limitPerBucket: filters.limitPerBucket,
+      staleDays: filters.staleDays,
+    });
+    renderTriageDashboard(dashboard);
+    return dashboard;
+  } catch (error) {
+    renderTriageDashboardError(error.message);
+    setStatus(`Triage dashboard failed: ${error.message}`, true);
+    return null;
+  }
+}
+
+async function selectTriageMessage(messageId) {
+  if (!messageId) {
+    return;
+  }
+
+  currentTriageSelectedMessageId = messageId;
+  const sample = findTriageMessageSample(messageId);
+  renderTriageMessagePlaceholder(sample, {
+    state: "loading",
+    subject: sample?.subject || "Loading message",
+    senderName: parseMailbox(sample?.sender, "Loading sender", "Loading sender").name,
+    senderAddress: parseMailbox(sample?.sender, "Loading sender", "Loading sender").address,
+    date: sample?.date || "",
+    recipientName: "Loading recipient",
+    recipientAddress: "Loading recipient",
+    body: sample?.bodyPreview || "Loading message body...",
+  });
+
+  const requestId = ++latestTriageMessageDetailRequest;
+  try {
+    const detail = await api.getMailIndexMessage(messageId);
+    if (requestId !== latestTriageMessageDetailRequest || currentTriageSelectedMessageId !== messageId) {
+      return;
+    }
+
+    renderTriageMessageDetail(detail, {
+      state: "ready",
+      body: detail.bodyText || sample?.bodyPreview || "",
+    });
+  } catch (error) {
+    if (requestId !== latestTriageMessageDetailRequest || currentTriageSelectedMessageId !== messageId) {
+      return;
+    }
+
+    renderTriageMessageDetail(null, {
+      state: "error",
+      subject: sample?.subject || "Message unavailable",
+      senderName: parseMailbox(sample?.sender, "Message unavailable", "Could not load sender").name,
+      senderAddress: parseMailbox(sample?.sender, "Message unavailable", "Could not load sender").address,
+      date: sample?.date || "",
+      recipientName: "Message unavailable",
+      recipientAddress: "Could not load recipient",
+      body: `Could not load this message: ${error.message}`,
+    });
+    setStatus(`Triage message load failed: ${error.message}`, true);
+  }
+}
+
+async function applySummaryResult(result, options = {}) {
+  currentJobId = result.jobId;
+  selectedMessageId = null;
+  currentMessageDetail = null;
+  latestMessageDetailRequest += 1;
+  jobIdLabel.textContent = options.jobLabel || `Current Job: ${result.jobId}`;
+  summaryText.textContent = result.summary;
+
+  const messages = Array.isArray(result.messages) ? result.messages : [];
+  const hasMessages = messages.length > 0;
+  if (summaryCard) {
+    summaryCard.dataset.state = hasMessages ? "ready" : "empty-results";
+  }
+  renderMessages(messages);
+  setActionButtons(hasMessages);
+  updateActionScopePreview();
+
+  if (hasMessages) {
+    await selectMessage(messages[0].id);
+  } else {
+    renderMessageDetail(null, {
+      state: "empty",
+      subject: "No messages matched",
+      senderName: "",
+      senderAddress: "",
+      recipientName: "",
+      recipientAddress: "",
+      body: "",
+    });
+  }
+
+  renderLogs(await api.getLogs());
+
+  if (options.openMainTab) {
+    document.querySelector(".tab[data-tab='search']")?.click();
+  }
+}
+
+async function summariseTriageBucket(bucketId, bucketLabel) {
+  if (!bucketId) {
+    setStatus("Choose a triage bucket before summarising.", true);
+    return;
+  }
+
+  const filters = collectTriageDashboardFilters();
+  try {
+    setStatus(`Creating triage summary for ${bucketLabel || bucketId}...`);
+    const result = await api.createTriageBucketSummary(bucketId, {
+      scopeId: filters.scopeId,
+      summaryLength: filters.summaryLength,
+      limitPerBucket: filters.limitPerBucket,
+      staleDays: filters.staleDays,
+    });
+    await applySummaryResult(result, {
+      jobLabel: `Bucket: ${bucketLabel || bucketId}`,
+      openMainTab: true,
+    });
+    setStatus(
+      result.messages.length > 0
+        ? `Triage summary created for ${result.messages.length} messages.`
+        : `Triage summary created for empty bucket ${bucketLabel || bucketId}.`
+    );
+  } catch (error) {
+    setStatus(`Triage summary failed: ${error.message}`, true);
+  }
 }
 
 function fillSettings(settings, options = {}) {
@@ -1246,6 +1677,7 @@ function bindTabs() {
   const tabButtons = document.querySelectorAll(".tab");
   const panels = {
     search: document.getElementById("tab-search"),
+    triage: document.getElementById("tab-triage"),
     logs: document.getElementById("tab-logs"),
     settings: document.getElementById("tab-settings"),
     help: document.getElementById("tab-help"),
@@ -1266,6 +1698,11 @@ function bindTabs() {
       button.classList.add("active");
       panels[newTab].classList.add("active");
       updateHelpButton(newTab === "help");
+      if (newTab === "triage") {
+        refreshTriageDashboard().catch((error) => {
+          setStatus(`Triage dashboard refresh failed: ${error.message}`, true);
+        });
+      }
     });
   });
 
@@ -1322,6 +1759,8 @@ async function loadInitialData() {
     renderLogs(logs);
     fillSettings(settings);
     currentSystemMessageDefaults = defaults;
+    await refreshTriageScopes();
+    await refreshTriageDashboard();
     await refreshRuntimeStatus();
     await refreshModelOptions();
     await refreshDownloadCatalog();
@@ -1353,6 +1792,8 @@ function wireEvents() {
     try {
       const settings = await api.getSettings();
       fillSettings(settings);
+      await refreshTriageScopes();
+      await refreshTriageDashboard();
       await refreshRuntimeStatus();
       await refreshModelOptions();
       await refreshDownloadCatalog();
@@ -1382,36 +1823,12 @@ function wireEvents() {
     try {
       const payload = collectSearchCriteria();
       const result = await api.createSummary(payload);
-
-      currentJobId = result.jobId;
-      selectedMessageId = null;
-      currentMessageDetail = null;
-      latestMessageDetailRequest += 1;
-      jobIdLabel.textContent = `Current Job: ${result.jobId}`;
-      summaryText.textContent = result.summary;
-      const messages = result.messages || [];
-      const hasMessages = messages.length > 0;
-      if (summaryCard) {
-        summaryCard.dataset.state = hasMessages ? "ready" : "empty-results";
-      }
-      renderMessages(messages);
-      setActionButtons(hasMessages);
-      updateActionScopePreview();
-      setStatus(hasMessages ? `Summary created for ${messages.length} messages.` : "No messages matched the current filters.");
-      if (hasMessages) {
-        await selectMessage(messages[0].id);
-      } else {
-        renderMessageDetail(null, {
-          state: "empty",
-          subject: "No messages matched",
-          senderName: "",
-          senderAddress: "",
-          recipientName: "",
-          recipientAddress: "",
-          body: "",
-        });
-      }
-      renderLogs(await api.getLogs());
+      await applySummaryResult(result);
+      setStatus(
+        Array.isArray(result.messages) && result.messages.length > 0
+          ? `Summary created for ${result.messages.length} messages.`
+          : "No messages matched the current filters."
+      );
     } catch (error) {
       setStatus(`Summary request failed: ${error.message}`, true);
     }
@@ -1419,6 +1836,53 @@ function wireEvents() {
 
   quickFilterButtons.forEach((button) => {
     button.addEventListener("click", () => applyQuickFilter(button.dataset.filter || "clear"));
+  });
+
+  triageScopeSelect?.addEventListener("change", async () => {
+    currentTriageSelectedScopeId = String(triageScopeSelect.value || "").trim();
+    await refreshTriageDashboard();
+  });
+  triageLimitPerBucketInput?.addEventListener("change", () => {
+    refreshTriageDashboard().catch((error) => {
+      setStatus(`Triage dashboard refresh failed: ${error.message}`, true);
+    });
+  });
+  triageStaleDaysInput?.addEventListener("change", () => {
+    refreshTriageDashboard().catch((error) => {
+      setStatus(`Triage dashboard refresh failed: ${error.message}`, true);
+    });
+  });
+  refreshTriageDashboardBtn?.addEventListener("click", () => {
+    refreshTriageDashboard().catch((error) => {
+      setStatus(`Triage dashboard refresh failed: ${error.message}`, true);
+    });
+  });
+  reloadTriageScopesBtn?.addEventListener("click", async () => {
+    await refreshTriageScopes();
+    await refreshTriageDashboard();
+  });
+  triageBucketsContainer?.addEventListener("click", async (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    const summaryButton = target.closest(".triage-summary-btn");
+    if (summaryButton) {
+      const bucketId = summaryButton.getAttribute("data-triage-summary-bucket-id");
+      const bucketLabel = summaryButton.getAttribute("data-triage-bucket-label");
+      await summariseTriageBucket(bucketId || "", bucketLabel || bucketId || "");
+      return;
+    }
+
+    const messageButton = target.closest(".triage-message-item");
+    if (messageButton) {
+      const messageId = messageButton.getAttribute("data-triage-message-id");
+      if (!messageId || messageId === currentTriageSelectedMessageId) {
+        return;
+      }
+      await selectTriageMessage(messageId);
+    }
   });
 
   [scopeActionMarkRead, scopeActionTag, scopeActionEmail].forEach((field) => {
@@ -1652,6 +2116,8 @@ function wireEvents() {
       clearCurrentWorkspaceState();
       fillSettings(response.settings);
       renderLogs(await api.getLogs());
+      await refreshTriageScopes();
+      await refreshTriageDashboard();
       await refreshRuntimeStatus();
       await refreshModelOptions();
       await refreshDownloadCatalog();
@@ -1704,6 +2170,8 @@ function wireEvents() {
       }
       syncDummyModeUI(nextMode);
       clearCurrentWorkspaceState();
+      await refreshTriageScopes();
+      await refreshTriageDashboard();
       setStatus(nextMode ? "Sample mailbox enabled." : "Live mailbox enabled.");
       renderLogs(await api.getLogs());
     } catch (error) {
@@ -1726,6 +2194,8 @@ function wireEvents() {
       if (previousDummyMode !== Boolean(refreshedSettings.dummyMode)) {
         clearCurrentWorkspaceState();
       }
+      await refreshTriageScopes();
+      await refreshTriageDashboard();
       await refreshRuntimeStatus();
       await refreshModelOptions();
       await refreshDownloadCatalog();

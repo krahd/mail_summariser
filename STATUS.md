@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-06-08 18:20
+Last updated: 2026-06-08 18:53
 
 ## Purpose
 
@@ -30,6 +30,7 @@ Key implemented backend areas:
   - `backend/routers_actions.py`
   - `backend/routers_summaries.py`
   - `backend/routers_saved_scopes.py`
+  - `backend/routers_triage.py`
   - `backend/routers_devtools.py`
 - shared app-module resolution in `backend/router_context.py`
 - SQLite persistence in `backend/db.py`
@@ -42,6 +43,7 @@ Key implemented backend areas:
 - live IMAP/SMTP mailbox handling in `backend/mail_service.py`, including explicit authentication and mailbox-selection failure reporting plus per-message action failure tracking
 - mailbox discovery in `backend/mail_service.py` and `backend/routers_mailboxes.py`, including deterministic sample folders, legacy single-account fallback, and per-account aggregate listing
 - server-side IMAP search in `backend/mail_service.py` and mailbox-scoped summary routing in `backend/routers_summaries.py`, including selected-account / selected-mailbox filtering, bounded fetches, and composite live message IDs
+- read-only triage dashboard computation in `backend/triage_service.py` and `backend/routers_triage.py`, including heuristic bucket counts and summary jobs projected from the local index
 
 ## Active focus
 
@@ -56,6 +58,7 @@ Current focus is stability, safety, and product clarity of the local-first workf
 - keeping the browser first-run path grounded in real sample messages and explicit empty-result handling
 - keeping mailbox discovery, legacy-account compatibility, composite-ID action handling, and saved-scope query semantics aligned
 - keeping the saved-scope evaluator narrow, predictable, and backed by the local index only
+- keeping the triage dashboard read-only, transparent, and anchored in the local index
 - keeping the new local mail index additive while `/summaries` still uses IMAP search for now
 - keeping live summary search scoped to selected accounts and mailboxes while the action routes continue to treat composite IDs as opaque until phase 08
 
@@ -84,7 +87,7 @@ The backend is the system of record for settings, mailbox integration, summaries
 
 Current browser UI state:
 
-- The browser client is a static HTML/CSS/JavaScript app with Main, Log, Settings, and Help surfaces.
+- The browser client is a static HTML/CSS/JavaScript app with Main, Triage, Log, Settings, and Help surfaces.
 - The Main surface uses a three-column desktop layout: quick filters and advanced query, digest and message review, and scoped job actions.
 - The Log surface is a timeline-style view with text, status, and undoable filters.
 - Settings are split into a basic screen and an advanced screen; advanced controls include provider prompts, provider keys, Ollama lifecycle, model tools, backend targeting, fake-mail tools, database reset, and backend shutdown.
@@ -104,11 +107,12 @@ Implemented UI/UX changes:
 - The rendered message table now uses fixed columns, wrapping, and a wider review split to prevent horizontal table scroll in the desktop review pane.
 - Browser settings loading now preserves a manually selected backend URL instead of overwriting it with the backend's stored `backendBaseURL`.
 - Developer fake-mail tooling remains gated by `MAIL_SUMMARISER_ENABLE_DEV_TOOLS` and is still separate from the end-user sample mailbox.
+- The browser now includes a read-only Triage surface that groups local-index mail into heuristic buckets, shows counts and sample messages, and supports bucket summaries plus message drill-down.
 
 Rendered validation:
 
-- `scripts/validate_rendered_ui.py` starts isolated backend and static-web instances, then drives Chromium through first load, sample digest generation, empty-result handling, the settings/live-mode toggle, and a mobile settings viewport.
-- The rendered validator checks page identity, console warnings/errors, page overflow, message-table overflow, Sample Mailbox copy, enabled/disabled action states, and screenshot capture.
+- `scripts/validate_rendered_ui.py` starts isolated backend and static-web instances, then drives Chromium through first load, triage empty/dashboard states, sample digest generation, empty-result handling, the settings/live-mode toggle, and a mobile settings viewport.
+- The rendered validator checks page identity, console warnings/errors, page overflow, message-table overflow, Sample Mailbox copy, triage bucket cards, message drill-down, enabled/disabled action states, and screenshot capture.
 - CI installs Chromium and required browser dependencies, then runs the rendered UI regression on the Ubuntu Python 3.11 test job.
 
 Remaining UI ideas:
@@ -197,11 +201,14 @@ python scripts/validate_rendered_ui.py
 - `backend/routers_mail_index.py`: local mail index API routes
 - `backend/saved_scope_service.py`: saved-scope storage, defaults, and index-backed scope evaluation
 - `backend/routers_saved_scopes.py`: saved-scope CRUD, message listing, and scope summaries
+- `backend/routers_triage.py`: triage dashboard and bucket summary routes
 - `backend/summary_service.py`: summary orchestration and fallback handling
 - `backend/model_provider_service.py`: provider runtime controls
 - `backend/llm_provider_clients.py`: provider abstraction
 - `webapp/api.js`: browser API contract surface
+- `backend/triage_service.py`: local-index triage heuristics and dashboard projection
 - `tests/test_saved_scopes.py`: saved-scope defaults, CRUD, evaluation, and summary coverage
+- `tests/test_triage_dashboard.py`: triage dashboard endpoint and bucket summary coverage
 - `docs/index.html`, `docs/site.css`, `docs/site.js`: GitHub Pages website source
 - `docs/assets/`: website diagrams and product screenshot
 - `tests/`: backend/API and robustness test suite
@@ -210,6 +217,13 @@ python scripts/validate_rendered_ui.py
 - `scripts/check_repo_hygiene.sh`: repository hygiene guard
 
 ## Recent audit status
+
+**Phase 07 — Triage dashboard for email control (2026-06-08):**
+- Added a read-only triage dashboard route at `GET /mail/triage/dashboard` plus a bucket summary route at `POST /mail/triage/buckets/{bucket_id}/summary`.
+- Added `backend/triage_service.py` to derive transparent heuristic buckets from the local index: reply-needed candidates, flagged, deadlines, mailing lists, stale unread, bulk archive candidates, and recent unread.
+- Added a Triage surface in the browser UI with scope controls, totals, bucket cards, sample drill-down, and a bucket summary button that reuses the existing summary canvas.
+- Added backend and rendered regression coverage for dashboard totals, bucket heuristics, clamped limits, empty-state handling, bucket summaries, drill-down, and no horizontal overflow.
+- Validation completed: `pytest -q`, `python3.11 scripts/validate_rendered_ui.py`, `./scripts/check_repo_hygiene.sh`, and `git diff --check` all passed.
 
 **Phase 06 — Saved scopes that recreate useful MailMate smart mailboxes (2026-06-08):**
 - Added a persisted `saved_scopes` table with default MailMate-like scope definitions, including unread-or-flagged inbox mail, flagged mail, unread mail, Fing list mail, and a finance scope for the existing quick-filter semantics.
@@ -319,6 +333,11 @@ Historical verification:
 
 Recent verification:
 
+- `pytest -q tests/test_triage_dashboard.py tests/test_router_decomposition.py tests/test_web_contract.py tests/test_saved_scopes.py`: passed with 21 passed.
+- `pytest -q`: passed with 174 passed, 1 skipped.
+- `python3.11 scripts/validate_rendered_ui.py`: passed.
+- `./scripts/check_repo_hygiene.sh`: passed.
+- `git diff --check`: passed.
 - `pytest -q tests/test_saved_scopes.py tests/test_db_init.py tests/test_database_reset.py tests/test_router_decomposition.py tests/test_web_contract.py`: passed with 17 passed.
 - `pytest -q tests/test_backend_mail_flow.py`: passed with 7 passed.
 - `pytest -q`: passed with 167 passed, 1 skipped.
@@ -404,7 +423,7 @@ Validation implications:
 
 ## Next steps
 
-Use the new saved scopes in the browser/dashboard when that UI is ready, and decide whether `/summaries` should eventually consume saved-scope criteria or remain IMAP-search based. The new mailbox discovery and mail-index endpoints are ready for later integration.
+Refine the triage bucket heuristics against real inbox patterns, and decide whether `/summaries` should eventually consume saved-scope criteria or remain IMAP-search based. The mailbox picker work and later routing changes remain available for later phases.
 
 ## Longer-term steps
 
@@ -423,4 +442,4 @@ Use the new saved scopes in the browser/dashboard when that UI is ready, and dec
 - Empty message sets should not be sent to LLM providers.
 - Saved scopes are additive, persisted in SQLite, and should not trigger automatic IMAP sync when summarising.
 - Saved scopes are persisted in SQLite, restored on startup/reset, and evaluated only against indexed mail data.
-Last updated: 2026-06-08 18:20
+Last updated: 2026-06-08 18:53

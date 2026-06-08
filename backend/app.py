@@ -44,6 +44,7 @@ from backend.routers_devtools import router as devtools_router
 from backend.routers_mail_index import router as mail_index_router
 from backend.routers_mailboxes import router as mailboxes_router
 from backend.routers_saved_scopes import router as saved_scopes_router
+from backend.routers_triage import router as triage_router
 from backend.routers_runtime_models import router as runtime_models_router
 from backend.routers_settings import router as settings_router
 from backend.routers_summaries import router as summaries_router
@@ -148,6 +149,7 @@ app.include_router(actions_router)
 app.include_router(devtools_router)
 app.include_router(mail_index_router)
 app.include_router(saved_scopes_router)
+app.include_router(triage_router)
 app.include_router(runtime_models_router)
 app.include_router(mailboxes_router)
 
