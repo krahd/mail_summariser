@@ -41,6 +41,7 @@ from backend.schemas import (
 from backend import model_provider_service
 from backend.routers_actions import router as actions_router
 from backend.routers_devtools import router as devtools_router
+from backend.routers_mail_index import router as mail_index_router
 from backend.routers_mailboxes import router as mailboxes_router
 from backend.routers_runtime_models import router as runtime_models_router
 from backend.routers_settings import router as settings_router
@@ -139,6 +140,7 @@ app.include_router(settings_router)
 app.include_router(summaries_router)
 app.include_router(actions_router)
 app.include_router(devtools_router)
+app.include_router(mail_index_router)
 app.include_router(runtime_models_router)
 app.include_router(mailboxes_router)
 

@@ -63,6 +63,53 @@ class SummaryRequest(BaseModel):
     summaryLength: int = 5
 
 
+class MailIndexSyncRequest(BaseModel):
+    accountId: str = ''
+    mailbox: str = 'INBOX'
+    limit: int = 500
+
+    @field_validator('limit', mode='before')
+    @classmethod
+    def _clamp_limit(cls, value: object) -> int:
+        if value in (None, ''):
+            return 500
+        try:
+            numeric = int(value)
+        except (TypeError, ValueError):
+            return value  # type: ignore[return-value]
+        return max(1, min(numeric, 500))
+
+
+class MailIndexSyncResponse(BaseModel):
+    accountId: str
+    mailbox: str
+    scanned: int
+    indexed: int
+    errors: int
+
+
+class MailIndexMessageSummary(BaseModel):
+    id: str
+    accountId: str
+    mailboxPath: str
+    uid: str
+    messageIdHeader: str = ''
+    subject: str
+    sender: str
+    recipients: list[str] = Field(default_factory=list)
+    date: str
+    flags: list[str] = Field(default_factory=list)
+    keywords: list[str] = Field(default_factory=list)
+    listId: str = ''
+    bodyPreview: str = ''
+    bodyCached: bool = False
+    lastSeenAt: str
+
+
+class MailIndexMessageDetail(MailIndexMessageSummary):
+    bodyText: str = ''
+
+
 class MessageItem(BaseModel):
     id: str
     subject: str

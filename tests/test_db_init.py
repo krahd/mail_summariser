@@ -48,7 +48,16 @@ class DatabaseInitTests(unittest.TestCase):
                 ).fetchall()
             }
 
-        self.assertTrue({"settings", "logs", "jobs", "undo_stack"}.issubset(table_names))
+        self.assertTrue({
+            "settings",
+            "logs",
+            "jobs",
+            "undo_stack",
+            "mail_accounts_index",
+            "mailboxes_index",
+            "messages_index",
+            "sync_state",
+        }.issubset(table_names))
 
 
 if __name__ == "__main__":
