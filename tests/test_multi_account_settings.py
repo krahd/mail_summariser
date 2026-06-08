@@ -35,15 +35,21 @@ def test_settings_endpoint_includes_mail_accounts_field() -> None:
         payload = response.json()
         assert 'mailAccounts' in payload
         assert isinstance(payload['mailAccounts'], list)
+        assert len(payload['mailAccounts']) == 1
 
 
-def test_mail_accounts_defaults_to_empty_list() -> None:
-    """Verify mailAccounts defaults to empty list."""
+def test_legacy_settings_derive_default_mail_account() -> None:
+    """Verify legacy-only settings derive a default mail account."""
     with TestClient(app) as client:
         response = client.get('/settings')
         assert response.status_code == 200
         payload = response.json()
-        assert payload['mailAccounts'] == []
+        account = payload['mailAccounts'][0]
+        assert account['id'] == 'default'
+        assert account['displayName'] == 'Default Account'
+        assert account['enabled'] is False
+        assert account['imapHost'] == ''
+        assert account['imapPassword'] == ''
 
 
 def test_post_settings_persists_mail_accounts() -> None:
@@ -93,6 +99,38 @@ def test_post_settings_persists_mail_accounts() -> None:
         assert len(settings_payload['mailAccounts']) == 2
         assert settings_payload['mailAccounts'][0]['id'] == 'personal'
         assert settings_payload['mailAccounts'][1]['id'] == 'work'
+
+
+def test_missing_mail_account_id_is_derived_and_trimmed() -> None:
+    """Verify missing or whitespace-only ids are normalised before storage."""
+    with TestClient(app) as client:
+        account = {
+            'id': '   ',
+            'displayName': 'Derived From Username',
+            'enabled': True,
+            'imapHost': 'imap.example.com',
+            'imapPort': 993,
+            'imapUseSSL': True,
+            'username': 'derived@example.com',
+            'imapPassword': 'secret-imap-pass',
+            'smtpHost': 'smtp.example.com',
+            'smtpPort': 465,
+            'smtpUseSSL': True,
+            'smtpPassword': 'secret-smtp-pass',
+            'recipientEmail': 'derived@example.com',
+        }
+
+        payload = _base_settings()
+        payload['mailAccounts'] = [account]
+
+        response = client.post('/settings', json=payload)
+        assert response.status_code == 200
+
+        settings_payload = client.get('/settings').json()
+        stored_account = settings_payload['mailAccounts'][0]
+        assert stored_account['id'] == 'derived@example.com'
+        assert stored_account['imapPassword'] == '__MASKED__'
+        assert stored_account['smtpPassword'] == '__MASKED__'
 
 
 def test_account_secrets_masked_in_read() -> None:
@@ -186,6 +224,41 @@ def test_masked_account_secret_write_preserves_stored_secret() -> None:
         assert retrieved2['mailAccounts'][0]['smtpPassword'] == '__MASKED__'
 
 
+def test_legacy_settings_save_does_not_clear_existing_mail_accounts() -> None:
+    """Verify omitting mailAccounts preserves the stored account list."""
+    with TestClient(app) as client:
+        account = {
+            'id': 'work',
+            'displayName': 'Work Email',
+            'enabled': True,
+            'imapHost': 'imap.example.com',
+            'imapPort': 993,
+            'imapUseSSL': True,
+            'username': 'user@example.com',
+            'imapPassword': 'work-imap-secret',
+            'smtpHost': 'smtp.example.com',
+            'smtpPort': 465,
+            'smtpUseSSL': True,
+            'smtpPassword': 'work-smtp-secret',
+            'recipientEmail': 'user@example.com',
+        }
+
+        payload = _base_settings()
+        payload['mailAccounts'] = [account]
+        assert client.post('/settings', json=payload).status_code == 200
+
+        legacy_update = _base_settings()
+        legacy_update['imapHost'] = 'legacy.imap.example.com'
+        legacy_update['username'] = 'legacyuser@example.com'
+        legacy_update['imapPassword'] = 'legacy-secret-pass'
+        assert client.post('/settings', json=legacy_update).status_code == 200
+
+        settings_payload = client.get('/settings').json()
+        assert len(settings_payload['mailAccounts']) == 1
+        assert settings_payload['mailAccounts'][0]['id'] == 'work'
+        assert settings_payload['imapHost'] == 'legacy.imap.example.com'
+
+
 def test_legacy_imap_settings_still_work() -> None:
     """Verify legacy top-level IMAP fields still persist and retrieve correctly."""
     with TestClient(app) as client:
@@ -210,6 +283,13 @@ def test_legacy_imap_settings_still_work() -> None:
         assert settings_payload['username'] == 'legacyuser@example.com'
         assert settings_payload['imapPassword'] == '__MASKED__'
         assert settings_payload['recipientEmail'] == 'legacyuser@example.com'
+        assert len(settings_payload['mailAccounts']) == 1
+        legacy_account = settings_payload['mailAccounts'][0]
+        assert legacy_account['id'] == 'default'
+        assert legacy_account['displayName'] == 'legacyuser@example.com'
+        assert legacy_account['imapHost'] == 'legacy.imap.example.com'
+        assert legacy_account['username'] == 'legacyuser@example.com'
+        assert legacy_account['imapPassword'] == '__MASKED__'
 
 
 def test_legacy_and_multi_account_coexist() -> None:
@@ -253,6 +333,48 @@ def test_legacy_and_multi_account_coexist() -> None:
         # Multi-account field present
         assert len(settings_payload['mailAccounts']) == 1
         assert settings_payload['mailAccounts'][0]['id'] == 'account1'
+
+
+def test_duplicate_mail_account_ids_are_rejected() -> None:
+    """Verify duplicate ids are rejected with HTTP 400."""
+    with TestClient(app) as client:
+        account1 = {
+            'id': 'duplicate',
+            'displayName': 'Account 1',
+            'enabled': True,
+            'imapHost': 'imap1.example.com',
+            'imapPort': 993,
+            'imapUseSSL': True,
+            'username': 'user1@example.com',
+            'imapPassword': 'pass1',
+            'smtpHost': 'smtp1.example.com',
+            'smtpPort': 465,
+            'smtpUseSSL': True,
+            'smtpPassword': 'pass1-smtp',
+            'recipientEmail': 'user1@example.com',
+        }
+        account2 = {
+            'id': ' duplicate ',
+            'displayName': 'Account 2',
+            'enabled': True,
+            'imapHost': 'imap2.example.com',
+            'imapPort': 993,
+            'imapUseSSL': True,
+            'username': 'user2@example.com',
+            'imapPassword': 'pass2',
+            'smtpHost': 'smtp2.example.com',
+            'smtpPort': 465,
+            'smtpUseSSL': True,
+            'smtpPassword': 'pass2-smtp',
+            'recipientEmail': 'user2@example.com',
+        }
+
+        payload = _base_settings()
+        payload['mailAccounts'] = [account1, account2]
+
+        response = client.post('/settings', json=payload)
+        assert response.status_code == 400
+        assert 'duplicate' in response.json()['detail'].lower()
 
 
 def test_empty_account_passwords_not_masked() -> None:

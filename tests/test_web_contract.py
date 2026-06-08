@@ -85,6 +85,9 @@ class WebContractTests(unittest.TestCase):
         self.assertIn("updateDigestMetrics", app_js)
         self.assertIn("getMessageDetail", (REPO_ROOT / "webapp" /
                       "api.js").read_text(encoding="utf-8"))
+        api_js = (REPO_ROOT / "webapp" / "api.js").read_text(encoding="utf-8")
+        self.assertIn("mailAccounts", api_js)
+        self.assertIn("MailAccountSettings", api_js)
         self.assertIn("Loading message body...", app_js)
         self.assertIn("message-detail-shell", (REPO_ROOT / "webapp" /
                       "index.html").read_text(encoding="utf-8"))
