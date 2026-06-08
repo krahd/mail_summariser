@@ -109,6 +109,24 @@ def _decode_index_message(row: sqlite3.Row) -> dict[str, Any]:
     }
 
 
+def _decode_saved_scope(row: sqlite3.Row) -> dict[str, Any]:
+    try:
+        query = json.loads(row['query_json'])
+    except (TypeError, ValueError, json.JSONDecodeError):
+        query = {}
+    if not isinstance(query, dict):
+        query = {}
+    return {
+        'id': row['id'],
+        'name': row['name'],
+        'description': row['description'],
+        'query': query,
+        'sortOrder': int(row['sort_order'] or 0),
+        'createdAt': row['created_at'],
+        'updatedAt': row['updated_at'],
+    }
+
+
 def init_db() -> None:
     with _connect() as conn:
         conn.executescript(
@@ -182,6 +200,15 @@ def init_db() -> None:
                 uidnext TEXT NOT NULL DEFAULT '',
                 last_sync_at TEXT NOT NULL,
                 PRIMARY KEY(account_id, mailbox_path)
+            );
+            CREATE TABLE IF NOT EXISTS saved_scopes (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT NOT NULL DEFAULT '',
+                query_json TEXT NOT NULL,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
             );
             """
         )
@@ -290,13 +317,86 @@ def reset_database(default_settings: dict[str, Any]) -> dict[str, int]:
             ('mailboxes_index', 'mailboxes_index'),
             ('messages_index', 'messages_index'),
             ('sync_state', 'sync_state'),
+            ('saved_scopes', 'saved_scopes'),
         )
         for table, key in tables:
             removed[key] = int(conn.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0])
             conn.execute(f'DELETE FROM {table}')
     for key, value in default_settings.items():
         set_setting(key, value)
+    try:
+        from backend.saved_scope_service import ensure_default_saved_scopes  # pylint: disable=import-outside-toplevel
+
+        ensure_default_saved_scopes()
+    except Exception:  # pylint: disable=broad-except
+        pass
     return removed
+
+
+def upsert_saved_scope(scope: dict[str, Any], created_at: str | None = None,
+                       updated_at: str | None = None) -> None:
+    init_db()
+    scope_id = _first_text(scope, 'id')
+    if not scope_id:
+        raise ValueError('Scope id is required')
+    name = _first_text(scope, 'name') or scope_id
+    description = _first_text(scope, 'description')
+    query = scope.get('query') if scope.get('query') is not None else {}
+    if not isinstance(query, dict):
+        raise ValueError('Scope query must be a JSON object')
+    sort_order_value = scope.get('sortOrder', scope.get('sort_order', 0))
+    try:
+        sort_order = int(sort_order_value or 0)
+    except (TypeError, ValueError) as exc:
+        raise ValueError('Scope sortOrder must be an integer') from exc
+    created_at_value = str(created_at or scope.get('createdAt') or scope.get('created_at') or _now_iso())
+    updated_at_value = str(updated_at or scope.get('updatedAt') or scope.get('updated_at') or _now_iso())
+
+    with _connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO saved_scopes(id, name, description, query_json, sort_order, created_at, updated_at)
+            VALUES(?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                name = excluded.name,
+                description = excluded.description,
+                query_json = excluded.query_json,
+                sort_order = excluded.sort_order,
+                updated_at = excluded.updated_at
+            """,
+            (scope_id, name, description, json.dumps(query), sort_order, created_at_value, updated_at_value),
+        )
+
+
+def list_saved_scopes() -> list[dict[str, Any]]:
+    init_db()
+    with _connect() as conn:
+        rows = conn.execute(
+            'SELECT * FROM saved_scopes ORDER BY sort_order, created_at, id'
+        ).fetchall()
+    return [_decode_saved_scope(row) for row in rows]
+
+
+def get_saved_scope(scope_id: str) -> dict[str, Any] | None:
+    init_db()
+    scope_id_value = str(scope_id or '').strip()
+    if not scope_id_value:
+        return None
+    with _connect() as conn:
+        row = conn.execute('SELECT * FROM saved_scopes WHERE id = ?', (scope_id_value,)).fetchone()
+    if row is None:
+        return None
+    return _decode_saved_scope(row)
+
+
+def delete_saved_scope(scope_id: str) -> bool:
+    init_db()
+    scope_id_value = str(scope_id or '').strip()
+    if not scope_id_value:
+        return False
+    with _connect() as conn:
+        result = conn.execute('DELETE FROM saved_scopes WHERE id = ?', (scope_id_value,))
+    return bool(result.rowcount)
 
 
 def upsert_index_account(account: dict[str, Any], updated_at: str | None = None) -> None:
@@ -524,6 +624,13 @@ def list_index_messages(criteria: dict[str, Any] | None = None) -> list[dict[str
         if len(results) >= limit:
             break
     return results
+
+
+def list_all_index_messages() -> list[dict[str, Any]]:
+    init_db()
+    with _connect() as conn:
+        rows = conn.execute('SELECT * FROM messages_index ORDER BY last_seen_at DESC, id DESC').fetchall()
+    return [_decode_index_message(row) for row in rows]
 
 
 def get_index_message(message_id: str) -> dict[str, Any] | None:

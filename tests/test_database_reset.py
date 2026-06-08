@@ -101,6 +101,13 @@ class DatabaseResetTests(unittest.TestCase):
             "bodyText": "",
             "lastSeenAt": "2026-04-04T12:00:03",
         })
+        db.upsert_saved_scope({
+            "id": "custom_scope",
+            "name": "Custom Scope",
+            "description": "Custom scope for reset testing",
+            "query": {"accounts": ["*"], "subjectContains": "Reset"},
+            "sortOrder": 99,
+        })
         db.update_sync_state("acct-reset", "INBOX", uidvalidity="123", uidnext="456",
                               last_sync_at="2026-04-04T12:00:04")
         dummy_state.insert_job(
@@ -129,6 +136,7 @@ class DatabaseResetTests(unittest.TestCase):
         self.assertEqual(payload["removed"]["mailboxes_index"], 1)
         self.assertEqual(payload["removed"]["messages_index"], 1)
         self.assertEqual(payload["removed"]["sync_state"], 1)
+        self.assertGreaterEqual(payload["removed"]["saved_scopes"], 1)
         self.assertNotIn("llmApiKey", db.list_settings())
         self.assertEqual(db.list_settings(), backend_app.DEFAULT_SETTINGS)
         self.assertEqual(self._table_count("logs"), 0)
@@ -138,11 +146,24 @@ class DatabaseResetTests(unittest.TestCase):
         self.assertEqual(self._table_count("mailboxes_index"), 0)
         self.assertEqual(self._table_count("messages_index"), 0)
         self.assertEqual(self._table_count("sync_state"), 0)
+        self.assertGreaterEqual(self._table_count("saved_scopes"), 5)
         self.assertEqual(dummy_state.dummy_store_counts()["jobs"], 0)
         self.assertEqual(dummy_state.dummy_store_counts()["logs"], 0)
         self.assertEqual(dummy_state.dummy_store_counts()["undo"], 0)
         self.assertEqual(payload["settings"]["dummyMode"],
                          backend_app.DEFAULT_SETTINGS["dummyMode"])
+
+        with self._client() as client:
+            scope_ids = {scope["id"] for scope in client.get("/mail/scopes").json()}
+
+        self.assertTrue({
+            "unread_or_flagged_all",
+            "flagged_all",
+            "unread_all",
+            "lists_fing",
+            "finance",
+        }.issubset(scope_ids))
+        self.assertNotIn("custom_scope", scope_ids)
 
     def test_admin_database_reset_requires_confirmation_phrase(self) -> None:
         with self._client() as client:

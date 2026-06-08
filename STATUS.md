@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-06-08 18:01
+Last updated: 2026-06-08 18:20
 
 ## Purpose
 
@@ -29,10 +29,12 @@ Key implemented backend areas:
   - `backend/routers_settings.py`
   - `backend/routers_actions.py`
   - `backend/routers_summaries.py`
+  - `backend/routers_saved_scopes.py`
   - `backend/routers_devtools.py`
 - shared app-module resolution in `backend/router_context.py`
 - SQLite persistence in `backend/db.py`
 - SQLite-backed local mail index tables, sync state, and query helpers in `backend/db.py`, `backend/mail_index_service.py`, and `backend/routers_mail_index.py`
+- persisted saved-scope storage, default scope seeding, and scope-backed summary helpers in `backend/db.py`, `backend/saved_scope_service.py`, and `backend/routers_saved_scopes.py`
 - provider abstraction in `backend/llm_provider_clients.py`
 - summary orchestration and fallback handling in `backend/summary_service.py`
 - runtime/provider operations in `backend/model_provider_service.py`
@@ -52,7 +54,8 @@ Current focus is stability, safety, and product clarity of the local-first workf
 - keeping live IMAP/SMTP failures explicit so authentication, mailbox selection, and per-message action errors are surfaced instead of being swallowed
 - keeping end-user surfaces focused on the sample mailbox and live mailbox concepts rather than internal dummy-mode naming
 - keeping the browser first-run path grounded in real sample messages and explicit empty-result handling
-- keeping mailbox discovery, legacy-account compatibility, and composite-ID action handling aligned with later saved-scope work
+- keeping mailbox discovery, legacy-account compatibility, composite-ID action handling, and saved-scope query semantics aligned
+- keeping the saved-scope evaluator narrow, predictable, and backed by the local index only
 - keeping the new local mail index additive while `/summaries` still uses IMAP search for now
 - keeping live summary search scoped to selected accounts and mailboxes while the action routes continue to treat composite IDs as opaque until phase 08
 
@@ -71,7 +74,7 @@ The backend is the system of record for settings, mailbox integration, summaries
   <rect x="300" y="145" width="210" height="90" rx="10" fill="none" stroke="black" /><text x="405" y="180" text-anchor="middle" font-size="14">backend/app.py</text><text x="405" y="202" text-anchor="middle" font-size="12">FastAPI app and</text><text x="405" y="220" text-anchor="middle" font-size="12">router mounting</text>
   <rect x="590" y="40" width="190" height="70" rx="10" fill="none" stroke="black" /><text x="685" y="70" text-anchor="middle" font-size="14">mail services</text><text x="685" y="90" text-anchor="middle" font-size="12">sample, IMAP, SMTP</text>
   <rect x="590" y="145" width="190" height="70" rx="10" fill="none" stroke="black" /><text x="685" y="174" text-anchor="middle" font-size="14">summary service</text><text x="685" y="194" text-anchor="middle" font-size="12">provider fallback</text>
-  <rect x="590" y="250" width="190" height="70" rx="10" fill="none" stroke="black" /><text x="685" y="280" text-anchor="middle" font-size="14">SQLite database</text><text x="685" y="300" text-anchor="middle" font-size="12">settings, jobs, logs, mail index</text>
+  <rect x="590" y="250" width="190" height="70" rx="10" fill="none" stroke="black" /><text x="685" y="280" text-anchor="middle" font-size="14">SQLite database</text><text x="685" y="300" text-anchor="middle" font-size="12">settings, jobs, logs, mail index, saved scopes</text>
   <rect x="820" y="145" width="180" height="80" rx="10" fill="none" stroke="black" /><text x="910" y="176" text-anchor="middle" font-size="14">model providers</text><text x="910" y="198" text-anchor="middle" font-size="12">Ollama, OpenAI,</text><text x="910" y="216" text-anchor="middle" font-size="12">Anthropic, fallback</text>
   <rect x="590" y="360" width="190" height="70" rx="10" fill="none" stroke="black" /><text x="685" y="390" text-anchor="middle" font-size="14">tests/scripts</text><text x="685" y="410" text-anchor="middle" font-size="12">validation and hygiene</text>
   <line x1="220" y1="115" x2="300" y2="175" stroke="black" marker-end="url(#arrow)" /><line x1="220" y1="265" x2="300" y2="205" stroke="black" marker-end="url(#arrow)" /><line x1="510" y1="170" x2="590" y2="75" stroke="black" marker-end="url(#arrow)" /><line x1="510" y1="190" x2="590" y2="180" stroke="black" marker-end="url(#arrow)" /><line x1="510" y1="215" x2="590" y2="285" stroke="black" marker-end="url(#arrow)" /><line x1="780" y1="180" x2="820" y2="185" stroke="black" marker-end="url(#arrow)" /><line x1="685" y1="320" x2="685" y2="360" stroke="black" marker-end="url(#arrow)" />
@@ -129,7 +132,7 @@ Current implementation notes:
 - `dummyMode` is persisted as a setting.
 - Dummy jobs, logs, and undo entries use the in-memory `backend/dummy_state.py` store rather than the SQLite job/log tables.
 - Switching from dummy mode to live mode resets dummy session state, which prevents old dummy jobs from being acted on after the mode change.
-- Database reset restores default settings and resets dummy state.
+- Database reset restores default settings, restores default saved scopes, and resets dummy state.
 - Sample mailbox mode exercises the same summary/action endpoints as live mode, which is valuable for tests.
 
 ## Main request flow
@@ -192,10 +195,13 @@ python scripts/validate_rendered_ui.py
 - `backend/db.py`: persistence
 - `backend/mail_index_service.py`: local mail index sync orchestration
 - `backend/routers_mail_index.py`: local mail index API routes
+- `backend/saved_scope_service.py`: saved-scope storage, defaults, and index-backed scope evaluation
+- `backend/routers_saved_scopes.py`: saved-scope CRUD, message listing, and scope summaries
 - `backend/summary_service.py`: summary orchestration and fallback handling
 - `backend/model_provider_service.py`: provider runtime controls
 - `backend/llm_provider_clients.py`: provider abstraction
 - `webapp/api.js`: browser API contract surface
+- `tests/test_saved_scopes.py`: saved-scope defaults, CRUD, evaluation, and summary coverage
 - `docs/index.html`, `docs/site.css`, `docs/site.js`: GitHub Pages website source
 - `docs/assets/`: website diagrams and product screenshot
 - `tests/`: backend/API and robustness test suite
@@ -204,6 +210,15 @@ python scripts/validate_rendered_ui.py
 - `scripts/check_repo_hygiene.sh`: repository hygiene guard
 
 ## Recent audit status
+
+**Phase 06 — Saved scopes that recreate useful MailMate smart mailboxes (2026-06-08):**
+- Added a persisted `saved_scopes` table with default MailMate-like scope definitions, including unread-or-flagged inbox mail, flagged mail, unread mail, Fing list mail, and a finance scope for the existing quick-filter semantics.
+- Added `backend/saved_scope_service.py` for default seeding, CRUD, saved-scope ID generation, and a narrow evaluator over local mail index fields: accounts, mailboxes, excludeMailboxes, unread, flagged, keyword/tag/listId/sender/subject matching, and `any`/`all` grouping.
+- Added `backend/routers_saved_scopes.py` with `GET/POST/PUT/DELETE /mail/scopes`, `GET /mail/scopes/{scope_id}/messages`, and `POST /mail/scopes/{scope_id}/summary`.
+- Scope summaries now use the local index only, project cached body preview/body text into normal summary jobs, and persist `scopeId` in the job criteria without triggering automatic IMAP sync.
+- App startup and database reset now restore the default scopes so the MailMate-style sidebar model is always available after a fresh launch or reset.
+- Added regression coverage for default scope creation, reset restoration, custom scope CRUD, unread-or-flagged matching, Deleted/Junk exclusion, `List_Fing` matching, empty-result summary handling, and scope summary job creation.
+- Validation completed: `pytest -q tests/test_saved_scopes.py tests/test_db_init.py tests/test_database_reset.py tests/test_router_decomposition.py tests/test_web_contract.py`, `pytest -q tests/test_backend_mail_flow.py`, `pytest -q`, `./scripts/check_repo_hygiene.sh`, and `git diff --check` all passed.
 
 **Phase 01 — Live IMAP hardening before architecture changes (2026-06-08):**
 - Hardened `_imap_connection(...)` so IMAP login is attempted whenever a username is present, login failures raise `MailServiceError`, and `select('INBOX')` non-OK responses fail explicitly instead of being treated as empty mailboxes.
@@ -229,7 +244,7 @@ python scripts/validate_rendered_ui.py
 - Sync now supports dummy/sample mailbox mode, fake-mail registry mode, and live IMAP mode with bounded UID scans, header/body-preview fetching, flags and keywords capture, `List-Id` extraction, and sync-state updates.
 - Added regression coverage for DB schema creation, account/mailbox/message upserts, message re-upserts, dummy/fake/live sync flows, limit clamping, list-ID filtering, unread/flagged filtering, and route registration / browser contract visibility.
 - Validation completed: `pytest -q tests/test_mail_index.py tests/test_db_init.py tests/test_database_reset.py tests/test_router_decomposition.py tests/test_web_contract.py`, `pytest -q tests/test_backend_mail_flow.py`, `pytest -q`, `./scripts/check_repo_hygiene.sh`, and `git diff --check` all passed.
-- `/summaries` remains on the existing IMAP search path; the new local index is additive and not yet used by the dashboard or summary flow.
+- `/summaries` remains on the existing IMAP search path; the new local index is additive and now also backs saved scopes and scope summaries.
 
 **Phase 02 — Multi-account settings model (2026-06-08):**
 - Added `MailAccountSettings` schema for individual IMAP/SMTP accounts and exposed `mailAccounts` on `AppSettings`.
@@ -304,6 +319,11 @@ Historical verification:
 
 Recent verification:
 
+- `pytest -q tests/test_saved_scopes.py tests/test_db_init.py tests/test_database_reset.py tests/test_router_decomposition.py tests/test_web_contract.py`: passed with 17 passed.
+- `pytest -q tests/test_backend_mail_flow.py`: passed with 7 passed.
+- `pytest -q`: passed with 167 passed, 1 skipped.
+- `./scripts/check_repo_hygiene.sh`: passed.
+- `git diff --check`: passed.
 - `backend/.venv/bin/python -m pytest -q`: passed with 136 passed, 1 skipped, 1 warning.
 - `backend/.venv/bin/python -m pytest -q tests/test_validate_full_stack_script.py`: passed with 3 passed.
 - `backend/.venv/bin/python -m pytest -q tests/test_web_contract.py tests/test_validate_full_stack_script.py`: passed with 6 passed.
@@ -379,12 +399,12 @@ Validation implications:
 
 ## Pending tasks
 
-- Saved mailbox scopes and a mailbox picker remain unimplemented.
-- Live IMAP summaries still use the existing INBOX-based search behaviour in this phase. The new local mail index is additive and not yet wired into `/summaries` or the dashboard.
+- A mailbox picker remains unimplemented.
+- Live IMAP summaries still use the existing INBOX-based search behaviour. The new local mail index is additive and `/summaries` has not yet been switched over to saved-scope queries.
 
 ## Next steps
 
-Implement saved mailbox scopes and only then consider wiring mailbox selection and cached-index reads into summary creation and the dashboard. The new mailbox discovery and mail-index endpoints are ready for later integration.
+Use the new saved scopes in the browser/dashboard when that UI is ready, and decide whether `/summaries` should eventually consume saved-scope criteria or remain IMAP-search based. The new mailbox discovery and mail-index endpoints are ready for later integration.
 
 ## Longer-term steps
 
@@ -393,6 +413,7 @@ Implement saved mailbox scopes and only then consider wiring mailbox selection a
 3. Preserve safe handling for live mailbox operations and provider integrations.
 4. Expand rendered UI regression checks beyond first-run flows to cover help/explainer overlays, scoped actions, and denser desktop layouts.
 5. Keep browser and macOS information architecture aligned as provider/runtime controls continue to evolve.
+6. Keep saved-scope defaults and query semantics aligned with sample mailbox and live index data.
 
 ## Decisions
 
@@ -400,4 +421,6 @@ Implement saved mailbox scopes and only then consider wiring mailbox selection a
 - Provider failures should degrade gracefully to deterministic fallback summaries.
 - Dev-only tooling remains explicit and gated.
 - Empty message sets should not be sent to LLM providers.
-Last updated: 2026-06-08 18:01
+- Saved scopes are additive, persisted in SQLite, and should not trigger automatic IMAP sync when summarising.
+- Saved scopes are persisted in SQLite, restored on startup/reset, and evaluated only against indexed mail data.
+Last updated: 2026-06-08 18:20

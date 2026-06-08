@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -108,6 +110,49 @@ class MailIndexMessageSummary(BaseModel):
 
 class MailIndexMessageDetail(MailIndexMessageSummary):
     bodyText: str = ''
+
+
+class SavedScope(BaseModel):
+    id: str
+    name: str
+    description: str = ''
+    query: dict[str, Any] = Field(default_factory=dict)
+    sortOrder: int = 0
+
+
+class SavedScopeCreateRequest(BaseModel):
+    id: str | None = None
+    name: str
+    description: str = ''
+    query: dict[str, Any] = Field(default_factory=dict)
+    sortOrder: int = 0
+
+
+class SavedScopeSummaryRequest(BaseModel):
+    summaryLength: int = 5
+    limit: int = 200
+
+    @field_validator('summaryLength', mode='before')
+    @classmethod
+    def _clamp_summary_length(cls, value: object) -> int:
+        if value in (None, ''):
+            return 5
+        try:
+            numeric = int(value)
+        except (TypeError, ValueError):
+            return value  # type: ignore[return-value]
+        return max(1, min(numeric, 24))
+
+    @field_validator('limit', mode='before')
+    @classmethod
+    def _clamp_limit(cls, value: object) -> int:
+        if value in (None, ''):
+            return 200
+        try:
+            numeric = int(value)
+        except (TypeError, ValueError):
+            return value  # type: ignore[return-value]
+        return max(1, min(numeric, 200))
 
 
 class MessageItem(BaseModel):
