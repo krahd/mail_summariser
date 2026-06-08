@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-06-08 16:34
+Last updated: 2026-06-08 18:01
 
 ## Purpose
 
@@ -32,6 +32,7 @@ Key implemented backend areas:
   - `backend/routers_devtools.py`
 - shared app-module resolution in `backend/router_context.py`
 - SQLite persistence in `backend/db.py`
+- SQLite-backed local mail index tables, sync state, and query helpers in `backend/db.py`, `backend/mail_index_service.py`, and `backend/routers_mail_index.py`
 - provider abstraction in `backend/llm_provider_clients.py`
 - summary orchestration and fallback handling in `backend/summary_service.py`
 - runtime/provider operations in `backend/model_provider_service.py`
@@ -52,6 +53,7 @@ Current focus is stability, safety, and product clarity of the local-first workf
 - keeping end-user surfaces focused on the sample mailbox and live mailbox concepts rather than internal dummy-mode naming
 - keeping the browser first-run path grounded in real sample messages and explicit empty-result handling
 - keeping mailbox discovery, legacy-account compatibility, and composite-ID action handling aligned with later saved-scope work
+- keeping the new local mail index additive while `/summaries` still uses IMAP search for now
 - keeping live summary search scoped to selected accounts and mailboxes while the action routes continue to treat composite IDs as opaque until phase 08
 
 ## Architecture
@@ -62,14 +64,14 @@ The backend is the system of record for settings, mailbox integration, summaries
 
 <svg xmlns="http://www.w3.org/2000/svg" width="1040" height="470" viewBox="0 0 1040 470" role="img" aria-labelledby="mail-arch-title mail-arch-desc">
   <title id="mail-arch-title">mail_summariser architecture</title>
-  <desc id="mail-arch-desc">Browser and macOS clients call FastAPI routes backed by mail services, SQLite persistence, summary providers, and runtime model control.</desc>
+  <desc id="mail-arch-desc">Browser and macOS clients call FastAPI routes backed by mail services, a local mail index, SQLite persistence, summary providers, and runtime model control.</desc>
   <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10 z" /></marker></defs>
   <rect x="40" y="80" width="180" height="70" rx="10" fill="none" stroke="black" /><text x="130" y="110" text-anchor="middle" font-size="14">webapp/</text><text x="130" y="130" text-anchor="middle" font-size="12">browser client</text>
   <rect x="40" y="230" width="180" height="70" rx="10" fill="none" stroke="black" /><text x="130" y="260" text-anchor="middle" font-size="14">macos-app/</text><text x="130" y="280" text-anchor="middle" font-size="12">SwiftUI client</text>
   <rect x="300" y="145" width="210" height="90" rx="10" fill="none" stroke="black" /><text x="405" y="180" text-anchor="middle" font-size="14">backend/app.py</text><text x="405" y="202" text-anchor="middle" font-size="12">FastAPI app and</text><text x="405" y="220" text-anchor="middle" font-size="12">router mounting</text>
   <rect x="590" y="40" width="190" height="70" rx="10" fill="none" stroke="black" /><text x="685" y="70" text-anchor="middle" font-size="14">mail services</text><text x="685" y="90" text-anchor="middle" font-size="12">sample, IMAP, SMTP</text>
   <rect x="590" y="145" width="190" height="70" rx="10" fill="none" stroke="black" /><text x="685" y="174" text-anchor="middle" font-size="14">summary service</text><text x="685" y="194" text-anchor="middle" font-size="12">provider fallback</text>
-  <rect x="590" y="250" width="190" height="70" rx="10" fill="none" stroke="black" /><text x="685" y="280" text-anchor="middle" font-size="14">SQLite database</text><text x="685" y="300" text-anchor="middle" font-size="12">settings and state</text>
+  <rect x="590" y="250" width="190" height="70" rx="10" fill="none" stroke="black" /><text x="685" y="280" text-anchor="middle" font-size="14">SQLite database</text><text x="685" y="300" text-anchor="middle" font-size="12">settings, jobs, logs, mail index</text>
   <rect x="820" y="145" width="180" height="80" rx="10" fill="none" stroke="black" /><text x="910" y="176" text-anchor="middle" font-size="14">model providers</text><text x="910" y="198" text-anchor="middle" font-size="12">Ollama, OpenAI,</text><text x="910" y="216" text-anchor="middle" font-size="12">Anthropic, fallback</text>
   <rect x="590" y="360" width="190" height="70" rx="10" fill="none" stroke="black" /><text x="685" y="390" text-anchor="middle" font-size="14">tests/scripts</text><text x="685" y="410" text-anchor="middle" font-size="12">validation and hygiene</text>
   <line x1="220" y1="115" x2="300" y2="175" stroke="black" marker-end="url(#arrow)" /><line x1="220" y1="265" x2="300" y2="205" stroke="black" marker-end="url(#arrow)" /><line x1="510" y1="170" x2="590" y2="75" stroke="black" marker-end="url(#arrow)" /><line x1="510" y1="190" x2="590" y2="180" stroke="black" marker-end="url(#arrow)" /><line x1="510" y1="215" x2="590" y2="285" stroke="black" marker-end="url(#arrow)" /><line x1="780" y1="180" x2="820" y2="185" stroke="black" marker-end="url(#arrow)" /><line x1="685" y1="320" x2="685" y2="360" stroke="black" marker-end="url(#arrow)" />
@@ -188,6 +190,8 @@ python scripts/validate_rendered_ui.py
 - `backend/app.py`: FastAPI entrypoint and router mounting
 - `backend/router_context.py`: runtime/test app-module parity
 - `backend/db.py`: persistence
+- `backend/mail_index_service.py`: local mail index sync orchestration
+- `backend/routers_mail_index.py`: local mail index API routes
 - `backend/summary_service.py`: summary orchestration and fallback handling
 - `backend/model_provider_service.py`: provider runtime controls
 - `backend/llm_provider_clients.py`: provider abstraction
@@ -217,6 +221,15 @@ python scripts/validate_rendered_ui.py
 - Added regression coverage for new schema fields, limit clamping, mailbox selection, `UNSEEN`/`FLAGGED`/`KEYWORD` search terms, composite IDs, mailbox-selection failures, and dummy-mode compatibility.
 - Validation completed: `pytest -q tests/test_imap_hardening.py`, `pytest -q tests/test_fuzz_summary_payloads.py`, `pytest -q tests/test_web_contract.py`, `pytest -q tests/test_backend_mail_flow.py`, `pytest -q`, `./scripts/check_repo_hygiene.sh`, and `git diff --check` all passed.
 - Known limitation: action routes still treat composite IDs as opaque until phase 08, so live mailbox-scoped summary actions are intentionally not expanded in this phase.
+
+**Phase 05 — Local incremental mail index (2026-06-08):**
+- Added idempotent SQLite tables for `mail_accounts_index`, `mailboxes_index`, `messages_index`, and `sync_state`, and made database reset clear them alongside the existing jobs/logs/undo tables.
+- Added mail index helpers in `backend/db.py` for account, mailbox, and message upserts plus indexed message queries and sync-state updates.
+- Added `backend/mail_index_service.py` and `backend/routers_mail_index.py` with `POST /mail/index/sync`, `GET /mail/index/messages`, and `GET /mail/index/messages/{message_id}`.
+- Sync now supports dummy/sample mailbox mode, fake-mail registry mode, and live IMAP mode with bounded UID scans, header/body-preview fetching, flags and keywords capture, `List-Id` extraction, and sync-state updates.
+- Added regression coverage for DB schema creation, account/mailbox/message upserts, message re-upserts, dummy/fake/live sync flows, limit clamping, list-ID filtering, unread/flagged filtering, and route registration / browser contract visibility.
+- Validation completed: `pytest -q tests/test_mail_index.py tests/test_db_init.py tests/test_database_reset.py tests/test_router_decomposition.py tests/test_web_contract.py`, `pytest -q tests/test_backend_mail_flow.py`, `pytest -q`, `./scripts/check_repo_hygiene.sh`, and `git diff --check` all passed.
+- `/summaries` remains on the existing IMAP search path; the new local index is additive and not yet used by the dashboard or summary flow.
 
 **Phase 02 — Multi-account settings model (2026-06-08):**
 - Added `MailAccountSettings` schema for individual IMAP/SMTP accounts and exposed `mailAccounts` on `AppSettings`.
@@ -367,11 +380,11 @@ Validation implications:
 ## Pending tasks
 
 - Saved mailbox scopes and a mailbox picker remain unimplemented.
-- Live IMAP summaries still use the existing INBOX-based search behaviour in this phase.
+- Live IMAP summaries still use the existing INBOX-based search behaviour in this phase. The new local mail index is additive and not yet wired into `/summaries` or the dashboard.
 
 ## Next steps
 
-Implement saved mailbox scopes and only then consider wiring mailbox selection into summary creation. The new mailbox discovery endpoints are ready for later integration.
+Implement saved mailbox scopes and only then consider wiring mailbox selection and cached-index reads into summary creation and the dashboard. The new mailbox discovery and mail-index endpoints are ready for later integration.
 
 ## Longer-term steps
 
@@ -387,4 +400,4 @@ Implement saved mailbox scopes and only then consider wiring mailbox selection i
 - Provider failures should degrade gracefully to deterministic fallback summaries.
 - Dev-only tooling remains explicit and gated.
 - Empty message sets should not be sent to LLM providers.
-Last updated: 2026-06-08 16:34
+Last updated: 2026-06-08 18:01

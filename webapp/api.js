@@ -50,6 +50,58 @@
  */
 
 /**
+ * @typedef {Object} MailIndexSyncRequest
+ * @property {string} accountId
+ * @property {string} mailbox
+ * @property {number} limit
+ */
+
+/**
+ * @typedef {Object} MailIndexSyncResponse
+ * @property {string} accountId
+ * @property {string} mailbox
+ * @property {number} scanned
+ * @property {number} indexed
+ * @property {number} errors
+ */
+
+/**
+ * @typedef {Object} MailIndexMessageSummary
+ * @property {string} id
+ * @property {string} accountId
+ * @property {string} mailboxPath
+ * @property {string} uid
+ * @property {string} messageIdHeader
+ * @property {string} subject
+ * @property {string} sender
+ * @property {string[]} recipients
+ * @property {string} date
+ * @property {string[]} flags
+ * @property {string[]} keywords
+ * @property {string} listId
+ * @property {string} bodyPreview
+ * @property {boolean} bodyCached
+ * @property {string} lastSeenAt
+ */
+
+/**
+ * @typedef {MailIndexMessageSummary & {bodyText: string}} MailIndexMessageDetail
+ */
+
+/**
+ * @typedef {Object} MailIndexMessageQuery
+ * @property {string} [accountId]
+ * @property {string} [mailbox]
+ * @property {boolean} [unread]
+ * @property {boolean} [flagged]
+ * @property {string} [tag]
+ * @property {string} [keyword]
+ * @property {string} [listId]
+ * @property {string} [sender]
+ * @property {number} [limit]
+ */
+
+/**
  * @typedef {Object} ActionLogItem
  * @property {string} id
  * @property {string} timestamp
@@ -161,6 +213,10 @@
  * @property {number} logs
  * @property {number} jobs
  * @property {number} undo
+ * @property {number} [mail_accounts_index]
+ * @property {number} [mailboxes_index]
+ * @property {number} [messages_index]
+ * @property {number} [sync_state]
  */
 
 /**
@@ -283,6 +339,22 @@ export function createApiClient(context) {
       return /** @type {Promise<T>} */ (response.json());
     }
     return /** @type {Promise<T>} */ (response.text());
+  }
+
+  /**
+   * @param {MailIndexMessageQuery} [filters]
+   * @returns {string}
+   */
+  function buildQueryString(filters = {}) {
+    const searchParams = new URLSearchParams();
+    for (const [key, value] of Object.entries(filters)) {
+      if (value === undefined || value === null || value === "") {
+        continue;
+      }
+      searchParams.set(key, String(value));
+    }
+    const query = searchParams.toString();
+    return query ? `?${query}` : "";
   }
 
   return {
@@ -432,6 +504,21 @@ export function createApiClient(context) {
     /** @param {string} jobId @param {string} messageId @returns {Promise<MessageDetail>} */
     getMessageDetail(jobId, messageId) {
       return request(`/jobs/${encodeURIComponent(jobId)}/messages/${encodeURIComponent(messageId)}`);
+    },
+    /** @param {MailIndexSyncRequest} payload @returns {Promise<MailIndexSyncResponse>} */
+    syncMailIndex(payload) {
+      return request("/mail/index/sync", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    },
+    /** @param {MailIndexMessageQuery} [filters] @returns {Promise<MailIndexMessageSummary[]>} */
+    getMailIndexMessages(filters = {}) {
+      return request(`/mail/index/messages${buildQueryString(filters)}`);
+    },
+    /** @param {string} messageId @returns {Promise<MailIndexMessageDetail>} */
+    getMailIndexMessage(messageId) {
+      return request(`/mail/index/messages/${encodeURIComponent(messageId)}`);
     },
     /** @param {string} jobId */
     markRead(jobId) {

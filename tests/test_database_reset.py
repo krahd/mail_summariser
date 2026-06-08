@@ -70,6 +70,39 @@ class DatabaseResetTests(unittest.TestCase):
             [{"id": "m-1", "subject": "Seed", "sender": "seed@example.com", "date": "2026-04-04T12:00:00"}],
         )
         db.push_undo({"type": "mark_read", "log_id": "log-reset"}, "2026-04-04T12:00:02")
+        db.upsert_index_account({
+            "id": "acct-reset",
+            "displayName": "Reset Account",
+            "username": "reset@example.com",
+            "imapHost": "imap.example.com",
+            "enabled": True,
+        })
+        db.upsert_index_mailbox("acct-reset", {
+            "path": "INBOX",
+            "delimiter": "/",
+            "selectable": True,
+            "flags": ["\\HasNoChildren"],
+        })
+        db.upsert_index_message({
+            "id": "acct-reset|INBOX|1",
+            "accountId": "acct-reset",
+            "mailboxPath": "INBOX",
+            "uid": "1",
+            "messageIdHeader": "<reset@example.com>",
+            "subject": "Reset seed",
+            "sender": "reset@example.com",
+            "recipients": ["recipient@example.com"],
+            "date": "2026-04-04T12:00:00Z",
+            "flags": ["\\Seen"],
+            "keywords": ["reset"],
+            "listId": "<list.example.com>",
+            "bodyPreview": "Reset seed body",
+            "bodyCached": False,
+            "bodyText": "",
+            "lastSeenAt": "2026-04-04T12:00:03",
+        })
+        db.update_sync_state("acct-reset", "INBOX", uidvalidity="123", uidnext="456",
+                              last_sync_at="2026-04-04T12:00:04")
         dummy_state.insert_job(
             "dummy-job",
             "2026-04-04T12:01:00",
@@ -92,11 +125,19 @@ class DatabaseResetTests(unittest.TestCase):
         self.assertEqual(payload["removed"]["logs"], 1)
         self.assertEqual(payload["removed"]["jobs"], 1)
         self.assertEqual(payload["removed"]["undo"], 1)
+        self.assertEqual(payload["removed"]["mail_accounts_index"], 1)
+        self.assertEqual(payload["removed"]["mailboxes_index"], 1)
+        self.assertEqual(payload["removed"]["messages_index"], 1)
+        self.assertEqual(payload["removed"]["sync_state"], 1)
         self.assertNotIn("llmApiKey", db.list_settings())
         self.assertEqual(db.list_settings(), backend_app.DEFAULT_SETTINGS)
         self.assertEqual(self._table_count("logs"), 0)
         self.assertEqual(self._table_count("jobs"), 0)
         self.assertEqual(self._table_count("undo_stack"), 0)
+        self.assertEqual(self._table_count("mail_accounts_index"), 0)
+        self.assertEqual(self._table_count("mailboxes_index"), 0)
+        self.assertEqual(self._table_count("messages_index"), 0)
+        self.assertEqual(self._table_count("sync_state"), 0)
         self.assertEqual(dummy_state.dummy_store_counts()["jobs"], 0)
         self.assertEqual(dummy_state.dummy_store_counts()["logs"], 0)
         self.assertEqual(dummy_state.dummy_store_counts()["undo"], 0)
