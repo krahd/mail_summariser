@@ -57,6 +57,7 @@ class DatabaseInitTests(unittest.TestCase):
             "mailboxes_index",
             "messages_index",
             "sync_state",
+            "saved_scopes",
         }.issubset(table_names))
 
 

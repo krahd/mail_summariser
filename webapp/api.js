@@ -89,6 +89,48 @@
  */
 
 /**
+ * @typedef {Object} SavedScopeQuery
+ * @property {string[]} [accounts]
+ * @property {string[]} [mailboxes]
+ * @property {string[]} [excludeMailboxes]
+ * @property {boolean} [unread]
+ * @property {boolean} [flagged]
+ * @property {string} [keyword]
+ * @property {string|string[]} [tag]
+ * @property {string|string[]} [keywords]
+ * @property {string} [listIdContains]
+ * @property {string} [senderContains]
+ * @property {string} [subjectContains]
+ * @property {string} [notMailboxKind]
+ * @property {SavedScopeQuery[]} [any]
+ * @property {SavedScopeQuery[]} [all]
+ */
+
+/**
+ * @typedef {Object} SavedScope
+ * @property {string} id
+ * @property {string} name
+ * @property {string} description
+ * @property {SavedScopeQuery} query
+ * @property {number} sortOrder
+ */
+
+/**
+ * @typedef {Object} SavedScopeCreateRequest
+ * @property {string | null} [id]
+ * @property {string} name
+ * @property {string} [description]
+ * @property {SavedScopeQuery} query
+ * @property {number} [sortOrder]
+ */
+
+/**
+ * @typedef {Object} SavedScopeSummaryRequest
+ * @property {number} [summaryLength]
+ * @property {number} [limit]
+ */
+
+/**
  * @typedef {Object} MailIndexMessageQuery
  * @property {string} [accountId]
  * @property {string} [mailbox]
@@ -217,6 +259,7 @@
  * @property {number} [mailboxes_index]
  * @property {number} [messages_index]
  * @property {number} [sync_state]
+ * @property {number} [saved_scopes]
  */
 
 /**
@@ -519,6 +562,41 @@ export function createApiClient(context) {
     /** @param {string} messageId @returns {Promise<MailIndexMessageDetail>} */
     getMailIndexMessage(messageId) {
       return request(`/mail/index/messages/${encodeURIComponent(messageId)}`);
+    },
+    /** @returns {Promise<SavedScope[]>} */
+    getSavedScopes() {
+      return request("/mail/scopes");
+    },
+    /** @param {SavedScopeCreateRequest} payload @returns {Promise<SavedScope>} */
+    createSavedScope(payload) {
+      return request("/mail/scopes", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    },
+    /** @param {string} scopeId @param {SavedScopeCreateRequest} payload @returns {Promise<SavedScope>} */
+    updateSavedScope(scopeId, payload) {
+      return request(`/mail/scopes/${encodeURIComponent(scopeId)}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
+    },
+    /** @param {string} scopeId @returns {Promise<{status: string}>} */
+    deleteSavedScope(scopeId) {
+      return request(`/mail/scopes/${encodeURIComponent(scopeId)}`, {
+        method: "DELETE",
+      });
+    },
+    /** @param {string} scopeId @param {number} [limit] @returns {Promise<MailIndexMessageSummary[]>} */
+    getSavedScopeMessages(scopeId, limit = 200) {
+      return request(`/mail/scopes/${encodeURIComponent(scopeId)}/messages?limit=${limit}`);
+    },
+    /** @param {string} scopeId @param {SavedScopeSummaryRequest} payload @returns {Promise<SummaryResponse>} */
+    createSavedScopeSummary(scopeId, payload) {
+      return request(`/mail/scopes/${encodeURIComponent(scopeId)}/summary`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
     },
     /** @param {string} jobId */
     markRead(jobId) {

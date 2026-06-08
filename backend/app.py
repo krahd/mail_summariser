@@ -43,9 +43,11 @@ from backend.routers_actions import router as actions_router
 from backend.routers_devtools import router as devtools_router
 from backend.routers_mail_index import router as mail_index_router
 from backend.routers_mailboxes import router as mailboxes_router
+from backend.routers_saved_scopes import router as saved_scopes_router
 from backend.routers_runtime_models import router as runtime_models_router
 from backend.routers_settings import router as settings_router
 from backend.routers_summaries import router as summaries_router
+from backend.saved_scope_service import ensure_default_saved_scopes
 
 if TYPE_CHECKING:
     # Provide imports for static type checkers. These modules are often
@@ -101,6 +103,10 @@ async def lifespan(_: FastAPI):
     for key, value in DEFAULT_SETTINGS.items():
         if key not in current:
             set_setting(key, value)
+    try:
+        ensure_default_saved_scopes()
+    except (AttributeError, TypeError):
+        pass
     dummy_state.reset_dummy_session_store()
     reset_dummy_mailbox()
     # Auto-start Ollama at startup when configured (tests may patch provider)
@@ -141,6 +147,7 @@ app.include_router(summaries_router)
 app.include_router(actions_router)
 app.include_router(devtools_router)
 app.include_router(mail_index_router)
+app.include_router(saved_scopes_router)
 app.include_router(runtime_models_router)
 app.include_router(mailboxes_router)
 
