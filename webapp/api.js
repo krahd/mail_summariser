@@ -80,6 +80,24 @@
  * @property {string} anthropicSystemMessage
  * @property {string} modelName
  * @property {string} backendBaseURL
+ * @property {MailAccountSettings[]} mailAccounts
+ */
+
+/**
+ * @typedef {Object} MailAccountSettings
+ * @property {string} id
+ * @property {string} displayName
+ * @property {boolean} enabled
+ * @property {string} imapHost
+ * @property {number} imapPort
+ * @property {boolean} imapUseSSL
+ * @property {string} username
+ * @property {string} imapPassword
+ * @property {string} smtpHost
+ * @property {number} smtpPort
+ * @property {boolean} smtpUseSSL
+ * @property {string} smtpPassword
+ * @property {string} recipientEmail
  */
 
 /**

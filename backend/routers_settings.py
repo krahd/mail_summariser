@@ -17,6 +17,19 @@ from backend.schemas import (
 router = APIRouter()
 
 
+def _normalise_mail_account_id(account: dict[str, object], app_module) -> str:
+    account_id = str(account.get('id', '') or '').strip()
+    if account_id:
+        return account_id
+    username = str(account.get('username', '') or '').strip()
+    host = str(account.get('imapHost', '') or account.get('smtpHost', '') or '').strip()
+    return username or host or app_module.LEGACY_MAIL_ACCOUNT_ID
+
+
+def _legacy_secret_value(settings: dict[str, object], secret_key: str) -> str:
+    return str(settings.get(secret_key, '') or '')
+
+
 @router.get('/settings', response_model=AppSettings)
 def get_settings() -> AppSettings:
     app_module = get_app_module()
@@ -42,7 +55,7 @@ def get_system_message_defaults() -> SystemMessageDefaultsResponse:
 def save_settings(settings: AppSettings) -> dict[str, str]:
     app_module = get_app_module()
 
-    data = settings.model_dump()
+    data = settings.model_dump(exclude_unset=True)
 
     # Handle legacy top-level secret masking
     for key_name in app_module.SECRET_SETTING_KEYS:
@@ -50,37 +63,53 @@ def save_settings(settings: AppSettings) -> dict[str, str]:
             data.pop(key_name)
 
     # Handle account-level secret masking
-    if isinstance(data.get('mailAccounts'), list):
+    if 'mailAccounts' in data and isinstance(data.get('mailAccounts'), list):
         current_settings = list_settings()
         current_accounts = current_settings.get('mailAccounts', [])
         # Build a map of account IDs to current account data for secret preservation
         current_accounts_by_id = {
-            acc.get('id'): acc for acc in current_accounts if isinstance(acc, dict)
+            _normalise_mail_account_id(acc, app_module): acc
+            for acc in current_accounts if isinstance(acc, dict)
         }
 
         sanitized_accounts = []
+        seen_account_ids: set[str] = set()
         for account in data['mailAccounts']:
             if isinstance(account, dict):
                 sanitized_account = account.copy()
-                account_id = account.get('id', '')
+                account_id = _normalise_mail_account_id(sanitized_account, app_module)
+                if account_id in seen_account_ids:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f'Duplicate mail account id: {account_id}',
+                    )
+                seen_account_ids.add(account_id)
+                sanitized_account['id'] = account_id
                 for secret_key in app_module.ACCOUNT_SECRET_KEYS:
                     if sanitized_account.get(secret_key) == '__MASKED__':
                         # Try to restore the current secret from the database
-                        if account_id in current_accounts_by_id:
-                            stored_secret = current_accounts_by_id[account_id].get(secret_key, '')
-                            if stored_secret:
-                                # Restore the stored value
-                                sanitized_account[secret_key] = stored_secret
-                            else:
-                                # No stored secret; remove the masked sentinel so field is empty
-                                sanitized_account.pop(secret_key, None)
+                        stored_secret = ''
+                        current_account = current_accounts_by_id.get(account_id)
+                        if isinstance(current_account, dict):
+                            stored_secret = _legacy_secret_value(current_account, secret_key)
+                        if not stored_secret and account_id == app_module.LEGACY_MAIL_ACCOUNT_ID:
+                            stored_secret = _legacy_secret_value(current_settings, secret_key)
+                        if stored_secret:
+                            sanitized_account[secret_key] = stored_secret
                         else:
-                            # Account is new; remove the masked sentinel
                             sanitized_account.pop(secret_key, None)
                 sanitized_accounts.append(sanitized_account)
             else:
                 sanitized_accounts.append(account)
         data['mailAccounts'] = sanitized_accounts
+
+        # Reject any duplicate ids that may have slipped through normalisation.
+        account_ids = [
+            _normalise_mail_account_id(account, app_module)
+            for account in sanitized_accounts if isinstance(account, dict)
+        ]
+        if len(account_ids) != len(set(account_ids)):
+            raise HTTPException(status_code=400, detail='mailAccounts must have unique ids')
 
     for key, value in data.items():
         set_setting(key, value)

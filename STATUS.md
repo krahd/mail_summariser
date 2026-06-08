@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-06-08 15:52
+Last updated: 2026-06-08 16:04
 
 ## Purpose
 
@@ -35,6 +35,7 @@ Key implemented backend areas:
 - provider abstraction in `backend/llm_provider_clients.py`
 - summary orchestration and fallback handling in `backend/summary_service.py`
 - runtime/provider operations in `backend/model_provider_service.py`
+- backwards-compatible multi-account settings storage, read masking, and legacy-derived default account rendering in `backend/app.py`, `backend/routers_settings.py`, and `backend/schemas.py`
 - live IMAP/SMTP mailbox handling in `backend/mail_service.py`, including explicit authentication and mailbox-selection failure reporting plus per-message action failure tracking
 
 ## Active focus
@@ -204,15 +205,14 @@ python scripts/validate_rendered_ui.py
 - Added regression coverage for bad IMAP login, mailbox selection failure, SMTP login failure, password redaction, failed message IDs, and the summary route returning HTTP 400 on IMAP auth errors.
 - Validation completed: `pytest -q tests/test_imap_hardening.py`, `pytest -q tests/test_backend_mail_flow.py`, `pytest -q tests/test_fuzz_summary_payloads.py`, `pytest -q tests/test_fuzz_settings_actions_payloads.py`, `pytest -q`, `./scripts/check_repo_hygiene.sh`, and `git diff --check` all passed.
 
-**Phase 02 — Multi-account settings model (2026-06-01):**
-- Added `MailAccountSettings` schema for individual IMAP/SMTP accounts.
-- Added `mailAccounts: list[MailAccountSettings]` to `AppSettings` schema.
-- Implemented backwards-compatible multi-account settings: legacy single-account fields remain alongside new multi-account list.
-- Extended secret masking to account-level passwords (`imapPassword`, `smtpPassword`).
-- Protected account secrets from masked-overwrite bugs: writing `__MASKED__` sentinels does not overwrite stored secrets.
-- Added 9 comprehensive tests covering persistence, masking, secret preservation, and legacy field compatibility.
-- All 119 backend tests pass; no regressions.
-- Phase scope complete: no mailbox discovery, no summary changes, no UI changes yet.
+**Phase 02 — Multi-account settings model (2026-06-08):**
+- Added `MailAccountSettings` schema for individual IMAP/SMTP accounts and exposed `mailAccounts` on `AppSettings`.
+- Kept legacy single-account fields intact while deriving a stable `default` account for read responses when no explicit account list is stored.
+- Extended secret masking to account-level passwords and preserved stored secrets when masked sentinels are written back.
+- Preserved stored `mailAccounts` when legacy clients omit the field, normalised account IDs, and rejected duplicate IDs with HTTP 400.
+- Added regression coverage for derived legacy accounts, masked account reads and writes, omission-preserving saves, ID normalisation, duplicate rejection, and legacy coexistence.
+- Validation completed: `pytest -q tests/test_multi_account_settings.py`, `pytest -q tests/test_system_message_settings.py`, `pytest -q tests/test_web_contract.py`, `pytest -q tests/test_backend_mail_flow.py`, `pytest -q`, `./scripts/check_repo_hygiene.sh`, and `git diff --check`.
+- No summary behaviour changes yet; mailbox discovery and multi-account summary routing remain out of scope for this phase.
 
 - Route decomposition remains in place across runtime/models, settings, actions, summaries, and dev-tools modules.
 - Router parity safeguards exist via router-context and route-decomposition tests.
@@ -361,4 +361,4 @@ None currently. Live IMAP hardening is complete and verified with targeted regre
 - Provider failures should degrade gracefully to deterministic fallback summaries.
 - Dev-only tooling remains explicit and gated.
 - Empty message sets should not be sent to LLM providers.
-Last updated: 2026-06-08 15:52
+Last updated: 2026-06-08 16:04

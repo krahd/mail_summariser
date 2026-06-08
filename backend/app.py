@@ -145,6 +145,7 @@ app.include_router(mailboxes_router)
 # Legacy top-level secret keys and account-level secret keys
 SECRET_SETTING_KEYS = ('openaiApiKey', 'anthropicApiKey', 'imapPassword', 'smtpPassword')
 ACCOUNT_SECRET_KEYS = ('imapPassword', 'smtpPassword')
+LEGACY_MAIL_ACCOUNT_ID = 'default'
 
 
 # Expose a mutable flag at module level so tests can toggle dev tools.
@@ -229,6 +230,52 @@ def _merged_settings() -> dict[str, Any]:
     return DEFAULT_SETTINGS | list_settings()
 
 
+def _strip_text(value: Any) -> str:
+    return str(value or '').strip()
+
+
+def _mask_mail_account_payload(account: dict[str, Any]) -> dict[str, Any]:
+    masked_account = account.copy()
+    for secret_key in ACCOUNT_SECRET_KEYS:
+        if masked_account.get(secret_key, ''):
+            masked_account[secret_key] = '__MASKED__'
+    return masked_account
+
+
+def _legacy_mail_account_payload(settings: dict[str, Any]) -> dict[str, Any]:
+    imap_host = _strip_text(settings.get('imapHost', ''))
+    smtp_host = _strip_text(settings.get('smtpHost', ''))
+    username = _strip_text(settings.get('username', ''))
+    display_name = username or imap_host or smtp_host or 'Default Account'
+    return {
+        'id': LEGACY_MAIL_ACCOUNT_ID,
+        'displayName': display_name,
+        'enabled': bool(imap_host or smtp_host),
+        'imapHost': settings.get('imapHost', ''),
+        'imapPort': int(settings.get('imapPort') or DEFAULT_SETTINGS.get('imapPort', 993) or 993),
+        'imapUseSSL': bool(settings.get('imapUseSSL', DEFAULT_SETTINGS.get('imapUseSSL', True))),
+        'username': settings.get('username', ''),
+        'imapPassword': settings.get('imapPassword', ''),
+        'smtpHost': settings.get('smtpHost', ''),
+        'smtpPort': int(settings.get('smtpPort') or DEFAULT_SETTINGS.get('smtpPort', 465) or 465),
+        'smtpUseSSL': bool(settings.get('smtpUseSSL', DEFAULT_SETTINGS.get('smtpUseSSL', True))),
+        'smtpPassword': settings.get('smtpPassword', ''),
+        'recipientEmail': settings.get('recipientEmail', ''),
+    }
+
+
+def _masked_mail_accounts_payload(settings: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_accounts = settings.get('mailAccounts')
+    masked_accounts: list[dict[str, Any]] = []
+    if isinstance(raw_accounts, list):
+        for account in raw_accounts:
+            if isinstance(account, dict):
+                masked_accounts.append(_mask_mail_account_payload(account))
+    if masked_accounts:
+        return masked_accounts
+    return [_mask_mail_account_payload(_legacy_mail_account_payload(settings))]
+
+
 def _masked_settings_payload() -> dict[str, Any]:
     merged = _merged_settings()
     legacy_key = str(merged.get('llmApiKey', ''))
@@ -241,19 +288,7 @@ def _masked_settings_payload() -> dict[str, Any]:
         if merged.get(key_name, ''):
             merged[key_name] = '__MASKED__'
 
-    # Mask secrets within mailAccounts list
-    if isinstance(merged.get('mailAccounts'), list):
-        masked_accounts = []
-        for account in merged['mailAccounts']:
-            if isinstance(account, dict):
-                masked_account = account.copy()
-                for secret_key in ACCOUNT_SECRET_KEYS:
-                    if masked_account.get(secret_key, ''):
-                        masked_account[secret_key] = '__MASKED__'
-                masked_accounts.append(masked_account)
-            else:
-                masked_accounts.append(account)
-        merged['mailAccounts'] = masked_accounts
+    merged['mailAccounts'] = _masked_mail_accounts_payload(merged)
 
     return merged
 

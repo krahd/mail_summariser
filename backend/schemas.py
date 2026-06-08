@@ -13,7 +13,7 @@ class MailboxInfo(BaseModel):
 
 
 class MailAccountSettings(BaseModel):
-    id: str
+    id: str = ''
     displayName: str = ''
     enabled: bool = True
     imapHost: str = ''
@@ -109,7 +109,7 @@ class AppSettings(BaseModel):
     anthropicSystemMessage: str
     modelName: str
     backendBaseURL: str
-    mailAccounts: list[MailAccountSettings] = []
+    mailAccounts: list[MailAccountSettings] = Field(default_factory=list)
 
 
 class DummyModeUpdate(BaseModel):
