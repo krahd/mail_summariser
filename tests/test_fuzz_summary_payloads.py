@@ -29,7 +29,9 @@ json_value = st.recursive(
 )
 
 criteria_key = st.sampled_from(
-    [
+        [
+        "accountIds",
+        "mailboxes",
         "keyword",
         "rawSearch",
         "sender",
@@ -37,8 +39,13 @@ criteria_key = st.sampled_from(
         "tag",
         "unreadOnly",
         "readOnly",
+        "flagged",
+        "since",
+        "before",
+        "listId",
         "replied",
         "useAnd",
+        "limit",
     ]
 )
 
