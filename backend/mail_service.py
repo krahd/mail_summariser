@@ -724,6 +724,49 @@ def test_mail_connection(settings: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _consume_imap_list_token(text: str, start: int = 0) -> tuple[bool, str | None, int]:
+    idx = start
+    length = len(text)
+    while idx < length and text[idx].isspace():
+        idx += 1
+    if idx >= length:
+        return False, None, idx
+
+    if text[idx] == '"':
+        idx += 1
+        chars: list[str] = []
+        escaped = False
+        while idx < length:
+            char = text[idx]
+            if escaped:
+                chars.append(char)
+                escaped = False
+            elif char == '\\':
+                escaped = True
+            elif char == '"':
+                return True, ''.join(chars), idx + 1
+            else:
+                chars.append(char)
+            idx += 1
+        if escaped:
+            chars.append('\\')
+        return True, ''.join(chars), idx
+
+    start_idx = idx
+    while idx < length and not text[idx].isspace():
+        idx += 1
+    token = text[start_idx:idx]
+    if not token:
+        return False, None, idx
+    if token.upper() == 'NIL':
+        return True, None, idx
+    return True, token, idx
+
+
+def _mailbox_is_selectable(flags: list[str]) -> bool:
+    return not any(flag.lower() == '\\noselect' for flag in flags)
+
+
 def _parse_list_response(line: bytes | str) -> tuple[list[str], str | None, str | None]:
     """Parse a single IMAP LIST response line.
 
@@ -731,13 +774,22 @@ def _parse_list_response(line: bytes | str) -> tuple[list[str], str | None, str 
     unparseable lines. This is intentionally defensive: IMAP server LIST
     responses vary across implementations.
     """
+    if isinstance(line, (list, tuple)):
+        for item in line:
+            if isinstance(item, (bytes, bytearray, str)):
+                line = item
+                break
+        else:
+            return [], None, None
+
     if isinstance(line, bytes):
         try:
             line = line.decode('utf-8', errors='replace')
         except (AttributeError, UnicodeDecodeError):
             line = str(line)
+    elif not isinstance(line, str):
+        line = str(line)
 
-    # Typical format: (\Flag \Flag2) "/" "INBOX" or (\Flag) "/" INBOX
     line = line.strip()
     if not line:
         return [], None, None
@@ -756,23 +808,13 @@ def _parse_list_response(line: bytes | str) -> tuple[list[str], str | None, str 
     else:
         remainder = line
 
-    # Extract delimiter and path from remainder.  Both may be quoted.
-    parts = remainder.split(None, 1)
-    if not parts:
+    has_delimiter, delimiter, position = _consume_imap_list_token(remainder, 0)
+    if not has_delimiter:
         return flags, None, None
 
-    raw_delim = parts[0]
-    delimiter = raw_delim.strip('"') if raw_delim != 'NIL' else None
-
-    if len(parts) < 2:
+    has_path, path, _ = _consume_imap_list_token(remainder, position)
+    if not has_path:
         return flags, delimiter, None
-
-    raw_path = parts[1].strip()
-    # Strip surrounding quotes
-    if raw_path.startswith('"') and raw_path.endswith('"') and len(raw_path) >= 2:
-        path = raw_path[1:-1]
-    else:
-        path = raw_path
 
     return flags, delimiter, path
 
@@ -797,11 +839,13 @@ def discover_mailboxes_for_account(account: dict[str, Any]) -> list[dict[str, An
     if _env is not None:
         results = []
         for mbox in getattr(_env, 'mailboxes', []):
+            raw_flags = mbox.get('flags', []) or []
+            flags = [str(flag) for flag in raw_flags if str(flag).strip()]
             results.append({
-                'path': mbox.get('path', ''),
+                'path': str(mbox.get('path', '')),
                 'delimiter': mbox.get('delimiter'),
-                'flags': list(mbox.get('flags', [])),
-                'selectable': mbox.get('selectable', True),
+                'flags': flags,
+                'selectable': bool(mbox.get('selectable', True)) and _mailbox_is_selectable(flags),
             })
         return results
 
@@ -815,11 +859,18 @@ def discover_mailboxes_for_account(account: dict[str, Any]) -> list[dict[str, An
                     'IMAP authentication failed', password)) from exc
 
         try:
-            typ, data = imap.list('""', '*')
+            typ, data = imap.list('', '*')
         except imaplib.IMAP4.error as exc:
             raise MailServiceError(_redact_error_message(str(exc), password)) from exc
 
-        if typ != 'OK' or not data:
+        if str(typ).upper() != 'OK':
+            reason = _response_text(data)
+            message = 'Could not list mailboxes'
+            if reason:
+                message = f'{message}: {_redact_error_message(reason, password)}'
+            raise MailServiceError(message)
+
+        if not data:
             return []
 
         results: list[dict[str, Any]] = []
@@ -829,12 +880,11 @@ def discover_mailboxes_for_account(account: dict[str, Any]) -> list[dict[str, An
             flags, delimiter, path = _parse_list_response(item)
             if path is None:
                 continue
-            noselect = any(f.lower() == '\\noselect' for f in flags)
             results.append({
                 'path': path,
                 'delimiter': delimiter,
                 'flags': flags,
-                'selectable': not noselect,
+                'selectable': _mailbox_is_selectable(flags),
             })
         return results
     finally:

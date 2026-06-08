@@ -12,6 +12,9 @@ Covers:
 
 from __future__ import annotations
 
+import imaplib
+from unittest import mock
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -70,6 +73,13 @@ def test_parse_list_response_string_input():
     assert path == 'Archive'
 
 
+def test_parse_list_response_unescapes_quoted_text():
+    flags, delim, path = _parse_list_response(b'(\\HasNoChildren) "/" "Foo\\"Bar"')
+    assert path == 'Foo"Bar'
+    assert delim == '/'
+    assert flags == ['\\HasNoChildren']
+
+
 # ---------------------------------------------------------------------------
 # discover_mailboxes_for_account — fake environment
 # ---------------------------------------------------------------------------
@@ -96,7 +106,7 @@ def test_discover_mailboxes_noselect_flag():
             'path': 'NoSelectFolder',
             'delimiter': '/',
             'flags': ['\\Noselect', '\\HasChildren'],
-            'selectable': False,
+            'selectable': True,
         })
         account = {
             'imapHost': env.host,
@@ -109,6 +119,23 @@ def test_discover_mailboxes_noselect_flag():
     noselect = [m for m in mailboxes if m['path'] == 'NoSelectFolder']
     assert len(noselect) == 1
     assert noselect[0]['selectable'] is False
+
+
+def test_discover_mailboxes_non_ok_list_response_raises():
+    with mock.patch('imaplib.IMAP4_SSL') as mock_imap:
+        mock_conn = mock.MagicMock()
+        mock_imap.return_value = mock_conn
+        mock_conn.login.return_value = ('OK', [])
+        mock_conn.list.return_value = ('NO', [b'Mailbox list failed'])
+
+        with pytest.raises(MailServiceError, match='mailbox'):
+            discover_mailboxes_for_account({
+                'imapHost': 'imap.example.com',
+                'imapPort': 993,
+                'imapUseSSL': True,
+                'username': 'user@example.com',
+                'imapPassword': 'secret',
+            })
 
 
 def test_discover_mailboxes_missing_host():
@@ -197,6 +224,33 @@ def test_api_mailboxes_known_account_returns_list():
     assert 'Archive' in paths
 
 
+def test_api_mailboxes_legacy_account_resolves_default_settings():
+    with FakeMailEnvironment() as env:
+        with TestClient(app) as client:
+            from backend.config import DEFAULT_SETTINGS
+            payload = dict(DEFAULT_SETTINGS) | {
+                'dummyMode': False,
+                'imapHost': env.host,
+                'imapPort': env.imap_server.port,
+                'imapUseSSL': False,
+                'imapPassword': env.password,
+                'smtpHost': env.host,
+                'smtpPort': env.smtp_server.port,
+                'smtpUseSSL': False,
+                'smtpPassword': env.password,
+                'username': env.username,
+                'recipientEmail': env.recipient_email,
+            }
+            response = client.post('/settings', json=payload)
+            assert response.status_code == 200
+            discovery = client.get('/mail/accounts/default/mailboxes')
+
+    assert discovery.status_code == 200
+    data = discovery.json()
+    assert any(m['path'] == 'INBOX' for m in data)
+    assert any(m['path'] == 'Archive' for m in data)
+
+
 def test_api_mailboxes_all_accounts():
     with FakeMailEnvironment() as env:
         with TestClient(app) as client:
@@ -210,7 +264,11 @@ def test_api_mailboxes_all_accounts():
 
 def test_api_mailboxes_bad_credentials_returns_400():
     """Account with bad password should return 400 with a redacted message."""
-    with FakeMailEnvironment() as env:
+    with mock.patch('imaplib.IMAP4_SSL') as mock_imap:
+        mock_conn = mock.MagicMock()
+        mock_imap.return_value = mock_conn
+        mock_conn.login.side_effect = imaplib.IMAP4.error('Invalid credentials')
+
         with TestClient(app) as client:
             from backend.config import DEFAULT_SETTINGS
             payload = dict(DEFAULT_SETTINGS) | {
@@ -220,10 +278,10 @@ def test_api_mailboxes_bad_credentials_returns_400():
                         'id': 'bad-creds-account',
                         'displayName': 'Bad',
                         'enabled': True,
-                        'imapHost': env.host,
-                        'imapPort': env.imap_server.port,
-                        'imapUseSSL': False,
-                        'username': env.username,
+                        'imapHost': 'imap.example.com',
+                        'imapPort': 993,
+                        'imapUseSSL': True,
+                        'username': 'user@example.com',
                         'imapPassword': 'wrong-password',
                         'smtpHost': '',
                         'smtpPort': 465,
@@ -234,35 +292,12 @@ def test_api_mailboxes_bad_credentials_returns_400():
                 ],
             }
             client.post('/settings', json=payload)
-            # The fake env authenticates by checking env.password; a wrong password
-            # won't be rejected by the stub, but we can test that if the host is
-            # unreachable we get 400. Use a port that has nothing registered.
-            unreachable_payload = dict(DEFAULT_SETTINGS) | {
-                'dummyMode': False,
-                'mailAccounts': [
-                    {
-                        'id': 'unreachable',
-                        'displayName': 'Unreachable',
-                        'enabled': True,
-                        'imapHost': '127.0.0.1',
-                        'imapPort': 19999,
-                        'imapUseSSL': False,
-                        'username': 'user',
-                        'imapPassword': 'secret',
-                        'smtpHost': '',
-                        'smtpPort': 465,
-                        'smtpUseSSL': False,
-                        'smtpPassword': '',
-                        'recipientEmail': '',
-                    }
-                ],
-            }
-            client.post('/settings', json=unreachable_payload)
-            response = client.get('/mail/accounts/unreachable/mailboxes')
+            response = client.get('/mail/accounts/bad-creds-account/mailboxes')
 
     assert response.status_code == 400
     detail = response.json().get('detail', '')
-    assert 'secret' not in detail.lower()
+    assert 'authentication' in detail.lower()
+    assert 'wrong-password' not in detail
 
 
 # ---------------------------------------------------------------------------
