@@ -43,6 +43,7 @@
 
   <nav class="tabs" aria-label="Main views">
     <button class="tab active" data-tab="search">Main</button>
+    <button class="tab" data-tab="triage">Triage</button>
     <button class="tab" data-tab="logs">Log</button>
     <button class="tab" data-tab="settings">Settings</button>
   </nav>
@@ -193,6 +194,90 @@
           <button id="undo-action" type="button" class="secondary">Undo Last</button>
         </div>
       </aside>
+    </section>
+
+    <section id="tab-triage" class="tab-panel triage-tab">
+      <aside class="card triage-sidebar">
+        <div class="panel-heading">
+          <div>
+            <p class="panel-kicker">Triage</p>
+            <h2>Scope Controls</h2>
+          </div>
+        </div>
+        <p class="panel-copy">Buckets are heuristic candidates and may overlap. Refresh after the local index is updated.</p>
+        <label>Saved Scope
+          <select id="triage-scope-select"></select>
+        </label>
+        <label>Bucket Samples
+          <input id="triage-limit-per-bucket" type="number" min="1" max="100" value="5" />
+        </label>
+        <label>Stale Unread Threshold
+          <input id="triage-stale-days" type="number" min="1" max="365" value="14" />
+        </label>
+        <label>Summary Length
+          <input id="triage-summary-length" type="number" min="1" max="24" value="5" />
+        </label>
+        <div class="inline-actions">
+          <button id="refresh-triage-dashboard" type="button">Refresh Dashboard</button>
+          <button id="reload-triage-scopes" type="button" class="secondary">Reload Scopes</button>
+        </div>
+        <div class="mode-summary triage-note">
+          <strong>Read-only</strong>
+          <p>Counts come from the local mail index. Bucket membership is transparent and not exclusive.</p>
+        </div>
+      </aside>
+
+      <section class="triage-main">
+        <section class="card triage-overview-card">
+          <div class="panel-heading panel-heading-spread">
+            <div>
+              <p class="panel-kicker">Overview</p>
+              <h2>Mail Triage Dashboard</h2>
+            </div>
+            <p id="triage-generated-at" class="summary-meta">Not loaded</p>
+          </div>
+          <div class="digest-metrics triage-metrics" aria-label="Triage totals">
+            <article class="digest-metric-card">
+              <p class="digest-metric-label">Messages</p>
+              <p id="triage-total-messages" class="digest-metric-value">0</p>
+            </article>
+            <article class="digest-metric-card">
+              <p class="digest-metric-label">Unread</p>
+              <p id="triage-total-unread" class="digest-metric-value">0</p>
+            </article>
+            <article class="digest-metric-card">
+              <p class="digest-metric-label">Flagged</p>
+              <p id="triage-total-flagged" class="digest-metric-value">0</p>
+            </article>
+          </div>
+          <p id="triage-empty-state" class="triage-empty-state is-hidden">No messages matched the selected scope yet. Index mail, then refresh the dashboard.</p>
+        </section>
+
+        <section id="triage-buckets" class="triage-bucket-grid" aria-live="polite"></section>
+
+        <article id="triage-message-detail-shell" class="message-detail-shell triage-message-detail-shell" data-state="empty" aria-live="polite">
+          <div class="message-detail-header">
+            <div>
+              <p class="message-detail-eyebrow">Bucket Sample</p>
+              <h3 id="triage-message-detail-subject">No message selected</h3>
+            </div>
+            <p id="triage-message-detail-date" class="message-detail-date"></p>
+          </div>
+          <div class="message-detail-meta">
+            <div class="message-party-card">
+              <p class="message-party-label">From</p>
+              <p id="triage-message-detail-sender-name" class="message-party-name">Select a bucket sample</p>
+              <p id="triage-message-detail-sender-address" class="message-party-address">Message detail appears here.</p>
+            </div>
+            <div class="message-party-card">
+              <p class="message-party-label">To</p>
+              <p id="triage-message-detail-recipient-name" class="message-party-name">Preview</p>
+              <p id="triage-message-detail-recipient-address" class="message-party-address">The selected mail body appears here.</p>
+            </div>
+          </div>
+          <pre id="triage-message-detail-body" class="message-detail-body">Select a bucket sample to inspect the underlying message.</pre>
+        </article>
+      </section>
     </section>
 
     <section id="tab-logs" class="tab-panel">
@@ -468,6 +553,7 @@
             <li><strong>Pick a starting view</strong>: Use <strong>Quick Filters</strong> in the left rail, then refine with Advanced Query.</li>
             <li><strong>Generate digest</strong>: Click <strong>Generate Digest</strong> to create a new summary job from the active filters.</li>
             <li><strong>Review context</strong>: Inspect the Summary Canvas and message stack; click any message row for full body preview.</li>
+            <li><strong>Check triage</strong>: Open <strong>Triage</strong> to review reply-needed, flagged, deadline, list-noise, and bulk-archive candidates from the local index.</li>
             <li><strong>Apply scoped actions</strong>: Use the right action panel to choose mark/tag/email operations, then apply to the current job.</li>
           </ol>
         </section>
@@ -476,6 +562,7 @@
           <h3>Tabs</h3>
           <ul>
             <li><strong>Main</strong>: Studio view with quick filters, digest canvas, message review, and scoped actions.</li>
+            <li><strong>Triage</strong>: Read-only dashboard with transparent heuristic buckets and bucket summaries from the local index.</li>
             <li><strong>Log</strong>: Action timeline with search, status filtering, and undoable-only filter.</li>
             <li><strong>Settings</strong>: Configure backend connection, LLM provider, email settings, and Ollama models.</li>
             <li><strong>Help</strong>: This page.</li>

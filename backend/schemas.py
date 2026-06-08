@@ -112,6 +112,72 @@ class MailIndexMessageDetail(MailIndexMessageSummary):
     bodyText: str = ''
 
 
+class TriageBucketMessage(MailIndexMessageSummary):
+    reasons: list[str] = Field(default_factory=list)
+
+
+class TriageBucket(BaseModel):
+    id: str
+    label: str
+    description: str
+    count: int
+    thresholdDays: int | None = None
+    messages: list[TriageBucketMessage] = Field(default_factory=list)
+
+
+class TriageDashboardTotals(BaseModel):
+    messages: int
+    unread: int
+    flagged: int
+
+
+class TriageDashboardResponse(BaseModel):
+    scopeId: str
+    generatedAt: str
+    totals: TriageDashboardTotals
+    buckets: list[TriageBucket] = Field(default_factory=list)
+
+
+class TriageBucketSummaryRequest(BaseModel):
+    scopeId: str = ''
+    summaryLength: int = 5
+    limitPerBucket: int = 5
+    staleDays: int = 14
+
+    @field_validator('summaryLength', mode='before')
+    @classmethod
+    def _clamp_summary_length(cls, value: object) -> int:
+        if value in (None, ''):
+            return 5
+        try:
+            numeric = int(value)
+        except (TypeError, ValueError):
+            return value  # type: ignore[return-value]
+        return max(1, min(numeric, 24))
+
+    @field_validator('limitPerBucket', mode='before')
+    @classmethod
+    def _clamp_limit_per_bucket(cls, value: object) -> int:
+        if value in (None, ''):
+            return 5
+        try:
+            numeric = int(value)
+        except (TypeError, ValueError):
+            return value  # type: ignore[return-value]
+        return max(1, min(numeric, 100))
+
+    @field_validator('staleDays', mode='before')
+    @classmethod
+    def _clamp_stale_days(cls, value: object) -> int:
+        if value in (None, ''):
+            return 14
+        try:
+            numeric = int(value)
+        except (TypeError, ValueError):
+            return value  # type: ignore[return-value]
+        return max(1, min(numeric, 365))
+
+
 class SavedScope(BaseModel):
     id: str
     name: str

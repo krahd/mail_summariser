@@ -470,6 +470,161 @@ main {
   min-width: 0;
 }
 
+.triage-tab.tab-panel.active {
+  grid-template-columns: minmax(280px, 310px) minmax(0, 1fr);
+  align-items: start;
+}
+
+.triage-sidebar {
+  position: sticky;
+  top: 12px;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.triage-main {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.triage-overview-card {
+  display: grid;
+  gap: 12px;
+  padding: 12px 16px;
+}
+
+.triage-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.triage-empty-state {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px dashed rgba(13, 117, 103, 0.22);
+  border-radius: 12px;
+  background: #f8fbfa;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.triage-bucket-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.triage-bucket-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+}
+
+.triage-bucket-count {
+  color: var(--muted);
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.triage-bucket-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.triage-bucket-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.34rem 0.62rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface-muted);
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.triage-message-list {
+  display: grid;
+  gap: 8px;
+}
+
+.triage-message-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.triage-message-item {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  padding: 0.76rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-strong);
+  color: var(--ink);
+  text-align: left;
+  box-shadow: none;
+}
+
+.triage-message-item:hover {
+  border-color: var(--line-strong);
+  background: #fbfdfc;
+}
+
+.triage-message-item-top {
+  display: grid;
+  gap: 2px;
+}
+
+.triage-message-item-subject {
+  font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
+  font-size: 0.94rem;
+  line-height: 1.25;
+}
+
+.triage-message-item-meta {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.triage-message-item-preview {
+  color: #27433e;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.triage-message-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.triage-message-reason {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(13, 117, 103, 0.18);
+  background: #edf7f4;
+  color: #245f58;
+  font-size: 0.74rem;
+}
+
+.triage-message-detail-shell {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.triage-note {
+  border-style: dashed;
+}
+
 .health-strip {
   padding: 10px 12px;
   display: flex;
@@ -1333,7 +1488,8 @@ td[colspan] {
   }
 
   .studio-sidebar,
-  .studio-actions {
+  .studio-actions,
+  .triage-sidebar {
     position: static;
   }
 
@@ -1346,6 +1502,10 @@ td[colspan] {
   }
 
   .digest-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .triage-metrics {
     grid-template-columns: 1fr;
   }
 
@@ -1373,6 +1533,10 @@ td[colspan] {
 
   #tab-search .workspace-sidebar {
     position: static;
+  }
+
+  .triage-tab.tab-panel.active {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1423,7 +1587,11 @@ td[colspan] {
   .workspace-primary,
   .workspace-table,
   .settings-group,
-  .help-article {
+  .help-article,
+  .triage-sidebar,
+  .triage-overview-card,
+  .triage-bucket-card,
+  .triage-message-detail-shell {
     padding: 16px;
   }
 }

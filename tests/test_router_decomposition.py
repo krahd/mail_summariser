@@ -37,6 +37,8 @@ def test_decomposed_router_endpoints_are_registered() -> None:
         ("DELETE", "/mail/scopes/{scope_id}"),
         ("GET", "/mail/scopes/{scope_id}/messages"),
         ("POST", "/mail/scopes/{scope_id}/summary"),
+        ("GET", "/mail/triage/dashboard"),
+        ("POST", "/mail/triage/buckets/{bucket_id}/summary"),
         ("GET", "/mail/accounts/{account_id}/mailboxes"),
         ("GET", "/mail/mailboxes"),
         ("GET", "/dev/fake-mail/status"),

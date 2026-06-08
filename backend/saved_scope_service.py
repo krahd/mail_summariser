@@ -369,3 +369,19 @@ def scope_messages_for_summary(scope_id: str, limit: int = 200) -> tuple[dict[st
         raise LookupError(f'Saved scope {scope_id!r} not found')
     messages = list_messages_for_scope(scope_id, limit=limit, include_body_text=True)
     return scope, messages
+
+
+def list_all_messages_for_scope(scope_id: str, include_body_text: bool = False) -> list[dict[str, Any]]:
+    ensure_default_saved_scopes()
+    scope = db.get_saved_scope(scope_id)
+    if scope is None:
+        raise LookupError(f'Saved scope {scope_id!r} not found')
+
+    messages: list[dict[str, Any]] = []
+    for message in db.list_all_index_messages():
+        if _message_matches_query(scope.get('query', {}), message):
+            projected = dict(message)
+            if not include_body_text:
+                projected.pop('bodyText', None)
+            messages.append(projected)
+    return messages

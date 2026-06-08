@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from urllib.request import Request, urlopen
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
@@ -109,6 +110,26 @@ def _fail_on_console_messages(messages: list[str]) -> None:
         raise RuntimeError(f"Rendered UI emitted console warnings/errors:\n{joined}")
 
 
+def _post_json(url: str, payload: dict[str, object]) -> dict[str, object]:
+    request = Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        method="POST",
+        headers={"Content-Type": "application/json"},
+    )
+    with urlopen(request, timeout=5.0) as response:  # nosec B310
+        body = response.read().decode("utf-8")
+        return json.loads(body) if body else {}
+
+
+def _seed_mail_index(backend_url: str) -> dict[str, object]:
+    result = _post_json(f"{backend_url}/mail/index/sync", {})
+    indexed = int(result.get("indexed", 0) or 0)
+    if indexed <= 0:
+        raise RuntimeError("Mail index seeding did not return any indexed messages.")
+    return result
+
+
 def _wait_for_initial_load(page) -> None:
     page.wait_for_selector("#workspace-health-strip", state="visible", timeout=15_000)
     page.wait_for_function(
@@ -194,6 +215,59 @@ def _run_desktop_flow(browser, web_url: str, backend_url: str, screenshot_dir: P
     _assert_text_absent(page, "Dummy mode")
     _assert_no_horizontal_overflow(page, "desktop initial")
 
+    page.locator(".tab[data-tab='triage']").click()
+    page.locator("#triage-empty-state").wait_for(state="visible", timeout=5_000)
+    if "No messages matched the selected scope yet." not in page.locator("#triage-empty-state").inner_text(timeout=5_000):
+        raise RuntimeError("Empty triage state text was not rendered.")
+    _assert_no_horizontal_overflow(page, "desktop triage empty")
+
+    seeded_index = _seed_mail_index(backend_url)
+    if int(seeded_index.get("indexed", 0) or 0) <= 0:
+        raise RuntimeError("Mail index seeding did not index sample messages.")
+
+    page.locator("#refresh-triage-dashboard").click()
+    page.wait_for_function(
+        "() => Number(document.querySelector('#triage-total-messages')?.textContent.trim() || '0') > 0",
+        timeout=30_000,
+    )
+    page.wait_for_function(
+        "() => document.querySelectorAll('#triage-buckets .triage-message-item').length > 0",
+        timeout=30_000,
+    )
+    page.wait_for_function(
+        "() => document.querySelector('#triage-empty-state')?.classList.contains('is-hidden')",
+        timeout=5_000,
+    )
+    bucket_count = page.locator(".triage-bucket-card").count()
+    if bucket_count != 7:
+        raise RuntimeError(f"Expected 7 triage bucket cards, found {bucket_count}.")
+    _assert_no_element_horizontal_scroll(page, "#triage-buckets", "triage bucket grid")
+    _assert_no_horizontal_overflow(page, "desktop triage populated")
+
+    triage_dashboard_path = screenshot_dir / "rendered-ui-triage-dashboard.png"
+    page.wait_for_timeout(350)
+    page.screenshot(path=str(triage_dashboard_path), full_page=False)
+
+    first_sample = page.locator(".triage-message-item").first
+    first_sample.click()
+    page.locator("#triage-message-detail-shell[data-state='ready']").wait_for(timeout=15_000)
+    if not page.locator("#triage-message-detail-body").inner_text(timeout=5_000).strip():
+        raise RuntimeError("Triaged message drill-down did not render message text.")
+
+    summary_button = page.locator(
+        ".triage-bucket-card"
+    ).filter(has=page.locator(".triage-message-item")).locator(".triage-summary-btn").first
+    summary_button.click()
+    page.locator("#summary-card[data-state='ready']").wait_for(timeout=30_000)
+    summary_text = page.locator("#summary-text").inner_text(timeout=5_000)
+    if "Messages summarized:" not in summary_text:
+        raise RuntimeError("Triage bucket summary did not update the main summary canvas.")
+    _assert_bottom_status(
+        page,
+        provider="Provider: OpenAI",
+        require_job=True,
+    )
+
     page.wait_for_timeout(350)
     first_run_path = screenshot_dir / "rendered-ui-desktop-first-run.png"
     page.screenshot(path=str(first_run_path), full_page=False)
@@ -276,6 +350,7 @@ def _run_desktop_flow(browser, web_url: str, backend_url: str, screenshot_dir: P
 
     return {
         "desktop_first_run": str(first_run_path),
+        "triage_dashboard": str(triage_dashboard_path),
         "sample_summary": str(sample_summary_path),
         "empty_result": str(empty_path),
         "settings": str(settings_path),
