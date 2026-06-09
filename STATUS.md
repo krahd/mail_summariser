@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-06-08 18:53
+Last updated: 2026-06-08 20:12
 
 ## Purpose
 
@@ -166,6 +166,12 @@ Web app:
 
 ```bash
 python -m http.server 8000 --directory webapp
+```
+
+Contributor install:
+
+```bash
+python3 -m pip install -e . -r dev-requirements.txt
 ```
 
 Validation commands:
@@ -442,4 +448,4 @@ Refine the triage bucket heuristics against real inbox patterns, and decide whet
 - Empty message sets should not be sent to LLM providers.
 - Saved scopes are additive, persisted in SQLite, and should not trigger automatic IMAP sync when summarising.
 - Saved scopes are persisted in SQLite, restored on startup/reset, and evaluated only against indexed mail data.
-Last updated: 2026-06-08 18:53
+Last updated: 2026-06-08 20:12

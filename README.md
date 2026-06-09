@@ -47,6 +47,12 @@ python -m http.server 8000 --directory webapp
 
 ### Tests
 
+Install the contributor dependencies first:
+
+```bash
+python3 -m pip install -e . -r dev-requirements.txt
+```
+
 ```bash
 pytest -q
 ```
