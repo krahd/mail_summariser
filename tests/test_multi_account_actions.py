@@ -108,5 +108,43 @@ class MultiAccountRoutingTests(unittest.TestCase):
         self.assertEqual(result['failed_message_ids'], ['acct-off|INBOX|1'])
 
 
+class ImapMoveHelperTests(unittest.TestCase):
+    def test_parse_copyuid(self) -> None:
+        self.assertEqual(mail_service._parse_copyuid([b'[COPYUID 1 5 9]']), '9')
+        self.assertEqual(mail_service._parse_copyuid([b'OK [COPYUID 12 5 9:11] done']), '9')
+        self.assertIsNone(mail_service._parse_copyuid([b'no copyuid here']))
+        self.assertIsNone(mail_service._parse_copyuid(None))
+
+    def test_imap_move_uses_move_capability(self) -> None:
+        conn = mock.MagicMock()
+        conn.capabilities = ('IMAP4REV1', 'MOVE')
+        conn.uid.return_value = ('OK', [b'[COPYUID 1 5 9]'])
+        moved, failed = mail_service._imap_move_messages(conn, ['5'], 'Archive')
+        self.assertEqual(moved, {'5': '9'})
+        self.assertEqual(failed, [])
+        conn.uid.assert_called_once_with('MOVE', '5', 'Archive')
+        conn.expunge.assert_not_called()
+
+    def test_imap_move_falls_back_to_copy_delete_expunge(self) -> None:
+        conn = mock.MagicMock()
+        conn.capabilities = ('IMAP4REV1',)
+        conn.uid.side_effect = [('OK', [b'[COPYUID 1 5 9]']), ('OK', [])]
+        moved, failed = mail_service._imap_move_messages(conn, ['5'], 'Archive')
+        self.assertEqual(moved, {'5': '9'})
+        self.assertEqual(failed, [])
+        self.assertEqual(conn.uid.call_args_list[0].args, ('COPY', '5', 'Archive'))
+        self.assertEqual(conn.uid.call_args_list[1].args, ('STORE', '5', '+FLAGS', '(\\Deleted)'))
+        conn.expunge.assert_called_once()
+
+    def test_imap_move_reports_failed_copy(self) -> None:
+        conn = mock.MagicMock()
+        conn.capabilities = ('IMAP4REV1',)
+        conn.uid.return_value = ('NO', [b'over quota'])
+        moved, failed = mail_service._imap_move_messages(conn, ['5'], 'Archive')
+        self.assertEqual(moved, {})
+        self.assertEqual(failed, ['5'])
+        conn.expunge.assert_not_called()
+
+
 if __name__ == '__main__':
     unittest.main()

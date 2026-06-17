@@ -30,12 +30,12 @@ class FakeMailEnvironment:  # pylint: disable=too-many-instance-attributes
             '101': {
                 'id': '101', 'subject': 'Project deployment schedule', 'sender': 'pm@example.com', 'recipient': self.username,
                 'date': '2026-04-01T09:00:00Z', 'body': 'The deployment schedule changed. Review milestones and confirm by Friday.',
-                'flags': set(),
+                'flags': set(), 'mailbox': 'INBOX',
             },
             '102': {
                 'id': '102', 'subject': 'Invoice due this week', 'sender': 'billing@example.com', 'recipient': self.username,
                 'date': '2026-04-02T12:00:00Z', 'body': 'Invoice 2048 is due on Thursday. Please review the attached invoice totals.',
-                'flags': set(),
+                'flags': set(), 'mailbox': 'INBOX',
             },
         }
         self.sent_messages: list[dict[str, str]] = []
@@ -91,6 +91,9 @@ class FakeMailEnvironment:  # pylint: disable=too-many-instance-attributes
 
     def flags_for(self, message_id: str) -> set[str]:
         return set(self.messages[message_id]['flags'])
+
+    def mailbox_for(self, message_id: str) -> str:
+        return str(self.messages[message_id].get('mailbox', 'INBOX'))
 
     def list_messages(self) -> list[dict]:
         return [deepcopy(v) for v in self.messages.values()]

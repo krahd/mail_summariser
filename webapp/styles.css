@@ -433,6 +433,83 @@ main {
   display: none;
 }
 
+.action-toast {
+  position: fixed;
+  right: 16px;
+  bottom: 64px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #1f2933;
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.action-toast-message {
+  font-size: 0.9rem;
+}
+
+.action-toast-undo {
+  background: transparent;
+  color: #8ec7ff;
+  border: 1px solid #8ec7ff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.action-toast-dismiss {
+  background: transparent;
+  color: #c4ccd4;
+  border: none;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mail-accounts-list {
+  display: grid;
+  gap: 12px;
+}
+
+.mail-account-card {
+  padding: 12px;
+  border: 1px solid var(--border, #d0d0d0);
+  border-radius: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.mail-account-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+}
+
+.mail-account-row label {
+  display: grid;
+  gap: 2px;
+}
+
+.mailbox-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 4px;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--surface-muted, #f6f6f8);
+}
+
+.mail-account-status {
+  font-size: 0.85rem;
+  font-style: italic;
+  color: var(--muted, #555);
+}
+
 .action-checklist {
   display: grid;
   gap: 6px;

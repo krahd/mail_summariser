@@ -275,6 +275,33 @@ class BackendMailFlowTests(unittest.TestCase):
             self.assertEqual(client.post(f"/actions/undo/logs/{tag_log['id']}").status_code, 200)
             self.assertNotIn("reviewed", environment.flags_for("102"))
 
+    def test_archive_action_moves_and_undo_restores_in_live_mail(self) -> None:
+        with FakeMailEnvironment() as environment, self._client() as client:
+            save_response = client.post("/settings", json=environment.settings_payload)
+            self.assertEqual(save_response.status_code, 200)
+
+            job_id, payload = self._create_summary_and_get_job(client, "invoice")
+            self.assertEqual(payload["messages"][0]["id"], "102")
+            self.assertEqual(environment.mailbox_for("102"), "INBOX")
+
+            preview = client.post(f"/actions/jobs/{job_id}/preview", json={"action": "archive"})
+            self.assertEqual(preview.status_code, 200)
+            self.assertEqual(preview.json()["targetMailbox"], "Archive")
+            self.assertEqual(preview.json()["changeCount"], 1)
+
+            apply_response = client.post(f"/actions/jobs/{job_id}/apply", json={"action": "archive"})
+            self.assertEqual(apply_response.status_code, 200)
+            self.assertEqual(apply_response.json()["changedIds"], ["102"])
+            self.assertEqual(environment.mailbox_for("102"), "Archive")
+
+            logs = client.get("/logs").json()
+            archive_log = next(item for item in logs if item["action"] == "archive")
+            self.assertTrue(archive_log["undoable"])
+
+            undo_response = client.post(f"/actions/undo/logs/{archive_log['id']}")
+            self.assertEqual(undo_response.status_code, 200)
+            self.assertEqual(environment.mailbox_for("102"), "INBOX")
+
     def test_embedded_fake_mail_server_can_drive_live_mail_flow(self) -> None:
         backend_app.ENABLE_DEV_TOOLS = True
         with self._client() as client:

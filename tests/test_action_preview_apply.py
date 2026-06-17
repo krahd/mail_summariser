@@ -122,6 +122,26 @@ class ActionPreviewApplyTests(unittest.TestCase):
             self.assertEqual(real.status_code, 200)
             self.assertGreaterEqual(len(real.json()["changedIds"]), 1)
 
+    def test_archive_action_is_undoable_in_sample_mailbox(self) -> None:
+        with self._client() as client:
+            job_id = self._make_job(client)
+            preview = client.post(f"/actions/jobs/{job_id}/preview", json={"action": "archive"})
+            self.assertEqual(preview.status_code, 200)
+            self.assertEqual(preview.json()["targetMailbox"], "Archive")
+            self.assertGreaterEqual(preview.json()["changeCount"], 1)
+
+            apply_response = client.post(f"/actions/jobs/{job_id}/apply", json={"action": "archive"})
+            self.assertEqual(apply_response.status_code, 200)
+            self.assertTrue(apply_response.json()["applied"])
+            self.assertGreaterEqual(len(apply_response.json()["changedIds"]), 1)
+
+            logs = client.get("/logs").json()
+            archive_log = next(item for item in logs if item["action"] == "archive")
+            self.assertTrue(archive_log["undoable"])
+
+            undo = client.post(f"/actions/undo/logs/{archive_log['id']}")
+            self.assertEqual(undo.status_code, 200)
+
     def test_dry_run_flag_does_not_mutate(self) -> None:
         with self._client() as client:
             job_id = self._make_job(client)
