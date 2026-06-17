@@ -481,4 +481,5 @@ Run the manual personal acceptance test against the real MailMate IMAP accounts 
 - Mailbox mutations go through an explicit preview then apply contract; safe mode and per-call dry-run force plan-only simulation that records a `dry_run` log and pushes no undo.
 - Archive is a folder move, not a flag: it prefers IMAP MOVE, falls back to COPY + `\Deleted` + EXPUNGE, and is undone by moving messages back to their source mailbox using the post-move uid.
 - Triage is the browser's primary landing surface; the digest review and bulk-action panel live in the "Review & Act" tab, which a triage bucket summary opens with the job preloaded.
+---
 Last updated: 2026-06-17 10:28
