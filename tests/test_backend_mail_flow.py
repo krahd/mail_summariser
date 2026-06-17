@@ -97,13 +97,13 @@ class BackendMailFlowTests(unittest.TestCase):
 
     def _perform_undo_checks(self, client: TestClient, job_id: str, payload: dict) -> None:
         # mark as read and tag summarised, then verify undo behavior
-        mark_response = client.post("/actions/mark-read", json={"jobId": job_id})
+        mark_response = client.post(f"/actions/jobs/{job_id}/apply", json={"action": "mark_read"})
         self.assertEqual(mark_response.status_code, 200)
-        self.assertEqual(mark_response.json()["failed_message_ids"], [])
+        self.assertEqual(mark_response.json()["failedIds"], [])
 
-        tag_response = client.post("/actions/tag-summarised", json={"jobId": job_id})
+        tag_response = client.post(f"/actions/jobs/{job_id}/apply", json={"action": "tag_summarised"})
         self.assertEqual(tag_response.status_code, 200)
-        self.assertEqual(tag_response.json()["failed_message_ids"], [])
+        self.assertEqual(tag_response.json()["failedIds"], [])
 
         logs = client.get("/logs").json()
         job_logs = [item for item in logs if item.get("job_id") == job_id]
@@ -145,16 +145,16 @@ class BackendMailFlowTests(unittest.TestCase):
         self.assertEqual(detail_response.status_code, 200)
         self.assertIn("invoice", detail_response.json()["body"].lower())
 
-        mark_response = client.post("/actions/mark-read", json={"jobId": job_id})
+        mark_response = client.post(f"/actions/jobs/{job_id}/apply", json={"action": "mark_read"})
         self.assertEqual(mark_response.status_code, 200)
-        self.assertEqual(mark_response.json()["restore_unread_ids"], ["102"])
-        self.assertEqual(mark_response.json()["failed_message_ids"], [])
+        self.assertEqual(mark_response.json()["changedIds"], ["102"])
+        self.assertEqual(mark_response.json()["failedIds"], [])
         self.assertIn("\\Seen", environment.flags_for("102"))
 
-        tag_response = client.post("/actions/tag-summarised", json={"jobId": job_id})
+        tag_response = client.post(f"/actions/jobs/{job_id}/apply", json={"action": "tag_summarised"})
         self.assertEqual(tag_response.status_code, 200)
-        self.assertEqual(tag_response.json()["added_message_ids"], ["102"])
-        self.assertEqual(tag_response.json()["failed_message_ids"], [])
+        self.assertEqual(tag_response.json()["changedIds"], ["102"])
+        self.assertEqual(tag_response.json()["failedIds"], [])
         self.assertIn("summarised", environment.flags_for("102"))
 
         logs = client.get("/logs").json()
@@ -231,7 +231,7 @@ class BackendMailFlowTests(unittest.TestCase):
             toggle_response = client.post("/settings/dummy-mode", json={"dummyMode": False})
             self.assertEqual(toggle_response.status_code, 200)
 
-            mark_response = client.post("/actions/mark-read", json={"jobId": job_id})
+            mark_response = client.post(f"/actions/jobs/{job_id}/apply", json={"action": "mark_read"})
             self.assertEqual(mark_response.status_code, 404)
 
         self.assertEqual(dummy_state.dummy_store_counts()["jobs"], 0)
@@ -263,8 +263,8 @@ class BackendMailFlowTests(unittest.TestCase):
             job_id, payload = self._create_summary_and_get_job(client, "invoice")
             self.assertEqual(payload["messages"][0]["id"], "102")
 
-            self.assertEqual(client.post("/actions/tag-summarised",
-                             json={"jobId": job_id}).status_code, 200)
+            self.assertEqual(client.post(f"/actions/jobs/{job_id}/apply",
+                             json={"action": "tag_summarised"}).status_code, 200)
             self.assertIn("reviewed", environment.flags_for("102"))
             self.assertNotIn("summarised", environment.flags_for("102"))
 
@@ -300,15 +300,15 @@ class BackendMailFlowTests(unittest.TestCase):
             self.assertEqual(summary.status_code, 200)
             job_id = summary.json()["jobId"]
 
-            mark_response = client.post("/actions/mark-read", json={"jobId": job_id})
+            mark_response = client.post(f"/actions/jobs/{job_id}/apply", json={"action": "mark_read"})
             self.assertEqual(mark_response.status_code, 200)
-            self.assertEqual(mark_response.json()["restore_unread_ids"], ["102"])
-            self.assertEqual(mark_response.json()["failed_message_ids"], [])
+            self.assertEqual(mark_response.json()["changedIds"], ["102"])
+            self.assertEqual(mark_response.json()["failedIds"], [])
 
-            tag_response = client.post("/actions/tag-summarised", json={"jobId": job_id})
+            tag_response = client.post(f"/actions/jobs/{job_id}/apply", json={"action": "tag_summarised"})
             self.assertEqual(tag_response.status_code, 200)
-            self.assertEqual(tag_response.json()["added_message_ids"], ["102"])
-            self.assertEqual(tag_response.json()["failed_message_ids"], [])
+            self.assertEqual(tag_response.json()["changedIds"], ["102"])
+            self.assertEqual(tag_response.json()["failedIds"], [])
 
             environment = cast(Any, backend_app._fake_mail_manager._environment)
             self.assertIsNotNone(environment)
