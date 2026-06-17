@@ -18,6 +18,8 @@ let activeQuickFilter = "today-unread";
 let backendStopping = false;
 let activeDummyMode = true;
 let activeSafeMode = false;
+/** @type {Array<Record<string, any>>} */
+let mailAccountsState = [];
 let currentTriageDashboard = null;
 let currentTriageScopes = [];
 let currentTriageSelectedScopeId = "";
@@ -76,16 +78,25 @@ const undoActionBtn = document.getElementById("undo-action");
 const quickFilterButtons = Array.from(document.querySelectorAll(".quick-filter"));
 const applyScopeActionsBtn = document.getElementById("apply-scope-actions");
 const actionScopePreview = document.getElementById("action-scope-preview");
+const mailAccountsList = document.getElementById("mail-accounts-list");
+const addMailAccountBtn = document.getElementById("add-mail-account");
 const scopeActionMarkRead = document.getElementById("scope-action-mark-read");
 const scopeActionTag = document.getElementById("scope-action-tag");
+const scopeActionArchive = document.getElementById("scope-action-archive");
 const scopeActionEmail = document.getElementById("scope-action-email");
 const actionConfirm = document.getElementById("action-confirm");
 const actionConfirmSummary = document.getElementById("action-confirm-summary");
 const actionConfirmWarnings = document.getElementById("action-confirm-warnings");
 const actionConfirmApplyBtn = document.getElementById("action-confirm-apply");
 const actionConfirmCancelBtn = document.getElementById("action-confirm-cancel");
-const ACTION_LABELS = { mark_read: "Mark read", tag_summarised: "Tag summarised" };
+const ACTION_LABELS = { mark_read: "Mark read", tag_summarised: "Tag summarised", archive: "Archive" };
+const actionToast = document.getElementById("action-toast");
+const actionToastMessage = document.getElementById("action-toast-message");
+const actionToastUndoBtn = document.getElementById("action-toast-undo");
+const actionToastDismissBtn = document.getElementById("action-toast-dismiss");
 let pendingActionKinds = null;
+let toastUndoLogIds = [];
+let toastTimer = null;
 const healthMode = document.getElementById("health-mode");
 const healthProvider = document.getElementById("health-provider");
 const healthRuntime = document.getElementById("health-runtime");
@@ -238,6 +249,7 @@ function updateActionScopePreview() {
   const actionNames = [];
   if (scopeActionMarkRead?.checked) actionNames.push("mark read");
   if (scopeActionTag?.checked) actionNames.push("tag");
+  if (scopeActionArchive?.checked) actionNames.push("archive");
   if (scopeActionEmail?.checked) actionNames.push("email summary");
 
   if (actionNames.length === 0) {
@@ -1043,7 +1055,7 @@ async function summariseTriageBucket(bucketId, bucketLabel) {
     });
     setStatus(
       result.messages.length > 0
-        ? `Triage summary created for ${result.messages.length} messages.`
+        ? `Triage summary for ${result.messages.length} message(s) ready in Review & Act — preview a bulk action below.`
         : `Triage summary created for empty bucket ${bucketLabel || bucketId}.`
     );
   } catch (error) {
@@ -1079,6 +1091,7 @@ function fillSettings(settings, options = {}) {
     activeDummyMode = Boolean(settings.dummyMode);
   }
   activeSafeMode = Boolean(settings.safeMode);
+  syncMailAccountsFromSettings(settings);
   if (dummyModeField) {
     dummyModeField.checked = Boolean(settings.dummyMode);
   }
@@ -1673,7 +1686,201 @@ function collectSettings() {
       payload[key] = input.value;
     }
   });
+  payload.mailAccounts = collectMailAccounts();
   return payload;
+}
+
+function syncMailAccountsFromSettings(settings) {
+  const accounts = Array.isArray(settings.mailAccounts) ? settings.mailAccounts : [];
+  mailAccountsState = accounts.map((acc) => ({
+    id: acc.id || "",
+    displayName: acc.displayName || "",
+    enabled: acc.enabled !== false,
+    imapHost: acc.imapHost || "",
+    imapPort: acc.imapPort ?? 993,
+    imapUseSSL: acc.imapUseSSL !== false,
+    username: acc.username || "",
+    imapPassword: "",
+    _passwordMasked: acc.imapPassword === "__MASKED__",
+    indexMailboxes: Array.isArray(acc.indexMailboxes) ? [...acc.indexMailboxes] : [],
+    _discovered: null,
+    _status: "",
+  }));
+  renderMailAccounts();
+}
+
+function collectMailAccounts() {
+  return mailAccountsState.map((acc) => {
+    const out = {
+      id: acc.id || "",
+      displayName: acc.displayName || "",
+      enabled: acc.enabled !== false,
+      imapHost: acc.imapHost || "",
+      imapPort: Number(acc.imapPort) || 993,
+      imapUseSSL: acc.imapUseSSL !== false,
+      username: acc.username || "",
+      indexMailboxes: Array.isArray(acc.indexMailboxes) ? acc.indexMailboxes : [],
+    };
+    out.imapPassword = acc._passwordMasked && !acc.imapPassword ? "__MASKED__" : acc.imapPassword || "";
+    return out;
+  });
+}
+
+function mailAccountMailboxHtml(acc) {
+  const selected = new Set((acc.indexMailboxes || []).map(String));
+  if (Array.isArray(acc._discovered)) {
+    if (acc._discovered.length === 0) {
+      return '<p class="panel-copy">No selectable mailboxes found.</p>';
+    }
+    const options = acc._discovered
+      .map((path) => {
+        const checked = selected.has(path) ? "checked" : "";
+        return `<label class="checkbox mailbox-option"><input type="checkbox" data-mailbox="${escapeHtml(path)}" ${checked}/> <span>${escapeHtml(path)}</span></label>`;
+      })
+      .join("");
+    return `<div class="mailbox-picker">${options}</div>`;
+  }
+  const current = (acc.indexMailboxes || []).length ? acc.indexMailboxes.join(", ") : "INBOX (default)";
+  return `<p class="panel-copy">Indexing: ${escapeHtml(current)}. Discover to choose folders.</p>`;
+}
+
+function mailAccountCardHtml(acc, index) {
+  const placeholder = acc._passwordMasked ? "Stored — leave blank to keep" : "IMAP password";
+  const status = acc._status ? `<p class="mail-account-status">${escapeHtml(acc._status)}</p>` : "";
+  return `
+  <div class="mail-account-card" data-index="${index}">
+    <div class="mail-account-row">
+      <label>Name <input data-field="displayName" value="${escapeHtml(acc.displayName || "")}" /></label>
+      <label class="checkbox"><input type="checkbox" data-field="enabled" ${acc.enabled ? "checked" : ""}/> <span>Enabled</span></label>
+    </div>
+    <div class="mail-account-row">
+      <label>IMAP Host <input data-field="imapHost" value="${escapeHtml(acc.imapHost || "")}" /></label>
+      <label>Port <input type="number" data-field="imapPort" value="${escapeHtml(String(acc.imapPort ?? 993))}" /></label>
+      <label class="checkbox"><input type="checkbox" data-field="imapUseSSL" ${acc.imapUseSSL ? "checked" : ""}/> <span>SSL</span></label>
+    </div>
+    <div class="mail-account-row">
+      <label>Username <input data-field="username" value="${escapeHtml(acc.username || "")}" /></label>
+      <label>Password <input type="password" data-field="imapPassword" placeholder="${placeholder}" value="${escapeHtml(acc.imapPassword || "")}" autocomplete="off" /></label>
+    </div>
+    ${mailAccountMailboxHtml(acc)}
+    ${status}
+    <div class="inline-actions">
+      <button type="button" data-action="discover">Discover Mailboxes</button>
+      <button type="button" data-action="sync" class="secondary">Sync Now</button>
+      <button type="button" data-action="remove" class="secondary">Remove</button>
+    </div>
+  </div>`;
+}
+
+function renderMailAccounts() {
+  if (!mailAccountsList) return;
+  if (mailAccountsState.length === 0) {
+    mailAccountsList.innerHTML =
+      '<p class="panel-copy">No accounts yet. Click "Add Account" to connect a mailbox.</p>';
+    return;
+  }
+  mailAccountsList.innerHTML = mailAccountsState
+    .map((acc, index) => mailAccountCardHtml(acc, index))
+    .join("");
+}
+
+function addMailAccount() {
+  mailAccountsState.push({
+    id: "",
+    displayName: "",
+    enabled: true,
+    imapHost: "",
+    imapPort: 993,
+    imapUseSSL: true,
+    username: "",
+    imapPassword: "",
+    _passwordMasked: false,
+    indexMailboxes: [],
+    _discovered: null,
+    _status: "New account — save settings before discovering or syncing.",
+  });
+  renderMailAccounts();
+}
+
+function onMailAccountFieldEvent(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  const card = target.closest(".mail-account-card");
+  if (!card) return;
+  const acc = mailAccountsState[Number(card.getAttribute("data-index"))];
+  if (!acc) return;
+  const field = target.getAttribute("data-field");
+  if (field) {
+    if (target.type === "checkbox") {
+      acc[field] = target.checked;
+    } else if (field === "imapPort") {
+      acc[field] = Number(target.value) || 993;
+    } else {
+      acc[field] = target.value;
+      if (field === "imapPassword") acc._passwordMasked = false;
+    }
+    return;
+  }
+  const mailbox = target.getAttribute("data-mailbox");
+  if (mailbox) {
+    const set = new Set((acc.indexMailboxes || []).map(String));
+    if (target.checked) set.add(mailbox);
+    else set.delete(mailbox);
+    acc.indexMailboxes = [...set];
+  }
+}
+
+async function discoverAccountMailboxes(index) {
+  const acc = mailAccountsState[index];
+  if (!acc) return;
+  if (!acc.id) {
+    acc._status = "Save settings first to discover mailboxes.";
+    renderMailAccounts();
+    return;
+  }
+  acc._status = "Discovering mailboxes…";
+  renderMailAccounts();
+  try {
+    const mailboxes = await api.getAccountMailboxes(acc.id);
+    acc._discovered = (mailboxes || [])
+      .filter((mailbox) => mailbox.selectable !== false)
+      .map((mailbox) => mailbox.path);
+    acc._status = `Found ${acc._discovered.length} mailbox(es).`;
+  } catch (error) {
+    acc._status = `Discover failed: ${error.message}`;
+  }
+  renderMailAccounts();
+}
+
+async function syncAccount(index) {
+  const acc = mailAccountsState[index];
+  if (!acc) return;
+  if (!acc.id) {
+    acc._status = "Save settings first to sync.";
+    renderMailAccounts();
+    return;
+  }
+  const mailboxes = (acc.indexMailboxes || []).length ? acc.indexMailboxes : ["INBOX"];
+  acc._status = "Syncing…";
+  renderMailAccounts();
+  let scanned = 0;
+  let indexed = 0;
+  let failed = 0;
+  for (const mailbox of mailboxes) {
+    try {
+      const result = await api.syncMailIndex({ accountId: acc.id, mailbox });
+      scanned += result.scanned || 0;
+      indexed += result.indexed || 0;
+    } catch (error) {
+      failed += 1;
+    }
+  }
+  const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  acc._status =
+    `Synced ${indexed}/${scanned} message(s) across ${mailboxes.length} mailbox(es) at ${time}` +
+    (failed ? ` (${failed} mailbox(es) failed)` : ".");
+  renderMailAccounts();
+  await refreshTriageDashboard();
 }
 
 function escapeHtml(value) {
@@ -1695,7 +1902,7 @@ function bindTabs() {
     help: document.getElementById("tab-help"),
   };
 
-  let previousTab = "search";
+  let previousTab = "triage";
 
   tabButtons.forEach((button) => {
     button.addEventListener("click", () => {
@@ -1795,8 +2002,9 @@ function renderActionConfirm(previews) {
   let safeMode = false;
   for (const { action, plan } of previews) {
     const label = ACTION_LABELS[action] || action;
+    const dest = action === "archive" && plan.targetMailbox ? ` → ${plan.targetMailbox}` : "";
     lines.push(
-      `${label}: ${plan.changeCount} to change, ${plan.skipCount} unchanged of ${plan.totalMessages}.`,
+      `${label}${dest}: ${plan.changeCount} to change, ${plan.skipCount} unchanged of ${plan.totalMessages}.`,
     );
     (plan.warnings || []).forEach((warning) => warnings.push(warning));
     if (plan.safeMode) safeMode = true;
@@ -1829,6 +2037,44 @@ async function requestJobActions(actionKinds) {
   }
 }
 
+function hideActionToast() {
+  if (toastTimer) {
+    clearTimeout(toastTimer);
+    toastTimer = null;
+  }
+  toastUndoLogIds = [];
+  if (actionToast) actionToast.hidden = true;
+}
+
+function showActionToast(message, logIds) {
+  if (!actionToast) return;
+  toastUndoLogIds = (logIds || []).filter(Boolean);
+  if (actionToastMessage) actionToastMessage.textContent = message;
+  if (actionToastUndoBtn) actionToastUndoBtn.hidden = toastUndoLogIds.length === 0;
+  actionToast.hidden = false;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideActionToast, 12000);
+}
+
+async function undoFromToast() {
+  if (toastUndoLogIds.length === 0) {
+    hideActionToast();
+    return;
+  }
+  const logIds = [...toastUndoLogIds].reverse();
+  hideActionToast();
+  try {
+    for (const logId of logIds) {
+      await api.undoLog(logId);
+    }
+    renderLogs(await api.getLogs());
+    updateActionScopePreview();
+    setStatus("Undone.");
+  } catch (error) {
+    setStatus(`Undo failed: ${error.message}`, true);
+  }
+}
+
 async function confirmPendingActions() {
   if (!pendingActionKinds || !currentJobId) {
     hideActionConfirm();
@@ -1840,11 +2086,13 @@ async function confirmPendingActions() {
     let applied = false;
     let simulated = false;
     let totalChanged = 0;
+    const appliedLogIds = [];
     for (const action of actionKinds) {
       const result = await api.applyAction(currentJobId, action);
       if (result.applied) {
         applied = true;
         totalChanged += (result.changedIds || []).length;
+        if (result.logId) appliedLogIds.push(result.logId);
       } else {
         simulated = true;
       }
@@ -1855,6 +2103,7 @@ async function confirmPendingActions() {
       setStatus("Safe mode: simulated only, nothing changed in your mailbox.");
     } else {
       setStatus(`Applied: ${totalChanged} message(s) changed.`);
+      showActionToast(`Applied: ${totalChanged} message(s) changed.`, appliedLogIds);
     }
   } catch (error) {
     setStatus(`Action failed: ${error.message}`, true);
@@ -1973,7 +2222,7 @@ function wireEvents() {
     }
   });
 
-  [scopeActionMarkRead, scopeActionTag, scopeActionEmail].forEach((field) => {
+  [scopeActionMarkRead, scopeActionTag, scopeActionArchive, scopeActionEmail].forEach((field) => {
     field?.addEventListener("change", updateActionScopePreview);
   });
 
@@ -1986,6 +2235,7 @@ function wireEvents() {
     const actionKinds = [];
     if (scopeActionMarkRead?.checked) actionKinds.push("mark_read");
     if (scopeActionTag?.checked) actionKinds.push("tag_summarised");
+    if (scopeActionArchive?.checked) actionKinds.push("archive");
     const wantEmail = Boolean(scopeActionEmail?.checked);
 
     if (actionKinds.length === 0 && !wantEmail) {
@@ -2005,6 +2255,30 @@ function wireEvents() {
   actionConfirmCancelBtn?.addEventListener("click", () => {
     hideActionConfirm();
     setStatus("Action cancelled.");
+  });
+  actionToastUndoBtn?.addEventListener("click", undoFromToast);
+  actionToastDismissBtn?.addEventListener("click", hideActionToast);
+
+  addMailAccountBtn?.addEventListener("click", addMailAccount);
+  mailAccountsList?.addEventListener("input", onMailAccountFieldEvent);
+  mailAccountsList?.addEventListener("change", onMailAccountFieldEvent);
+  mailAccountsList?.addEventListener("click", async (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const button = target.closest("button[data-action]");
+    if (!button) return;
+    const card = button.closest(".mail-account-card");
+    if (!card) return;
+    const index = Number(card.getAttribute("data-index"));
+    const action = button.getAttribute("data-action");
+    if (action === "remove") {
+      mailAccountsState.splice(index, 1);
+      renderMailAccounts();
+    } else if (action === "discover") {
+      await discoverAccountMailboxes(index);
+    } else if (action === "sync") {
+      await syncAccount(index);
+    }
   });
 
   messagesBody.addEventListener("click", async (event) => {

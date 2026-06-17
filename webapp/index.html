@@ -42,14 +42,14 @@
   </section>
 
   <nav class="tabs" aria-label="Main views">
-    <button class="tab active" data-tab="search">Main</button>
-    <button class="tab" data-tab="triage">Triage</button>
+    <button class="tab active" data-tab="triage">Triage</button>
+    <button class="tab" data-tab="search">Review &amp; Act</button>
     <button class="tab" data-tab="logs">Log</button>
     <button class="tab" data-tab="settings">Settings</button>
   </nav>
 
   <main>
-    <section id="tab-search" class="tab-panel active studio-tab">
+    <section id="tab-search" class="tab-panel studio-tab">
       <aside class="card studio-sidebar">
         <div class="panel-heading">
           <div>
@@ -187,6 +187,7 @@
         <div class="action-checklist" role="group" aria-label="Scoped actions">
           <label class="checkbox action-option"><input type="checkbox" id="scope-action-mark-read" checked /> <span>Mark messages read</span></label>
           <label class="checkbox action-option"><input type="checkbox" id="scope-action-tag" checked /> <span>Tag as summarised</span></label>
+          <label class="checkbox action-option"><input type="checkbox" id="scope-action-archive" /> <span>Archive (move to folder)</span></label>
           <label class="checkbox action-option"><input type="checkbox" id="scope-action-email" /> <span>Email summary</span></label>
         </div>
         <div class="inline-actions">
@@ -204,7 +205,7 @@
       </aside>
     </section>
 
-    <section id="tab-triage" class="tab-panel triage-tab">
+    <section id="tab-triage" class="tab-panel active triage-tab">
       <aside class="card triage-sidebar">
         <div class="panel-heading">
           <div>
@@ -379,6 +380,18 @@
             <label>Summarised Tag <input name="summarisedTag" /></label>
             <label>Archive Mailbox <input name="archiveMailbox" placeholder="Archive" /></label>
             <label class="checkbox"><input name="safeMode" id="safe-mode-field" type="checkbox" /> <span>Safe mode (preview only — never changes the mailbox)</span></label>
+          </section>
+
+          <section class="settings-group">
+            <div class="settings-group-heading">
+              <div>
+                <p class="panel-kicker">Mail</p>
+                <h3>Mail Accounts</h3>
+              </div>
+              <button id="add-mail-account" type="button" class="secondary">Add Account</button>
+            </div>
+            <p class="panel-copy">Add each IMAP account you want to summarise and act on. Save settings, then discover mailboxes and choose which to index. Sync indexes INBOX only until you select more folders.</p>
+            <div id="mail-accounts-list" class="mail-accounts-list"></div>
           </section>
 
           <section class="settings-group settings-actions settings-save-shell">
@@ -648,6 +661,12 @@
       <span id="bottom-status-messages" class="bottom-status-chip">Messages: 0</span>
     </div>
   </footer>
+
+  <div id="action-toast" class="action-toast" role="status" aria-live="polite" hidden>
+    <span id="action-toast-message" class="action-toast-message"></span>
+    <button id="action-toast-undo" type="button" class="action-toast-undo">Undo</button>
+    <button id="action-toast-dismiss" type="button" class="action-toast-dismiss" aria-label="Dismiss">×</button>
+  </div>
 
   <script type="module" src="app.js"></script>
 </body>

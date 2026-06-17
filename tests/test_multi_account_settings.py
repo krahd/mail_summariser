@@ -52,6 +52,30 @@ def test_legacy_settings_derive_default_mail_account() -> None:
         assert account['imapPassword'] == ''
 
 
+def test_index_mailboxes_round_trip() -> None:
+    """indexMailboxes persists per account and defaults to an empty list."""
+    with TestClient(app) as client:
+        account = {
+            'id': 'personal',
+            'displayName': 'Personal Email',
+            'enabled': True,
+            'imapHost': 'imap.example.com',
+            'imapPort': 993,
+            'imapUseSSL': True,
+            'username': 'user@example.com',
+            'imapPassword': 'secret',
+            'indexMailboxes': ['INBOX', 'Lists/Fing'],
+        }
+        payload = _base_settings()
+        payload['mailAccounts'] = [account]
+        assert client.post('/settings', json=payload).status_code == 200
+
+        settings_payload = client.get('/settings').json()
+        stored = next(a for a in settings_payload['mailAccounts'] if a['id'] == 'personal')
+        assert stored['indexMailboxes'] == ['INBOX', 'Lists/Fing']
+        assert stored['imapPassword'] == '__MASKED__'
+
+
 def test_post_settings_persists_mail_accounts() -> None:
     """Verify POST /settings persists mailAccounts list."""
     with TestClient(app) as client:

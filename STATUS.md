@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-06-17 00:27
+Last updated: 2026-06-17 10:28
 
 ## Purpose
 
@@ -225,6 +225,22 @@ python scripts/validate_rendered_ui.py
 
 ## Recent audit status
 
+**Phase 09 — Browser multi-account setup, index/sync controls, and triage-first workflow (2026-06-17):**
+- Added a Mail Accounts editor to the browser Settings screen (`webapp/index.html`, `webapp/app.js`, `webapp/styles.css`): add/edit/remove/disable entries in `mailAccounts`, per-account password masking (`__MASKED__` is preserved when left blank), per-account "Discover Mailboxes" (via `GET /mail/accounts/{id}/mailboxes`), folder selection for indexing, and "Sync Now" (via `POST /mail/index/sync`) with a per-account last-sync status line. Sync indexes INBOX only until folders are selected; after a sync the triage dashboard refreshes.
+- Added `indexMailboxes: list[str]` to `MailAccountSettings` (`backend/schemas.py`); it round-trips through `POST/GET /settings` and is covered by `tests/test_multi_account_settings.py::test_index_mailboxes_round_trip`.
+- Made Triage the primary landing surface (M1.7): Triage is the first, default-active tab; the studio tab is renamed "Review & Act"; generating a triage bucket summary continues to load the job into the action panel and switch to Review & Act, with a status hint pointing at the bulk-action preview.
+- Extended `tests/test_web_contract.py` to assert the account editor, archive scoped action, confirm panel, action toast, safe-mode/archive settings inputs, and the triage-first default tab.
+- Validation completed: `pytest -q` (194 passed, 1 skipped), `./scripts/check_repo_hygiene.sh`, `node --check` on the webapp JS. Rendered UI validation still not run locally (no `playwright` in `backend/.venv`; CI runs it). The rendered validator already drives triage via an explicit tab click and the bucket-summary flow opens Review & Act before submitting a search, so the triage-first default is compatible.
+
+**Phase 08b — Archive/move-to-folder bulk action with move-back undo (2026-06-17):**
+- Added `move_messages` and `move_messages_back` in `backend/mail_service.py`. Moves group by source account/mailbox, prefer IMAP MOVE (RFC 6851), and otherwise COPY then set `\Deleted` and EXPUNGE; `_parse_copyuid` recovers the UIDPLUS destination uid so undo can target the moved message. Sample mailbox and the fake-mail environment move by reassigning a per-message `mailbox` field.
+- Wired `archive` into the preview/apply contract (`backend/routers_actions.py`): `archive` is a third action kind, the preview reports the source mailbox and `targetMailbox` (the `archiveMailbox` setting, default `Archive`), apply records a `move` undo payload carrying source/target mailbox and post-move uid, and the undo dispatch moves messages back.
+- Extended the fake-mail environment with a per-message `mailbox` (default `INBOX`) and a `mailbox_for` helper for assertions.
+- Browser: added an "Archive (move to folder)" scoped action plus the confirmation line showing the destination folder.
+- Promoted undo to a first-class surface (M1.5): applying actions now shows a dismissible action toast with an Undo control that reverses the just-applied actions by log id, alongside the existing Log-tab per-action undo and the global Undo Last button (`webapp/index.html`, `webapp/app.js`, `webapp/styles.css`).
+- Added coverage: live archive move + undo round trip through the fake mail environment (`tests/test_backend_mail_flow.py`), sample-mailbox archive undoability (`tests/test_action_preview_apply.py`), and `_imap_move_messages`/`_parse_copyuid` unit tests for the MOVE and COPY+delete+expunge paths (`tests/test_multi_account_actions.py`).
+- Validation completed: `pytest -q` (193 passed, 1 skipped), `./scripts/check_repo_hygiene.sh`, `node --check` on the webapp JS. Rendered UI validation still not run locally (no `playwright` in `backend/.venv`; CI runs it).
+
 **Phase 08 — Multi-account actions, preview/apply, and dry-run safe mode (2026-06-17):**
 - Made composite ids (`account|mailbox|uid`) the canonical action identifier. Added `_split_composite_id`, `_plan_action_groups`, `_resolve_action_account`, and a shared `_apply_grouped_message_action` core in `backend/mail_service.py` so `mark_messages_read`, `restore_messages_unread`, `add_keyword_tag`, and `remove_keyword_tag` route per account/mailbox, open one connection per group against the selected mailbox, and aggregate changed/failed ids. Non-composite ids still route to the legacy single account against INBOX so the sample mailbox and existing tests keep working. Removed the now-redundant `_imap_add_flag`/`_imap_remove_flag` helpers.
 - Added `unroutable_message_ids` to flag messages whose account is missing or disabled.
@@ -435,13 +451,14 @@ Validation implications:
 
 ## Pending tasks
 
-- A mailbox picker remains unimplemented.
+- A per-account mailbox picker now exists for selecting which folders to index in the browser Mail Accounts editor; a mailbox picker for scoping live `/summaries` searches is still unimplemented.
 - Live IMAP summaries still use the existing INBOX-based search behaviour. The new local mail index is additive and `/summaries` has not yet been switched over to saved-scope queries.
-- Milestone 1 ("useful to me") remaining sub-items not yet implemented: archive/move-to-folder bulk action with move-back undo (M1.4); a browser multi-account setup surface plus index/sync controls (M1.6); promoting triage to the primary action workflow (M1.7); and a first-class undo surface such as an action toast with global undo (M1.5).
+- Milestone 1 ("useful to me") is implemented end to end: multi-account live action routing, the preview/apply contract, dry-run safe mode, mark-read/tag/archive bulk actions, move-back undo, a first-class undo surface, the browser multi-account setup with index/sync controls, and the triage-first workflow.
+- Not yet exercised against the owner's real MailMate IMAP accounts. The manual personal acceptance test (configure accounts with safe mode on, sync, summarise, preview, apply, verify in MailMate, undo) remains the outstanding validation before Milestone 1 is considered done in practice.
 
 ## Next steps
 
-Implement the archive/move-to-folder action (M1.4) on top of the new preview/apply engine: a `move_messages` service that groups by source account/mailbox, prefers IMAP MOVE (RFC 6851) and falls back to COPY + `\Deleted` + EXPUNGE, with an undo payload that records source mailbox and post-move uid so undo can move messages back. The fake-mail test environment will need multi-mailbox/COPY support to cover this end to end. After that, build the browser multi-account setup surface and index/sync controls (M1.6), make triage the primary action workflow (M1.7), and promote undo to a first-class surface (M1.5). Refine triage bucket heuristics against real inbox patterns as real usage emerges.
+Run the manual personal acceptance test against the real MailMate IMAP accounts with safe mode on first, then off. After Milestone 1 is confirmed useful in daily practice, move to Milestone 2 (downloadable product: positioning, first-run wizard with safe mode on by default, macOS notarisation, Windows installer, end-user docs). Refine triage bucket heuristics against real inbox patterns as real usage emerges. Outlook/CU Boulder (Microsoft Graph/OAuth) remains deferred to a later connector phase and a candidate premium connector.
 
 ## Longer-term steps
 
@@ -462,4 +479,6 @@ Implement the archive/move-to-folder action (M1.4) on top of the new preview/app
 - Saved scopes are persisted in SQLite, restored on startup/reset, and evaluated only against indexed mail data.
 - Composite message ids (`account|mailbox|uid`) are the canonical action identifier; live bulk actions route per account/mailbox with no legacy single-account fallback retained as a product compatibility guarantee (the non-composite path now exists only to serve the sample mailbox and tests).
 - Mailbox mutations go through an explicit preview then apply contract; safe mode and per-call dry-run force plan-only simulation that records a `dry_run` log and pushes no undo.
-Last updated: 2026-06-17 00:27
+- Archive is a folder move, not a flag: it prefers IMAP MOVE, falls back to COPY + `\Deleted` + EXPUNGE, and is undone by moving messages back to their source mailbox using the post-move uid.
+- Triage is the browser's primary landing surface; the digest review and bulk-action panel live in the "Review & Act" tab, which a triage bucket summary opens with the job preloaded.
+Last updated: 2026-06-17 10:28

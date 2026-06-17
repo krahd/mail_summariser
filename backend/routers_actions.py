@@ -8,6 +8,8 @@ from backend.mail_service import (
     add_keyword_tag,
     is_dummy_mode,
     mark_messages_read,
+    move_messages,
+    move_messages_back,
     remove_keyword_tag,
     restore_messages_unread,
     send_summary_email,
@@ -17,12 +19,17 @@ from backend.router_context import get_app_module
 
 router = APIRouter()
 
-ACTION_KINDS = ('mark_read', 'tag_summarised')
+ACTION_KINDS = ('mark_read', 'tag_summarised', 'archive')
 
 
 def _summarised_tag(settings: dict) -> str:
     return str(settings.get('summarisedTag') or DEFAULT_SETTINGS.get(
         'summarisedTag', 'summarised'))
+
+
+def _archive_mailbox(settings: dict) -> str:
+    return str(settings.get('archiveMailbox') or DEFAULT_SETTINGS.get(
+        'archiveMailbox', 'Archive'))
 
 
 def _result_payload(result: object) -> dict:
@@ -58,6 +65,7 @@ def _build_action_plan(action: str, job_id: str, messages: list[dict], settings:
     """Best-effort preview of what an action would change. Advisory only."""
     tag = _summarised_tag(settings)
     tag_lower = tag.lower()
+    target_mailbox = _archive_mailbox(settings)
     unroutable = set(unroutable_message_ids([str(m.get('id') or '') for m in messages], settings))
 
     changed_items: list[dict] = []
@@ -94,6 +102,15 @@ def _build_action_plan(action: str, job_id: str, messages: list[dict], settings:
             else:
                 changed_items.append({**base, 'currentState': 'untagged',
                                       'plannedState': f'tagged:{tag}', 'willChange': True})
+        elif action == 'archive':
+            source_mailbox = base['mailboxPath'] or 'INBOX'
+            if source_mailbox == target_mailbox:
+                skipped_items.append({**base, 'currentState': source_mailbox,
+                                      'plannedState': target_mailbox, 'willChange': False,
+                                      'reason': 'already in archive'})
+            else:
+                changed_items.append({**base, 'currentState': source_mailbox,
+                                      'plannedState': target_mailbox, 'willChange': True})
 
     groups: dict[tuple[str, str], dict] = {}
     for item in changed_items:
@@ -113,7 +130,7 @@ def _build_action_plan(action: str, job_id: str, messages: list[dict], settings:
         'jobId': job_id,
         'action': action,
         'tag': tag if action == 'tag_summarised' else '',
-        'targetMailbox': '',
+        'targetMailbox': target_mailbox if action == 'archive' else '',
         'totalMessages': len(messages),
         'changeCount': len(changed_items),
         'skipCount': len(skipped_items),
@@ -163,6 +180,13 @@ def _apply_action(action: str, message_ids: list[str], settings: dict) -> tuple[
         changed = result.get('added_message_ids', []) or []
         failed = result.get('failed_message_ids', []) or []
         return changed, failed, {'action': 'tag_summarised', 'message_ids': changed, 'tag': tag}
+    if action == 'archive':
+        target = _archive_mailbox(settings)
+        result = _result_payload(move_messages(message_ids, target, settings))
+        moved = result.get('moved', []) or []
+        failed = result.get('failed_message_ids', []) or []
+        changed = [str(entry.get('id')) for entry in moved]
+        return changed, failed, {'action': 'move', 'moved': moved}
     raise HTTPException(status_code=400, detail='Unsupported action')
 
 
@@ -253,6 +277,14 @@ def _perform_undo(payload: dict, settings: dict, app_module) -> None:
         removed_ids = result.get('removed_message_ids', []) or []
         failed_ids = result.get('failed_message_ids', []) or []
         details = f"removed tags from {len(removed_ids)} messages"
+        if failed_ids:
+            details += f" failed_message_ids={failed_ids}"
+        app_module._record_log('undo', 'ok', details, job_id=job_id, settings=settings)
+    elif action == 'move':
+        result = _result_payload(move_messages_back(payload.get('moved', []) or [], settings))
+        restored_ids = result.get('restored_message_ids', []) or []
+        failed_ids = result.get('failed_message_ids', []) or []
+        details = f"moved back {len(restored_ids)} messages"
         if failed_ids:
             details += f" failed_message_ids={failed_ids}"
         app_module._record_log('undo', 'ok', details, job_id=job_id, settings=settings)

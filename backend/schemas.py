@@ -28,6 +28,7 @@ class MailAccountSettings(BaseModel):
     smtpUseSSL: bool = True
     smtpPassword: str = ''
     recipientEmail: str = ''
+    indexMailboxes: list[str] = Field(default_factory=list)
 
 
 class SearchCriteria(BaseModel):
