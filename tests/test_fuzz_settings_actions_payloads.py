@@ -76,9 +76,9 @@ def test_actions_mark_read_payload_fuzz_never_500(payload) -> None:
         mock.patch.object(backend_app, "_record_log", return_value="log-1"),
         mock.patch.object(backend_app, "_push_undo", return_value=None),
     ):
-        response = client.post("/actions/mark-read", json=payload)
+        response = client.post("/actions/jobs/job-x/apply", json=payload)
 
-    assert response.status_code in {200, 422}
+    assert response.status_code in {200, 400, 422}
 
 
 @given(payload=json_value)
@@ -95,9 +95,9 @@ def test_actions_tag_payload_fuzz_never_500(payload) -> None:
         mock.patch.object(backend_app, "_record_log", return_value="log-2"),
         mock.patch.object(backend_app, "_push_undo", return_value=None),
     ):
-        response = client.post("/actions/tag-summarised", json=payload)
+        response = client.post("/actions/jobs/job-x/apply", json=payload)
 
-    assert response.status_code in {200, 422}
+    assert response.status_code in {200, 400, 422}
 
 
 @given(payload=json_value)

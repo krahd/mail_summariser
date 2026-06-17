@@ -250,6 +250,48 @@ def _compose_message_id(account_id: str, mailbox_path: str, uid: str) -> str:
     return f'{account_id}|{mailbox_path}|{uid}'
 
 
+def _split_composite_id(message_id: str) -> tuple[str, str, str] | None:
+    """Split a canonical ``account|mailbox|uid`` id.
+
+    The account is the first segment and the uid is the last; any inner
+    segments form the mailbox path, so mailbox names containing ``|`` survive
+    a round trip. Returns ``None`` for non-composite (legacy/sample) ids.
+    """
+    text = str(message_id or '')
+    if text.count('|') < 2:
+        return None
+    parts = text.split('|')
+    account_id = parts[0]
+    uid = parts[-1]
+    mailbox_path = '|'.join(parts[1:-1])
+    if not account_id or not mailbox_path or not uid:
+        return None
+    return account_id, mailbox_path, uid
+
+
+def _plan_action_groups(
+    message_ids: list[str],
+) -> tuple[dict[tuple[str, str], list[tuple[str, str]]], list[tuple[str, str]]]:
+    """Group message ids for per-account/mailbox action routing.
+
+    Returns ``(composite_groups, legacy_units)`` where each unit is a
+    ``(uid, external_id)`` pair. ``external_id`` is what callers passed in, so
+    aggregated results echo composite ids for composite inputs and the original
+    (unwrapped) id for legacy/sample inputs.
+    """
+    composite_groups: dict[tuple[str, str], list[tuple[str, str]]] = {}
+    legacy_units: list[tuple[str, str]] = []
+    for raw in message_ids:
+        external_id = str(raw)
+        split = _split_composite_id(external_id)
+        if split is None:
+            legacy_units.append((external_id, external_id))
+            continue
+        account_id, mailbox_path, uid = split
+        composite_groups.setdefault((account_id, mailbox_path), []).append((uid, external_id))
+    return composite_groups, legacy_units
+
+
 def _matches_criteria(message: dict[str, Any], criteria: SearchCriteria) -> bool:
     checks: list[bool] = []
     subject = str(message.get('subject', ''))
@@ -329,9 +371,16 @@ def _env_messages_from_env(env: Any) -> list[dict[str, Any]]:
 
 
 def _find_dummy_message(message_id: str) -> dict[str, Any] | None:
+    target = str(message_id)
     for message in _dummy_mailbox:
-        if str(message.get('id', '')) == str(message_id):
+        if str(message.get('id', '')) == target:
             return message
+    split = _split_composite_id(target)
+    if split is not None:
+        _, _, uid = split
+        for message in _dummy_mailbox:
+            if str(message.get('id', '')) == uid:
+                return message
     return None
 
 
@@ -681,23 +730,6 @@ def _remove_tag_from_env(env: Any, normalized_tag: str, message_ids: list[str]) 
     _remove_env_tag(env, normalized_tag, message_ids)
 
 
-def _imap_add_flag(host: str | None, port: int, use_ssl: bool, username: str | None, password: str | None, message_ids: list[str], normalized_tag: str) -> tuple[list[str], list[str]]:
-    added: list[str] = []
-    failed: list[str] = []
-    if host is None:
-        return added, failed
-    with _imap_connection(host, port, use_ssl, username, password) as imap:
-        added, failed = _store_message_flags(imap, message_ids, '+FLAGS', f'({normalized_tag})')
-    return added, failed
-
-
-def _imap_remove_flag(host: str | None, port: int, use_ssl: bool, username: str | None, password: str | None, message_ids: list[str], normalized_tag: str) -> tuple[list[str], list[str]]:
-    if host is None:
-        return [], []
-    with _imap_connection(host, port, use_ssl, username, password) as imap:
-        return _store_message_flags(imap, message_ids, '-FLAGS', f'({normalized_tag})')
-
-
 def _open_imap(host: str, port: int, use_ssl: bool) -> imaplib.IMAP4 | imaplib.IMAP4_SSL:
     try:
         return imaplib.IMAP4_SSL(host, port) if use_ssl else imaplib.IMAP4(host, port)
@@ -746,31 +778,104 @@ def search_messages(criteria: SearchCriteria, settings: dict[str, Any]) -> list[
         raise MailServiceError(str(exc)) from exc
 
 
+def _resolve_action_account(account_id: str, settings: dict[str, Any]) -> dict[str, Any] | None:
+    """Resolve the enabled account for a composite id, or None if unroutable."""
+    target = str(account_id or '').strip()
+    for account in _explicit_search_accounts(settings):
+        if str(account.get('id', '') or '').strip() == target:
+            if not bool(account.get('enabled', True)):
+                return None
+            return account
+    legacy = _legacy_search_account(settings)
+    if legacy is not None and target in ('', 'default', 'sample'):
+        return legacy
+    return None
+
+
+def _apply_grouped_message_action(
+    message_ids: list[str],
+    settings: dict[str, Any],
+    *,
+    imap_op: Any,
+    env_op: Any,
+) -> tuple[list[str], list[str]]:
+    """Route an action over composite ids grouped by account and mailbox.
+
+    ``imap_op(imap, uids)`` and ``env_op(env, uids)`` each return
+    ``(changed_uids, failed_uids)``. Results are mapped back to the ids the
+    caller passed in. Legacy (non-composite) ids route to the single legacy
+    account against INBOX and are returned unwrapped.
+    """
+    composite_groups, legacy_units = _plan_action_groups(message_ids)
+    changed: list[str] = []
+    failed: list[str] = []
+
+    def run_unit(account: dict[str, Any] | None, mailbox_path: str, units: list[tuple[str, str]]) -> None:
+        external_by_uid = {uid: external for uid, external in units}
+        uids = [uid for uid, _external in units]
+
+        def externals(values: list[str]) -> list[str]:
+            return [external_by_uid.get(str(value), str(value)) for value in values]
+
+        if account is None:
+            failed.extend(external for _uid, external in units)
+            return
+        host, port, use_ssl, username, password = _account_connection_details(account, settings)
+        env = _get_fake_env_for_host_port(host, port)
+        if env is not None:
+            changed_uids, failed_uids = env_op(env, uids)
+            changed.extend(externals(changed_uids))
+            failed.extend(externals(failed_uids))
+            return
+        if host is None:
+            raise MailServiceError('IMAP host not configured')
+        try:
+            with _imap_connection(host, port, use_ssl, username, password, mailbox_path) as imap:
+                changed_uids, failed_uids = imap_op(imap, uids)
+        except (imaplib.IMAP4.error, OSError) as exc:
+            raise MailServiceError(_redact_error_message(str(exc), password)) from exc
+        changed.extend(externals(changed_uids))
+        failed.extend(externals(failed_uids))
+
+    if legacy_units:
+        legacy_account = _legacy_search_account(settings)
+        if legacy_account is None:
+            raise MailServiceError('IMAP host not configured')
+        run_unit(legacy_account, 'INBOX', legacy_units)
+
+    for (account_id, mailbox_path), units in composite_groups.items():
+        run_unit(_resolve_action_account(account_id, settings), mailbox_path, units)
+
+    return changed, failed
+
+
+def unroutable_message_ids(message_ids: list[str], settings: dict[str, Any]) -> list[str]:
+    """Return ids that cannot be routed to a configured, enabled account.
+
+    Used by action previews to warn before applying. Sample/dummy mode treats
+    everything as routable.
+    """
+    if is_dummy_mode(settings):
+        return []
+    composite_groups, legacy_units = _plan_action_groups(message_ids)
+    unroutable: list[str] = []
+    if legacy_units and _legacy_search_account(settings) is None:
+        unroutable.extend(external for _uid, external in legacy_units)
+    for (account_id, _mailbox), units in composite_groups.items():
+        if _resolve_action_account(account_id, settings) is None:
+            unroutable.extend(external for _uid, external in units)
+    return unroutable
+
+
 def mark_messages_read(message_ids: list[str], settings: dict[str, Any]) -> dict[str, Any]:
     if is_dummy_mode(settings):
         changed_ids, failed_ids = _mark_dummy_messages_read(message_ids)
         return {'restore_unread_ids': changed_ids, 'failed_message_ids': failed_ids}
-    host = settings.get('imapHost')
-    port = int(settings.get('imapPort') or 993)
-    use_ssl = bool(settings.get('imapUseSSL'))
-    username = settings.get('username')
-    password = settings.get('imapPassword')
-
-    _env = _get_fake_env_for_host_port(host, port)
-    if _env is not None:
-        changed_ids, failed_ids = _mark_env_messages_read(_env, message_ids)
-        return {'restore_unread_ids': changed_ids, 'failed_message_ids': failed_ids}
-
-    if host is None:
-        raise MailServiceError('IMAP host not configured')
-
-    try:
-        changed_ids: list[str] = []
-        failed_ids: list[str] = []
-        with _imap_connection(host, port, use_ssl, username, password) as imap:
-            changed_ids, failed_ids = _store_message_flags(imap, message_ids, '+FLAGS', '(\\Seen)')
-    except (imaplib.IMAP4.error, OSError) as exc:
-        raise MailServiceError(_redact_error_message(str(exc), password)) from exc
+    changed_ids, failed_ids = _apply_grouped_message_action(
+        message_ids, settings,
+        imap_op=lambda imap, uids: _store_message_flags(imap, uids, '+FLAGS', '(\\Seen)'),
+        env_op=lambda env, uids: _mark_env_messages_read(env, uids),
+    )
     return {'restore_unread_ids': changed_ids, 'failed_message_ids': failed_ids}
 
 
@@ -778,25 +883,11 @@ def restore_messages_unread(message_ids: list[str], settings: dict[str, Any]) ->
     if is_dummy_mode(settings):
         changed_ids, failed_ids = _restore_dummy_messages_unread(message_ids)
         return {'restore_unread_ids': changed_ids, 'failed_message_ids': failed_ids}
-    host = settings.get('imapHost')
-    port = int(settings.get('imapPort') or 993)
-    use_ssl = bool(settings.get('imapUseSSL'))
-    username = settings.get('username')
-    password = settings.get('imapPassword')
-
-    _env = _get_fake_env_for_host_port(host, port)
-    if _env is not None:
-        changed_ids, failed_ids = _restore_env_messages_unread(_env, message_ids)
-        return {'restore_unread_ids': changed_ids, 'failed_message_ids': failed_ids}
-
-    if host is None:
-        raise MailServiceError('IMAP host not configured')
-
-    try:
-        with _imap_connection(host, port, use_ssl, username, password) as imap:
-            changed_ids, failed_ids = _store_message_flags(imap, message_ids, '-FLAGS', '(\\Seen)')
-    except (imaplib.IMAP4.error, OSError) as exc:
-        raise MailServiceError(_redact_error_message(str(exc), password)) from exc
+    changed_ids, failed_ids = _apply_grouped_message_action(
+        message_ids, settings,
+        imap_op=lambda imap, uids: _store_message_flags(imap, uids, '-FLAGS', '(\\Seen)'),
+        env_op=lambda env, uids: _restore_env_messages_unread(env, uids),
+    )
     return {'restore_unread_ids': changed_ids, 'failed_message_ids': failed_ids}
 
 
@@ -804,27 +895,14 @@ def add_keyword_tag(message_ids: list[str], tag: str, settings: dict[str, Any]) 
     normalized_tag = tag.strip()
     if not normalized_tag:
         return {'added_message_ids': [], 'failed_message_ids': []}
-    added_message_ids: list[str] = []
-    failed_message_ids: list[str] = []
     if is_dummy_mode(settings):
         added_message_ids, failed_message_ids = _add_dummy_tag(message_ids, normalized_tag)
         return {'added_message_ids': added_message_ids, 'failed_message_ids': failed_message_ids}
-    # Live IMAP mode: use STORE to add flag
-    host = settings.get('imapHost')
-    port = int(settings.get('imapPort') or 993)
-    use_ssl = bool(settings.get('imapUseSSL'))
-    username = settings.get('username')
-    password = settings.get('imapPassword')
-    _env = _get_fake_env_for_host_port(host, port)
-    if _env is not None:
-        added_message_ids, failed_message_ids = _add_env_tag(_env, normalized_tag, message_ids)
-        return {'added_message_ids': added_message_ids, 'failed_message_ids': failed_message_ids}
-
-    try:
-        added_message_ids, failed_message_ids = _imap_add_flag(
-            host, port, use_ssl, username, password, message_ids, normalized_tag)
-    except (imaplib.IMAP4.error, OSError) as exc:
-        raise MailServiceError(_redact_error_message(str(exc), password)) from exc
+    added_message_ids, failed_message_ids = _apply_grouped_message_action(
+        message_ids, settings,
+        imap_op=lambda imap, uids: _store_message_flags(imap, uids, '+FLAGS', f'({normalized_tag})'),
+        env_op=lambda env, uids: _add_env_tag(env, normalized_tag, uids),
+    )
     return {'added_message_ids': added_message_ids, 'failed_message_ids': failed_message_ids}
 
 
@@ -835,21 +913,11 @@ def remove_keyword_tag(message_ids: list[str], tag: str, settings: dict[str, Any
     if is_dummy_mode(settings):
         removed_message_ids, failed_message_ids = _remove_dummy_tag(message_ids, normalized_tag)
         return {'removed_message_ids': removed_message_ids, 'failed_message_ids': failed_message_ids}
-    host = settings.get('imapHost')
-    port = int(settings.get('imapPort') or 993)
-    use_ssl = bool(settings.get('imapUseSSL'))
-    username = settings.get('username')
-    password = settings.get('imapPassword')
-    _env = _get_fake_env_for_host_port(host, port)
-    if _env is not None:
-        removed_message_ids, failed_message_ids = _remove_env_tag(_env, normalized_tag, message_ids)
-        return {'removed_message_ids': removed_message_ids, 'failed_message_ids': failed_message_ids}
-
-    try:
-        removed_message_ids, failed_message_ids = _imap_remove_flag(
-            host, port, use_ssl, username, password, message_ids, normalized_tag)
-    except (imaplib.IMAP4.error, OSError) as exc:
-        raise MailServiceError(_redact_error_message(str(exc), password)) from exc
+    removed_message_ids, failed_message_ids = _apply_grouped_message_action(
+        message_ids, settings,
+        imap_op=lambda imap, uids: _store_message_flags(imap, uids, '-FLAGS', f'({normalized_tag})'),
+        env_op=lambda env, uids: _remove_env_tag(env, normalized_tag, uids),
+    )
     return {'removed_message_ids': removed_message_ids, 'failed_message_ids': failed_message_ids}
 
 

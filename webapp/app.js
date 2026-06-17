@@ -17,6 +17,7 @@ let currentLogs = [];
 let activeQuickFilter = "today-unread";
 let backendStopping = false;
 let activeDummyMode = true;
+let activeSafeMode = false;
 let currentTriageDashboard = null;
 let currentTriageScopes = [];
 let currentTriageSelectedScopeId = "";
@@ -78,6 +79,13 @@ const actionScopePreview = document.getElementById("action-scope-preview");
 const scopeActionMarkRead = document.getElementById("scope-action-mark-read");
 const scopeActionTag = document.getElementById("scope-action-tag");
 const scopeActionEmail = document.getElementById("scope-action-email");
+const actionConfirm = document.getElementById("action-confirm");
+const actionConfirmSummary = document.getElementById("action-confirm-summary");
+const actionConfirmWarnings = document.getElementById("action-confirm-warnings");
+const actionConfirmApplyBtn = document.getElementById("action-confirm-apply");
+const actionConfirmCancelBtn = document.getElementById("action-confirm-cancel");
+const ACTION_LABELS = { mark_read: "Mark read", tag_summarised: "Tag summarised" };
+let pendingActionKinds = null;
 const healthMode = document.getElementById("health-mode");
 const healthProvider = document.getElementById("health-provider");
 const healthRuntime = document.getElementById("health-runtime");
@@ -243,7 +251,8 @@ function updateActionScopePreview() {
 
 function updateHealthStrip() {
   if (healthMode) {
-    healthMode.textContent = `Mailbox: ${activeDummyMode ? "Sample" : "Live"}`;
+    const safeSuffix = activeSafeMode ? " · Safe mode" : "";
+    healthMode.textContent = `Mailbox: ${activeDummyMode ? "Sample" : "Live"}${safeSuffix}`;
   }
   if (healthProvider) {
     healthProvider.textContent = `Provider: ${providerDisplayName(selectedProvider())}`;
@@ -1069,6 +1078,7 @@ function fillSettings(settings, options = {}) {
   if (updateActiveMode) {
     activeDummyMode = Boolean(settings.dummyMode);
   }
+  activeSafeMode = Boolean(settings.safeMode);
   if (dummyModeField) {
     dummyModeField.checked = Boolean(settings.dummyMode);
   }
@@ -1636,6 +1646,8 @@ function collectSettings() {
     "username",
     "recipientEmail",
     "summarisedTag",
+    "archiveMailbox",
+    "safeMode",
     "llmProvider",
     "openaiApiKey",
     "anthropicApiKey",
@@ -1771,19 +1783,95 @@ async function loadInitialData() {
   }
 }
 
-async function runJobAction(action) {
+function hideActionConfirm() {
+  pendingActionKinds = null;
+  if (actionConfirm) actionConfirm.hidden = true;
+  if (actionConfirmWarnings) actionConfirmWarnings.innerHTML = "";
+}
+
+function renderActionConfirm(previews) {
+  const lines = [];
+  const warnings = [];
+  let safeMode = false;
+  for (const { action, plan } of previews) {
+    const label = ACTION_LABELS[action] || action;
+    lines.push(
+      `${label}: ${plan.changeCount} to change, ${plan.skipCount} unchanged of ${plan.totalMessages}.`,
+    );
+    (plan.warnings || []).forEach((warning) => warnings.push(warning));
+    if (plan.safeMode) safeMode = true;
+  }
+  if (safeMode) {
+    lines.push("Safe mode is ON — applying will simulate only and not change your mailbox.");
+  }
+  if (actionConfirmSummary) actionConfirmSummary.textContent = lines.join(" ");
+  if (actionConfirmWarnings) {
+    actionConfirmWarnings.innerHTML = warnings.map((w) => `<li>${escapeHtml(w)}</li>`).join("");
+  }
+  if (actionConfirm) actionConfirm.hidden = false;
+}
+
+async function requestJobActions(actionKinds) {
   if (!currentJobId) {
     setStatus("No active job selected.", true);
     return;
   }
-
   try {
-    await action(currentJobId);
-    setStatus("Action completed.");
+    const previews = [];
+    for (const action of actionKinds) {
+      previews.push({ action, plan: await api.previewAction(currentJobId, action) });
+    }
+    pendingActionKinds = actionKinds;
+    renderActionConfirm(previews);
+    setStatus("Review the preview, then confirm to apply.");
+  } catch (error) {
+    setStatus(`Preview failed: ${error.message}`, true);
+  }
+}
+
+async function confirmPendingActions() {
+  if (!pendingActionKinds || !currentJobId) {
+    hideActionConfirm();
+    return;
+  }
+  const actionKinds = pendingActionKinds;
+  hideActionConfirm();
+  try {
+    let applied = false;
+    let simulated = false;
+    let totalChanged = 0;
+    for (const action of actionKinds) {
+      const result = await api.applyAction(currentJobId, action);
+      if (result.applied) {
+        applied = true;
+        totalChanged += (result.changedIds || []).length;
+      } else {
+        simulated = true;
+      }
+    }
     renderLogs(await api.getLogs());
     updateActionScopePreview();
+    if (simulated && !applied) {
+      setStatus("Safe mode: simulated only, nothing changed in your mailbox.");
+    } else {
+      setStatus(`Applied: ${totalChanged} message(s) changed.`);
+    }
   } catch (error) {
     setStatus(`Action failed: ${error.message}`, true);
+  }
+}
+
+async function runEmailSummary() {
+  if (!currentJobId) {
+    setStatus("No active job selected.", true);
+    return;
+  }
+  try {
+    await api.emailSummary(currentJobId);
+    setStatus("Summary emailed.");
+    renderLogs(await api.getLogs());
+  } catch (error) {
+    setStatus(`Email summary failed: ${error.message}`, true);
   }
 }
 
@@ -1895,28 +1983,28 @@ function wireEvents() {
       return;
     }
 
-    const selectedActions = [];
-    if (scopeActionMarkRead?.checked) selectedActions.push(api.markRead);
-    if (scopeActionTag?.checked) selectedActions.push(api.tagSummarised);
-    if (scopeActionEmail?.checked) selectedActions.push(api.emailSummary);
+    const actionKinds = [];
+    if (scopeActionMarkRead?.checked) actionKinds.push("mark_read");
+    if (scopeActionTag?.checked) actionKinds.push("tag_summarised");
+    const wantEmail = Boolean(scopeActionEmail?.checked);
 
-    if (selectedActions.length === 0) {
+    if (actionKinds.length === 0 && !wantEmail) {
       setStatus("Select at least one action to apply.", true);
       return;
     }
 
-    for (const action of selectedActions) {
-      try {
-        await action(currentJobId);
-      } catch (error) {
-        setStatus(`Scoped action failed: ${error.message}`, true);
-        return;
-      }
+    if (wantEmail) {
+      await runEmailSummary();
     }
+    if (actionKinds.length > 0) {
+      await requestJobActions(actionKinds);
+    }
+  });
 
-    renderLogs(await api.getLogs());
-    setStatus("Scoped actions applied.");
-    updateActionScopePreview();
+  actionConfirmApplyBtn?.addEventListener("click", confirmPendingActions);
+  actionConfirmCancelBtn?.addEventListener("click", () => {
+    hideActionConfirm();
+    setStatus("Action cancelled.");
   });
 
   messagesBody.addEventListener("click", async (event) => {
@@ -1962,9 +2050,9 @@ function wireEvents() {
     await selectMessage(messageId);
   });
 
-  markReadBtn.addEventListener("click", () => runJobAction(api.markRead));
-  tagSummaryBtn.addEventListener("click", () => runJobAction(api.tagSummarised));
-  emailSummaryBtn.addEventListener("click", () => runJobAction(api.emailSummary));
+  markReadBtn.addEventListener("click", () => requestJobActions(["mark_read"]));
+  tagSummaryBtn.addEventListener("click", () => requestJobActions(["tag_summarised"]));
+  emailSummaryBtn.addEventListener("click", runEmailSummary);
 
   undoActionBtn.addEventListener("click", async () => {
     try {

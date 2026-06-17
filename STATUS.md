@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-06-08 20:12
+Last updated: 2026-06-17 00:27
 
 ## Purpose
 
@@ -60,7 +60,8 @@ Current focus is stability, safety, and product clarity of the local-first workf
 - keeping the saved-scope evaluator narrow, predictable, and backed by the local index only
 - keeping the triage dashboard read-only, transparent, and anchored in the local index
 - keeping the new local mail index additive while `/summaries` still uses IMAP search for now
-- keeping live summary search scoped to selected accounts and mailboxes while the action routes continue to treat composite IDs as opaque until phase 08
+- keeping live summary search scoped to selected accounts and mailboxes
+- keeping mailbox mutations behind the preview/apply contract and honouring safe mode / dry-run so live actions cannot mutate during testing
 
 ## Architecture
 
@@ -223,6 +224,16 @@ python scripts/validate_rendered_ui.py
 - `scripts/check_repo_hygiene.sh`: repository hygiene guard
 
 ## Recent audit status
+
+**Phase 08 — Multi-account actions, preview/apply, and dry-run safe mode (2026-06-17):**
+- Made composite ids (`account|mailbox|uid`) the canonical action identifier. Added `_split_composite_id`, `_plan_action_groups`, `_resolve_action_account`, and a shared `_apply_grouped_message_action` core in `backend/mail_service.py` so `mark_messages_read`, `restore_messages_unread`, `add_keyword_tag`, and `remove_keyword_tag` route per account/mailbox, open one connection per group against the selected mailbox, and aggregate changed/failed ids. Non-composite ids still route to the legacy single account against INBOX so the sample mailbox and existing tests keep working. Removed the now-redundant `_imap_add_flag`/`_imap_remove_flag` helpers.
+- Added `unroutable_message_ids` to flag messages whose account is missing or disabled.
+- Replaced the direct `/actions/mark-read` and `/actions/tag-summarised` routes with a job-scoped `POST /actions/jobs/{job_id}/preview` and `POST /actions/jobs/{job_id}/apply` contract in `backend/routers_actions.py`. Preview is a non-mutating, advisory plan (per-message current→planned state, per-account/mailbox groups, skip reasons, warnings). Apply passes all routable job ids to the existing action functions, so only actually-changed ids are logged and undone. `/actions/email-summary`, undo routes, and `/logs` are unchanged.
+- Added the `safeMode` and `archiveMailbox` settings (`backend/config.py`, `backend/schemas.py`). When `safeMode` is on, or a request sets `dryRun`, apply records a `dry_run` log, pushes no undo, and returns the preview without mutating the mailbox.
+- Added `ActionPreview`, `ActionPreviewItem`, `ActionPreviewGroup`, and `ActionApplyResult` schemas.
+- Browser UI moved to preview → confirm → apply: `webapp/api.js` exposes `previewAction`/`applyAction`; `webapp/app.js` shows a confirmation panel (counts, warnings, safe-mode notice) before applying; `webapp/index.html` adds the confirm panel plus Safe-mode and Archive-mailbox settings inputs; the mailbox health chip shows a Safe-mode indicator.
+- Added regression coverage: `tests/test_multi_account_actions.py` (composite-id helpers, per-account/mailbox routing, disabled/unresolved accounts) and `tests/test_action_preview_apply.py` (preview counts, invalid action rejection, apply undoability, safe-mode and dry-run no-mutation). Migrated `tests/test_backend_mail_flow.py`, `tests/test_router_decomposition.py`, `tests/test_router_error_paths.py`, and `tests/test_fuzz_settings_actions_payloads.py` to the preview/apply routes.
+- Validation completed: `pytest -q` (187 passed, 1 skipped), `./scripts/check_repo_hygiene.sh`. Rendered UI validation (`scripts/validate_rendered_ui.py`) not run locally: the `playwright` Python package is absent from `backend/.venv`; CI still runs it. JS syntax checked with `node --check`.
 
 **Phase 07 — Triage dashboard for email control (2026-06-08):**
 - Added a read-only triage dashboard route at `GET /mail/triage/dashboard` plus a bucket summary route at `POST /mail/triage/buckets/{bucket_id}/summary`.
@@ -426,10 +437,11 @@ Validation implications:
 
 - A mailbox picker remains unimplemented.
 - Live IMAP summaries still use the existing INBOX-based search behaviour. The new local mail index is additive and `/summaries` has not yet been switched over to saved-scope queries.
+- Milestone 1 ("useful to me") remaining sub-items not yet implemented: archive/move-to-folder bulk action with move-back undo (M1.4); a browser multi-account setup surface plus index/sync controls (M1.6); promoting triage to the primary action workflow (M1.7); and a first-class undo surface such as an action toast with global undo (M1.5).
 
 ## Next steps
 
-Refine the triage bucket heuristics against real inbox patterns, and decide whether `/summaries` should eventually consume saved-scope criteria or remain IMAP-search based. The mailbox picker work and later routing changes remain available for later phases.
+Implement the archive/move-to-folder action (M1.4) on top of the new preview/apply engine: a `move_messages` service that groups by source account/mailbox, prefers IMAP MOVE (RFC 6851) and falls back to COPY + `\Deleted` + EXPUNGE, with an undo payload that records source mailbox and post-move uid so undo can move messages back. The fake-mail test environment will need multi-mailbox/COPY support to cover this end to end. After that, build the browser multi-account setup surface and index/sync controls (M1.6), make triage the primary action workflow (M1.7), and promote undo to a first-class surface (M1.5). Refine triage bucket heuristics against real inbox patterns as real usage emerges.
 
 ## Longer-term steps
 
@@ -448,4 +460,6 @@ Refine the triage bucket heuristics against real inbox patterns, and decide whet
 - Empty message sets should not be sent to LLM providers.
 - Saved scopes are additive, persisted in SQLite, and should not trigger automatic IMAP sync when summarising.
 - Saved scopes are persisted in SQLite, restored on startup/reset, and evaluated only against indexed mail data.
-Last updated: 2026-06-08 20:12
+- Composite message ids (`account|mailbox|uid`) are the canonical action identifier; live bulk actions route per account/mailbox with no legacy single-account fallback retained as a product compatibility guarantee (the non-composite path now exists only to serve the sample mailbox and tests).
+- Mailbox mutations go through an explicit preview then apply contract; safe mode and per-call dry-run force plan-only simulation that records a `dry_run` log and pushes no undo.
+Last updated: 2026-06-17 00:27

@@ -273,6 +273,8 @@ class AppSettings(BaseModel):
     username: str
     recipientEmail: str
     summarisedTag: str
+    archiveMailbox: str = 'Archive'
+    safeMode: bool = False
     llmProvider: str
     openaiApiKey: str = ''
     anthropicApiKey: str = ''
@@ -290,3 +292,51 @@ class AppSettings(BaseModel):
 
 class DummyModeUpdate(BaseModel):
     dummyMode: bool
+
+
+class ActionPreviewItem(BaseModel):
+    id: str
+    accountId: str = ''
+    mailboxPath: str = ''
+    uid: str = ''
+    subject: str = ''
+    sender: str = ''
+    currentState: str = ''
+    plannedState: str = ''
+    willChange: bool = True
+    reason: str = ''
+
+
+class ActionPreviewGroup(BaseModel):
+    accountId: str
+    mailboxPath: str
+    changeCount: int = 0
+    skipCount: int = 0
+
+
+class ActionPreview(BaseModel):
+    jobId: str
+    action: str
+    tag: str = ''
+    targetMailbox: str = ''
+    totalMessages: int = 0
+    changeCount: int = 0
+    skipCount: int = 0
+    items: list[ActionPreviewItem] = Field(default_factory=list)
+    skipped: list[ActionPreviewItem] = Field(default_factory=list)
+    groups: list[ActionPreviewGroup] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    safeMode: bool = False
+
+
+class ActionApplyResult(BaseModel):
+    status: str = 'ok'
+    jobId: str
+    action: str
+    applied: bool
+    safeMode: bool = False
+    changedIds: list[str] = Field(default_factory=list)
+    failedIds: list[str] = Field(default_factory=list)
+    skippedIds: list[str] = Field(default_factory=list)
+    logId: str = ''
+    preview: ActionPreview

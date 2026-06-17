@@ -646,18 +646,28 @@ export function createApiClient(context) {
         body: JSON.stringify(payload),
       });
     },
-    /** @param {string} jobId */
-    markRead(jobId) {
-      return request("/actions/mark-read", {
+    /**
+     * Preview a bulk action without mutating the mailbox.
+     * @param {string} jobId
+     * @param {string} action - "mark_read" | "tag_summarised"
+     */
+    previewAction(jobId, action) {
+      return request(`/actions/jobs/${encodeURIComponent(jobId)}/preview`, {
         method: "POST",
-        body: JSON.stringify({ jobId }),
+        body: JSON.stringify({ action }),
       });
     },
-    /** @param {string} jobId */
-    tagSummarised(jobId) {
-      return request("/actions/tag-summarised", {
+    /**
+     * Apply a bulk action. Returns { applied, safeMode, changedIds, ... }.
+     * Safe mode (server setting) or dryRun force a non-mutating simulation.
+     * @param {string} jobId
+     * @param {string} action - "mark_read" | "tag_summarised"
+     * @param {{ dryRun?: boolean }} [options]
+     */
+    applyAction(jobId, action, options = {}) {
+      return request(`/actions/jobs/${encodeURIComponent(jobId)}/apply`, {
         method: "POST",
-        body: JSON.stringify({ jobId }),
+        body: JSON.stringify({ action, dryRun: Boolean(options.dryRun) }),
       });
     },
     /** @param {string} jobId */

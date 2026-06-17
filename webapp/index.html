@@ -190,8 +190,16 @@
           <label class="checkbox action-option"><input type="checkbox" id="scope-action-email" /> <span>Email summary</span></label>
         </div>
         <div class="inline-actions">
-          <button id="apply-scope-actions" type="button" disabled>Apply Selected Actions</button>
+          <button id="apply-scope-actions" type="button" disabled>Preview Selected Actions</button>
           <button id="undo-action" type="button" class="secondary">Undo Last</button>
+        </div>
+        <div id="action-confirm" class="action-confirm" hidden>
+          <p id="action-confirm-summary" class="panel-copy"></p>
+          <ul id="action-confirm-warnings" class="action-confirm-warnings"></ul>
+          <div class="inline-actions">
+            <button id="action-confirm-apply" type="button">Confirm &amp; Apply</button>
+            <button id="action-confirm-cancel" type="button" class="secondary">Cancel</button>
+          </div>
         </div>
       </aside>
     </section>
@@ -369,6 +377,8 @@
             <label>Username <input name="username" /></label>
             <label>Recipient Email <input name="recipientEmail" type="email" /></label>
             <label>Summarised Tag <input name="summarisedTag" /></label>
+            <label>Archive Mailbox <input name="archiveMailbox" placeholder="Archive" /></label>
+            <label class="checkbox"><input name="safeMode" id="safe-mode-field" type="checkbox" /> <span>Safe mode (preview only — never changes the mailbox)</span></label>
           </section>
 
           <section class="settings-group settings-actions settings-save-shell">

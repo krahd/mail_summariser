@@ -75,7 +75,7 @@ def test_actions_mark_read_returns_400_when_mail_operation_fails() -> None:
             side_effect=RuntimeError("mark failed"),
         ),
     ):
-        response = client.post("/actions/mark-read", json={"jobId": "job-123"})
+        response = client.post("/actions/jobs/job-123/apply", json={"action": "mark_read"})
 
     assert response.status_code == 400
     assert response.json()["detail"] == "mark failed"
