@@ -1,24 +1,24 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-06-17 10:28
+Last updated: 2026-06-17 23:45
 
 ## Purpose
 
-mail_summariser is a local-first email workflow with:
+mail_summariser is a local-first email situational-awareness system with:
 
 - a FastAPI backend
-- a browser client
-- a macOS SwiftUI client
+- a browser client as the active product surface
+- a macOS SwiftUI client source tree whose deployment is currently paused
 
 It supports a resettable sample mailbox for onboarding and testing, live IMAP/SMTP workflows, provider-backed summaries, and deterministic fallback summaries when providers are unavailable or return invalid output.
 
 ## Current state
 
-The repository currently contains three active runtime surfaces and one documentation surface:
+The repository currently contains two active runtime surfaces, one paused client source tree, and one documentation surface:
 
 - `backend/` for API, storage, mail integration, summary orchestration, and model-runtime control
-- `webapp/` for the browser UI
-- `macos-app/` for the desktop client
+- `webapp/` for the active browser UI
+- `macos-app/` for the desktop client source; deployment, notarisation, and end-user distribution are paused
 - `docs/` for the GitHub Pages project website served from `main:/docs`
 
 Key implemented backend areas:
@@ -51,7 +51,8 @@ Current focus is stability, safety, and product clarity of the local-first workf
 
 - preserving secret masking semantics
 - keeping fake-mail dev tooling strictly gated
-- maintaining alignment between backend, browser client, and macOS client
+- hardening the backend plus browser client as the active personal-use workflow
+- keeping the paused macOS client source from drifting against backend contracts without treating it as a deployment target
 - continuing malformed-input hardening and endpoint-level fuzz coverage
 - keeping live IMAP/SMTP failures explicit so authentication, mailbox selection, and per-message action errors are surfaced instead of being swallowed
 - keeping end-user surfaces focused on the sample mailbox and live mailbox concepts rather than internal dummy-mode naming
@@ -65,16 +66,16 @@ Current focus is stability, safety, and product clarity of the local-first workf
 
 ## Architecture
 
-The backend is the system of record for settings, mailbox integration, summaries, actions, logs, and runtime/model controls. Both clients call backend HTTP APIs.
+The backend is the system of record for settings, mailbox integration, summaries, actions, logs, and runtime/model controls. The browser client is the active UI. The macOS client source also calls backend HTTP APIs, but deployment is paused.
 
 ### Architecture diagram
 
 <svg xmlns="http://www.w3.org/2000/svg" width="1040" height="470" viewBox="0 0 1040 470" role="img" aria-labelledby="mail-arch-title mail-arch-desc">
   <title id="mail-arch-title">mail_summariser architecture</title>
-  <desc id="mail-arch-desc">Browser and macOS clients call FastAPI routes backed by mail services, a local mail index, SQLite persistence, summary providers, and runtime model control.</desc>
+  <desc id="mail-arch-desc">The active browser client and paused macOS source call FastAPI routes backed by mail services, a local mail index, SQLite persistence, summary providers, and runtime model control.</desc>
   <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10 z" /></marker></defs>
   <rect x="40" y="80" width="180" height="70" rx="10" fill="none" stroke="black" /><text x="130" y="110" text-anchor="middle" font-size="14">webapp/</text><text x="130" y="130" text-anchor="middle" font-size="12">browser client</text>
-  <rect x="40" y="230" width="180" height="70" rx="10" fill="none" stroke="black" /><text x="130" y="260" text-anchor="middle" font-size="14">macos-app/</text><text x="130" y="280" text-anchor="middle" font-size="12">SwiftUI client</text>
+  <rect x="40" y="230" width="180" height="70" rx="10" fill="none" stroke="black" /><text x="130" y="260" text-anchor="middle" font-size="14">macos-app/</text><text x="130" y="280" text-anchor="middle" font-size="12">paused SwiftUI source</text>
   <rect x="300" y="145" width="210" height="90" rx="10" fill="none" stroke="black" /><text x="405" y="180" text-anchor="middle" font-size="14">backend/app.py</text><text x="405" y="202" text-anchor="middle" font-size="12">FastAPI app and</text><text x="405" y="220" text-anchor="middle" font-size="12">router mounting</text>
   <rect x="590" y="40" width="190" height="70" rx="10" fill="none" stroke="black" /><text x="685" y="70" text-anchor="middle" font-size="14">mail services</text><text x="685" y="90" text-anchor="middle" font-size="12">sample, IMAP, SMTP</text>
   <rect x="590" y="145" width="190" height="70" rx="10" fill="none" stroke="black" /><text x="685" y="174" text-anchor="middle" font-size="14">summary service</text><text x="685" y="194" text-anchor="middle" font-size="12">provider fallback</text>
@@ -190,6 +191,8 @@ python scripts/validate_rendered_ui.py
 
 - Settings persist in SQLite (`backend/data/mail_summariser.sqlite3` by default).
 - The persisted API setting remains named `dummyMode`, but user-facing clients present it as "Sample Mailbox".
+- `safeMode` defaults to on; disabling it is required before live bulk actions mutate mail.
+- `archiveMailbox` is available globally and per mail account; per-account values override the global target for archive actions.
 - Secrets returned from settings routes are masked.
 - Writing masked sentinel values (for example `__MASKED__`) does not overwrite persisted secrets.
 - Provider error messages are redacted before fallback text or metadata is returned.
@@ -225,6 +228,18 @@ python scripts/validate_rendered_ui.py
 
 ## Recent audit status
 
+**Phase 10 — Personal-use safety audit and macOS deployment pause (2026-06-17):**
+- Paused macOS app deployment as a product decision. The active user path is now backend plus browser client; `macos-app/` remains in source control, but notarisation, release distribution, and end-user positioning for the macOS app are deferred.
+- Reframed the project as a local-first email situational-awareness system in `README.md` and this status snapshot.
+- Made safe mode the default (`backend/config.py`, `backend/schemas.py`, `backend/fake_mail_server.py`). Real mailbox actions now require explicitly disabling safe mode or they record `dry_run` logs and mutate nothing.
+- Tightened the preview/apply action path (`backend/routers_actions.py`): apply now operates only on preview-selected changed items, derives indexed unread/flagged/replied state from flags, records undo only for actual changes, and synchronises the local SQLite mail index after mark-read, tag, archive, and their undo paths.
+- Tightened live IMAP flag actions (`backend/mail_service.py`): mark-read, restore-unread, add-tag, and remove-tag fetch current flags first and return only messages that actually changed; failed flag fetches are reported as per-message failures rather than silent skips.
+- Tightened archive (`backend/mail_service.py`): live archive requires IMAP `MOVE` plus `UIDPLUS`, no longer falls back to COPY + `\Deleted` + EXPUNGE, supports per-account archive mailbox targets, and fails unsupported accounts without creating an unsafe undo payload.
+- Multi-account summary search now uses enabled `mailAccounts` by default when no explicit `accountIds` filter is supplied.
+- Browser settings now expose per-account archive mailbox targets and no longer make remote Google Fonts requests.
+- The paused macOS search view now calls the current job-scoped action apply route instead of removed legacy action endpoints.
+- Validation completed: focused action/client tests passed with 36 passed, full `backend/.venv/bin/python -m pytest -q` passed with 199 passed and 1 skipped, `node --check webapp/app.js`, `node --check webapp/api.js`, `./scripts/check_repo_hygiene.sh`, `git diff --check`, and `backend/.venv/bin/python scripts/validate_full_stack.py` passed. Rendered UI validation was attempted; after local port binding was allowed it failed because Playwright is not installed in `backend/.venv`.
+
 **Phase 09 — Browser multi-account setup, index/sync controls, and triage-first workflow (2026-06-17):**
 - Added a Mail Accounts editor to the browser Settings screen (`webapp/index.html`, `webapp/app.js`, `webapp/styles.css`): add/edit/remove/disable entries in `mailAccounts`, per-account password masking (`__MASKED__` is preserved when left blank), per-account "Discover Mailboxes" (via `GET /mail/accounts/{id}/mailboxes`), folder selection for indexing, and "Sync Now" (via `POST /mail/index/sync`) with a per-account last-sync status line. Sync indexes INBOX only until folders are selected; after a sync the triage dashboard refreshes.
 - Added `indexMailboxes: list[str]` to `MailAccountSettings` (`backend/schemas.py`); it round-trips through `POST/GET /settings` and is covered by `tests/test_multi_account_settings.py::test_index_mailboxes_round_trip`.
@@ -233,19 +248,19 @@ python scripts/validate_rendered_ui.py
 - Validation completed: `pytest -q` (194 passed, 1 skipped), `./scripts/check_repo_hygiene.sh`, `node --check` on the webapp JS. Rendered UI validation still not run locally (no `playwright` in `backend/.venv`; CI runs it). The rendered validator already drives triage via an explicit tab click and the bucket-summary flow opens Review & Act before submitting a search, so the triage-first default is compatible.
 
 **Phase 08b — Archive/move-to-folder bulk action with move-back undo (2026-06-17):**
-- Added `move_messages` and `move_messages_back` in `backend/mail_service.py`. Moves group by source account/mailbox, prefer IMAP MOVE (RFC 6851), and otherwise COPY then set `\Deleted` and EXPUNGE; `_parse_copyuid` recovers the UIDPLUS destination uid so undo can target the moved message. Sample mailbox and the fake-mail environment move by reassigning a per-message `mailbox` field.
+- Added `move_messages` and `move_messages_back` in `backend/mail_service.py`. Moves group by source account/mailbox and live IMAP archive now requires IMAP MOVE (RFC 6851) plus UIDPLUS so undo can target the moved message. The previous COPY + `\Deleted` + EXPUNGE fallback has been removed. Sample mailbox and the fake-mail environment move by reassigning a per-message `mailbox` field.
 - Wired `archive` into the preview/apply contract (`backend/routers_actions.py`): `archive` is a third action kind, the preview reports the source mailbox and `targetMailbox` (the `archiveMailbox` setting, default `Archive`), apply records a `move` undo payload carrying source/target mailbox and post-move uid, and the undo dispatch moves messages back.
 - Extended the fake-mail environment with a per-message `mailbox` (default `INBOX`) and a `mailbox_for` helper for assertions.
 - Browser: added an "Archive (move to folder)" scoped action plus the confirmation line showing the destination folder.
 - Promoted undo to a first-class surface (M1.5): applying actions now shows a dismissible action toast with an Undo control that reverses the just-applied actions by log id, alongside the existing Log-tab per-action undo and the global Undo Last button (`webapp/index.html`, `webapp/app.js`, `webapp/styles.css`).
-- Added coverage: live archive move + undo round trip through the fake mail environment (`tests/test_backend_mail_flow.py`), sample-mailbox archive undoability (`tests/test_action_preview_apply.py`), and `_imap_move_messages`/`_parse_copyuid` unit tests for the MOVE and COPY+delete+expunge paths (`tests/test_multi_account_actions.py`).
+- Added coverage: live archive move + undo round trip through the fake mail environment (`tests/test_backend_mail_flow.py`), sample-mailbox archive undoability (`tests/test_action_preview_apply.py`), and `_imap_move_messages`/`_parse_copyuid` unit tests for MOVE, missing MOVE/UIDPLUS capability, failed MOVE, and missing COPYUID response paths (`tests/test_multi_account_actions.py`).
 - Validation completed: `pytest -q` (193 passed, 1 skipped), `./scripts/check_repo_hygiene.sh`, `node --check` on the webapp JS. Rendered UI validation still not run locally (no `playwright` in `backend/.venv`; CI runs it).
 
 **Phase 08 — Multi-account actions, preview/apply, and dry-run safe mode (2026-06-17):**
 - Made composite ids (`account|mailbox|uid`) the canonical action identifier. Added `_split_composite_id`, `_plan_action_groups`, `_resolve_action_account`, and a shared `_apply_grouped_message_action` core in `backend/mail_service.py` so `mark_messages_read`, `restore_messages_unread`, `add_keyword_tag`, and `remove_keyword_tag` route per account/mailbox, open one connection per group against the selected mailbox, and aggregate changed/failed ids. Non-composite ids still route to the legacy single account against INBOX so the sample mailbox and existing tests keep working. Removed the now-redundant `_imap_add_flag`/`_imap_remove_flag` helpers.
 - Added `unroutable_message_ids` to flag messages whose account is missing or disabled.
-- Replaced the direct `/actions/mark-read` and `/actions/tag-summarised` routes with a job-scoped `POST /actions/jobs/{job_id}/preview` and `POST /actions/jobs/{job_id}/apply` contract in `backend/routers_actions.py`. Preview is a non-mutating, advisory plan (per-message current→planned state, per-account/mailbox groups, skip reasons, warnings). Apply passes all routable job ids to the existing action functions, so only actually-changed ids are logged and undone. `/actions/email-summary`, undo routes, and `/logs` are unchanged.
-- Added the `safeMode` and `archiveMailbox` settings (`backend/config.py`, `backend/schemas.py`). When `safeMode` is on, or a request sets `dryRun`, apply records a `dry_run` log, pushes no undo, and returns the preview without mutating the mailbox.
+- Replaced the direct `/actions/mark-read` and `/actions/tag-summarised` routes with a job-scoped `POST /actions/jobs/{job_id}/preview` and `POST /actions/jobs/{job_id}/apply` contract in `backend/routers_actions.py`. Preview is a non-mutating, advisory plan (per-message current→planned state, per-account/mailbox groups, skip reasons, warnings). Apply now sends only preview-selected changed ids to the action functions, so already-read/already-tagged/skipped messages are not mutated or pushed into undo. `/actions/email-summary`, undo routes, and `/logs` are unchanged.
+- Added the `safeMode` and `archiveMailbox` settings (`backend/config.py`, `backend/schemas.py`). `safeMode` now defaults to on. When `safeMode` is on, or a request sets `dryRun`, apply records a `dry_run` log, pushes no undo, and returns the preview without mutating the mailbox.
 - Added `ActionPreview`, `ActionPreviewItem`, `ActionPreviewGroup`, and `ActionApplyResult` schemas.
 - Browser UI moved to preview → confirm → apply: `webapp/api.js` exposes `previewAction`/`applyAction`; `webapp/app.js` shows a confirmation panel (counts, warnings, safe-mode notice) before applying; `webapp/index.html` adds the confirm panel plus Safe-mode and Archive-mailbox settings inputs; the mailbox health chip shows a Safe-mode indicator.
 - Added regression coverage: `tests/test_multi_account_actions.py` (composite-id helpers, per-account/mailbox routing, disabled/unresolved accounts) and `tests/test_action_preview_apply.py` (preview counts, invalid action rejection, apply undoability, safe-mode and dry-run no-mutation). Migrated `tests/test_backend_mail_flow.py`, `tests/test_router_decomposition.py`, `tests/test_router_error_paths.py`, and `tests/test_fuzz_settings_actions_payloads.py` to the preview/apply routes.
@@ -366,6 +381,14 @@ Historical verification:
 
 Recent verification:
 
+- `backend/.venv/bin/python -m pytest -q tests/test_multi_account_actions.py tests/test_action_preview_apply.py tests/test_backend_mail_flow.py tests/test_web_contract.py`: passed with 36 passed and 1 existing Starlette/httpx deprecation warning.
+- `backend/.venv/bin/python -m pytest -q`: passed with 199 passed, 1 skipped, and 1 existing Starlette/httpx deprecation warning.
+- `node --check webapp/app.js`: passed.
+- `node --check webapp/api.js`: passed.
+- `./scripts/check_repo_hygiene.sh`: passed.
+- `git diff --check`: passed.
+- `backend/.venv/bin/python scripts/validate_full_stack.py`: passed.
+- `backend/.venv/bin/python scripts/validate_rendered_ui.py`: attempted; sandboxed run could not bind a loopback port, and the allowed local-binding run failed because Playwright is not installed in `backend/.venv`.
 - `pytest -q tests/test_triage_dashboard.py tests/test_router_decomposition.py tests/test_web_contract.py tests/test_saved_scopes.py`: passed with 21 passed.
 - `pytest -q`: passed with 174 passed, 1 skipped.
 - `python3.11 scripts/validate_rendered_ui.py`: passed.
@@ -439,12 +462,12 @@ Validation implications:
 - Behaviour changes across backend/client boundaries require contract discipline.
 - Playwright browser installation is now a CI dependency for the Ubuntu Python 3.11 test job; the first CI run passed, but CDN/browser-install availability remains an external dependency.
 - Sample mailbox naming is implemented in clients, but backend route and schema names intentionally retain `dummyMode` for compatibility.
-- Browser and macOS clients should continue to be reviewed together when backend response contracts change.
+- The browser client is the active product surface. macOS source should be kept contract-compatible while deployment is paused, but it is not a release target right now.
 
 ## Recurring tasks
 
 - Continue broad malformed-input fuzzing for any remaining lightly covered route shapes.
-- Keep browser and macOS client expectations aligned with backend response contracts.
+- Keep browser expectations aligned with backend response contracts; keep paused macOS source from calling removed routes.
 - Keep hygiene checks current as packaging and release scripts evolve.
 - Add more rendered UI assertions as new workflows land.
 - Keep documentation, website, and client copy aligned around "Sample Mailbox" while preserving backend API compatibility.
@@ -453,12 +476,13 @@ Validation implications:
 
 - A per-account mailbox picker now exists for selecting which folders to index in the browser Mail Accounts editor; a mailbox picker for scoping live `/summaries` searches is still unimplemented.
 - Live IMAP summaries still use the existing INBOX-based search behaviour. The new local mail index is additive and `/summaries` has not yet been switched over to saved-scope queries.
-- Milestone 1 ("useful to me") is implemented end to end: multi-account live action routing, the preview/apply contract, dry-run safe mode, mark-read/tag/archive bulk actions, move-back undo, a first-class undo surface, the browser multi-account setup with index/sync controls, and the triage-first workflow.
+- Milestone 1 code paths are implemented end to end: multi-account live action routing, the preview/apply contract, dry-run safe mode, mark-read/tag/archive bulk actions, move-back undo, a first-class undo surface, the browser multi-account setup with index/sync controls, and the triage-first workflow.
 - Not yet exercised against the owner's real MailMate IMAP accounts. The manual personal acceptance test (configure accounts with safe mode on, sync, summarise, preview, apply, verify in MailMate, undo) remains the outstanding validation before Milestone 1 is considered done in practice.
+- macOS app deployment is paused. Milestone 2 should not assume macOS notarisation or app distribution until the browser workflow has passed real-account acceptance testing and the desktop client is deliberately reactivated.
 
 ## Next steps
 
-Run the manual personal acceptance test against the real MailMate IMAP accounts with safe mode on first, then off. After Milestone 1 is confirmed useful in daily practice, move to Milestone 2 (downloadable product: positioning, first-run wizard with safe mode on by default, macOS notarisation, Windows installer, end-user docs). Refine triage bucket heuristics against real inbox patterns as real usage emerges. Outlook/CU Boulder (Microsoft Graph/OAuth) remains deferred to a later connector phase and a candidate premium connector.
+Run the manual personal acceptance test against the real MailMate IMAP accounts with safe mode on first, then off. After Milestone 1 is confirmed useful in daily practice, move to Milestone 2 around a downloadable backend-plus-browser product: positioning, first-run wizard with safe mode on by default, packaging, installer/docs, and a clear local data model. Refine triage bucket heuristics against real inbox patterns as real usage emerges. Outlook/CU Boulder (Microsoft Graph/OAuth) remains deferred to a later connector phase and a candidate premium connector.
 
 ## Longer-term steps
 
@@ -466,7 +490,7 @@ Run the manual personal acceptance test against the real MailMate IMAP accounts 
 2. Strengthen cross-platform validation for backend and clients.
 3. Preserve safe handling for live mailbox operations and provider integrations.
 4. Expand rendered UI regression checks beyond first-run flows to cover help/explainer overlays, scoped actions, and denser desktop layouts.
-5. Keep browser and macOS information architecture aligned as provider/runtime controls continue to evolve.
+5. Keep browser information architecture aligned with backend capabilities; revisit macOS information architecture only if deployment is reactivated.
 6. Keep saved-scope defaults and query semantics aligned with sample mailbox and live index data.
 
 ## Decisions
@@ -479,7 +503,8 @@ Run the manual personal acceptance test against the real MailMate IMAP accounts 
 - Saved scopes are persisted in SQLite, restored on startup/reset, and evaluated only against indexed mail data.
 - Composite message ids (`account|mailbox|uid`) are the canonical action identifier; live bulk actions route per account/mailbox with no legacy single-account fallback retained as a product compatibility guarantee (the non-composite path now exists only to serve the sample mailbox and tests).
 - Mailbox mutations go through an explicit preview then apply contract; safe mode and per-call dry-run force plan-only simulation that records a `dry_run` log and pushes no undo.
-- Archive is a folder move, not a flag: it prefers IMAP MOVE, falls back to COPY + `\Deleted` + EXPUNGE, and is undone by moving messages back to their source mailbox using the post-move uid.
+- Archive is a folder move, not a flag: live IMAP archive requires MOVE plus UIDPLUS and does not use COPY + `\Deleted` + EXPUNGE fallback. Undo moves messages back to their source mailbox using the post-move uid.
 - Triage is the browser's primary landing surface; the digest review and bulk-action panel live in the "Review & Act" tab, which a triage bucket summary opens with the job preloaded.
+- macOS app deployment, notarisation, and end-user distribution are paused. The active product surface is the browser client against the local backend; `macos-app/` is retained as source but not positioned as a current download target.
 ---
-Last updated: 2026-06-17 10:28
+Last updated: 2026-06-17 23:45

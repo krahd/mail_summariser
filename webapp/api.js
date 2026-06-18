@@ -206,6 +206,8 @@
  * @property {string} username
  * @property {string} recipientEmail
  * @property {string} summarisedTag
+ * @property {string} archiveMailbox
+ * @property {boolean} safeMode
  * @property {string} llmProvider
  * @property {string} openaiApiKey
  * @property {string} anthropicApiKey
@@ -236,6 +238,8 @@
  * @property {boolean} smtpUseSSL
  * @property {string} smtpPassword
  * @property {string} recipientEmail
+ * @property {string} archiveMailbox
+ * @property {string[]} indexMailboxes
  */
 
 /**

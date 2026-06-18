@@ -59,6 +59,8 @@ class FakeMailEnvironment:  # pylint: disable=too-many-instance-attributes
             'username': self.username,
             'recipientEmail': self.recipient_email,
             'summarisedTag': 'summarised',
+            'archiveMailbox': 'Archive',
+            'safeMode': True,
             'llmProvider': 'ollama',
             'openaiApiKey': '',
             'anthropicApiKey': '',
