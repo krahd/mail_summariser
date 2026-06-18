@@ -1,11 +1,14 @@
 # mail_summariser
 
-mail_summariser is a local-first email workflow with a FastAPI backend, a browser client, and a macOS SwiftUI client.
+mail_summariser is a local-first email situational-awareness system with a FastAPI backend and a browser client. The macOS SwiftUI client remains in the repository, but macOS app deployment is paused while the browser workflow is hardened for daily use.
 
 It supports:
 
 - a resettable sample mailbox for local onboarding and fast validation
-- live IMAP/SMTP mode for real inbox workflows
+- live multi-account IMAP/SMTP mode for real inbox workflows
+- local mail indexing, saved scopes, and a triage dashboard
+- preview-first bulk actions for marking mail read, tagging it, and archiving it
+- safe mode by default, per-action dry runs, and undo for supported mailbox mutations
 - provider-backed summaries via Ollama, OpenAI, or Anthropic
 - deterministic fallback summaries when providers are unavailable or return invalid output
 
@@ -13,7 +16,7 @@ It supports:
 
 - `backend/`: FastAPI app, mail services, provider integration, SQLite persistence
 - `webapp/`: static browser UI (`index.html`, `app.js`, `api.js`)
-- `macos-app/`: SwiftUI desktop client
+- `macos-app/`: SwiftUI desktop client source; deployment is currently paused
 - `tests/`: pytest suite for backend behavior and integration boundaries
 - `scripts/`: build, release packaging, hygiene checks, and full-stack validation
 
@@ -27,7 +30,9 @@ brew install mail-summariser
 mail_summariser
 ```
 
-This installs the pre-built backend binary. Serve the `webapp/` folder separately (see Web app below) or use the macOS app from the release page.
+This installs the pre-built backend binary. Serve the `webapp/` folder separately (see Web app below).
+
+Current product decision: use the backend plus browser client for now. macOS app deployment, notarisation, and end-user distribution are paused until the browser workflow has passed real-account acceptance testing.
 
 ### Backend
 
@@ -92,6 +97,8 @@ This starts isolated backend and static-web instances, verifies the sample mailb
 
 - Runtime settings are persisted in SQLite (`backend/data/mail_summariser.sqlite3` by default).
 - The backend setting is still named `dummyMode` for API compatibility, but user-facing clients present it as the sample mailbox.
+- `safeMode` defaults to on. Bulk actions preview and log dry runs until safe mode is disabled explicitly.
+- Archive is implemented as an IMAP folder move and requires server support for both `MOVE` and `UIDPLUS` so undo can identify the moved message.
 - Secrets are masked on reads from `/settings`.
 - Writing masked sentinel values (`__MASKED__`) does not overwrite stored secrets.
 

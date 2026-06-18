@@ -1702,6 +1702,7 @@ function syncMailAccountsFromSettings(settings) {
     username: acc.username || "",
     imapPassword: "",
     _passwordMasked: acc.imapPassword === "__MASKED__",
+    archiveMailbox: acc.archiveMailbox || "Archive",
     indexMailboxes: Array.isArray(acc.indexMailboxes) ? [...acc.indexMailboxes] : [],
     _discovered: null,
     _status: "",
@@ -1719,6 +1720,7 @@ function collectMailAccounts() {
       imapPort: Number(acc.imapPort) || 993,
       imapUseSSL: acc.imapUseSSL !== false,
       username: acc.username || "",
+      archiveMailbox: acc.archiveMailbox || "Archive",
       indexMailboxes: Array.isArray(acc.indexMailboxes) ? acc.indexMailboxes : [],
     };
     out.imapPassword = acc._passwordMasked && !acc.imapPassword ? "__MASKED__" : acc.imapPassword || "";
@@ -1761,6 +1763,7 @@ function mailAccountCardHtml(acc, index) {
     <div class="mail-account-row">
       <label>Username <input data-field="username" value="${escapeHtml(acc.username || "")}" /></label>
       <label>Password <input type="password" data-field="imapPassword" placeholder="${placeholder}" value="${escapeHtml(acc.imapPassword || "")}" autocomplete="off" /></label>
+      <label>Archive Mailbox <input data-field="archiveMailbox" value="${escapeHtml(acc.archiveMailbox || "Archive")}" placeholder="Archive" /></label>
     </div>
     ${mailAccountMailboxHtml(acc)}
     ${status}
@@ -1795,6 +1798,7 @@ function addMailAccount() {
     username: "",
     imapPassword: "",
     _passwordMasked: false,
+    archiveMailbox: "Archive",
     indexMailboxes: [],
     _discovered: null,
     _status: "New account — save settings before discovering or syncing.",

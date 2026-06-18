@@ -46,6 +46,22 @@ struct SummaryResponse: Codable {
     var summary: String
 }
 
+struct ActionApplyRequest: Codable {
+    var action: String
+}
+
+struct ActionApplyResponse: Codable {
+    var status: String?
+    var jobId: String?
+    var action: String?
+    var applied: Bool?
+    var safeMode: Bool?
+    var changedIds: [String]?
+    var failedIds: [String]?
+    var skippedIds: [String]?
+    var logId: String?
+}
+
 struct ActionLogItem: Codable, Identifiable {
     var id: String
     var timestamp: String
@@ -70,6 +86,8 @@ struct AppSettings: Codable {
     var username: String = ""
     var recipientEmail: String = ""
     var summarisedTag: String = "summarised"
+    var archiveMailbox: String = "Archive"
+    var safeMode: Bool = true
     var llmProvider: String = "ollama"
     var openaiApiKey: String = ""
     var anthropicApiKey: String = ""

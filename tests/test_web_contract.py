@@ -56,6 +56,8 @@ class WebContractTests(unittest.TestCase):
         self.assertIn('id="add-mail-account"', html)
         self.assertIn('name="safeMode"', html)
         self.assertIn('name="archiveMailbox"', html)
+        self.assertNotIn("fonts.googleapis.com", html)
+        self.assertNotIn("fonts.gstatic.com", html)
         # Triage is the primary landing tab.
         self.assertIn('class="tab active" data-tab="triage"', html)
         self.assertIn('class="tab-panel active triage-tab"', html)
@@ -130,6 +132,8 @@ class WebContractTests(unittest.TestCase):
         self.assertIn("/mail/triage/dashboard", api_js)
         self.assertIn("mailAccounts", api_js)
         self.assertIn("MailAccountSettings", api_js)
+        self.assertIn("archiveMailbox", api_js)
+        self.assertIn("archiveMailbox", app_js)
         self.assertIn("MailboxInfo", api_js)
         self.assertIn("getAccountMailboxes", api_js)
         self.assertIn("getAllMailboxes", api_js)
@@ -197,6 +201,15 @@ class WebContractTests(unittest.TestCase):
         self.assertIn("Sample Mailbox", settings_view)
         self.assertNotIn("Dummy Mode", settings_view)
         self.assertNotIn("Dummy mode", settings_view)
+
+    def test_macos_search_uses_current_action_routes(self) -> None:
+        search_view = (REPO_ROOT / "macos-app" / "SearchView.swift").read_text(encoding="utf-8")
+
+        self.assertIn("actions/jobs/\\(appState.selectedJobId)/apply", search_view)
+        self.assertIn("mark_read", search_view)
+        self.assertIn("tag_summarised", search_view)
+        self.assertNotIn("actions/mark-read", search_view)
+        self.assertNotIn("actions/tag-summarised", search_view)
 
 
 if __name__ == "__main__":

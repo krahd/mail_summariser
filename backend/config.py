@@ -69,7 +69,7 @@ DEFAULT_SETTINGS = {
     'recipientEmail': os.getenv('RECIPIENT_EMAIL', ''),
     'summarisedTag': os.getenv('SUMMARISED_TAG', 'summarised'),
     'archiveMailbox': os.getenv('ARCHIVE_MAILBOX', 'Archive'),
-    'safeMode': os.getenv('SAFE_MODE', 'false').lower() in ('1', 'true', 'yes', 'on'),
+    'safeMode': os.getenv('SAFE_MODE', 'true').lower() in ('1', 'true', 'yes', 'on'),
     'llmProvider': os.getenv('LLM_PROVIDER', 'ollama'),
     'openaiApiKey': os.getenv('OPENAI_API_KEY', '').strip(),
     'anthropicApiKey': os.getenv('ANTHROPIC_API_KEY', '').strip(),

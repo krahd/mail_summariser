@@ -239,13 +239,13 @@ struct SearchView: View {
 
             HStack(spacing: 8) {
                 Button("Mark Read") {
-                    Task { await performJobAction(path: "actions/mark-read") }
+                    Task { await performBulkAction("mark_read") }
                 }
                 .disabled(appState.selectedJobId.isEmpty)
                 .buttonStyle(.bordered)
 
                 Button("Tag Summarised") {
-                    Task { await performJobAction(path: "actions/tag-summarised") }
+                    Task { await performBulkAction("tag_summarised") }
                 }
                 .disabled(appState.selectedJobId.isEmpty)
                 .buttonStyle(.bordered)
@@ -420,6 +420,24 @@ struct SearchView: View {
             let body = ["jobId": appState.selectedJobId]
             let response: EmptyResponse = try await appState.bridge.postJSON(path: path, body: body)
             appState.statusText = response.status ?? "OK"
+        } catch {
+            appState.statusText = "Action failed: \(error.localizedDescription)"
+        }
+    }
+
+    private func performBulkAction(_ action: String) async {
+        guard !appState.selectedJobId.isEmpty else { return }
+        do {
+            let response: ActionApplyResponse = try await appState.bridge.postJSON(
+                path: "actions/jobs/\(appState.selectedJobId)/apply",
+                body: ActionApplyRequest(action: action)
+            )
+            let changed = response.changedIds?.count ?? 0
+            let failed = response.failedIds?.count ?? 0
+            let prefix = response.applied == false ? "Safe mode preview" : "Applied"
+            appState.statusText = failed > 0
+                ? "\(prefix) \(changed) message(s), \(failed) failed"
+                : "\(prefix) \(changed) message(s)"
         } catch {
             appState.statusText = "Action failed: \(error.localizedDescription)"
         }

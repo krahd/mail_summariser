@@ -191,6 +191,7 @@ def _legacy_search_account(settings: dict[str, Any]) -> dict[str, Any] | None:
         'imapUseSSL': bool(settings.get('imapUseSSL', True)),
         'username': settings.get('username', ''),
         'imapPassword': settings.get('imapPassword', ''),
+        'archiveMailbox': settings.get('archiveMailbox', 'Archive'),
     }
 
 
@@ -206,13 +207,16 @@ def _resolve_search_accounts(settings: dict[str, Any], criteria: SearchCriteria)
     explicit_accounts = _explicit_search_accounts(settings)
     requested_ids = _unique_non_empty_values(list(getattr(criteria, 'accountIds', []) or []))
 
-    if explicit_accounts and requested_ids:
-        requested = set(requested_ids)
+    if explicit_accounts:
         selected: list[dict[str, Any]] = []
+        requested = set(requested_ids)
         for account in explicit_accounts:
             account_id = str(account.get('id', '') or '').strip()
-            if account_id and account_id in requested and bool(account.get('enabled', True)):
-                selected.append(account)
+            if not account_id or not bool(account.get('enabled', True)):
+                continue
+            if requested and account_id not in requested:
+                continue
+            selected.append(account)
         return selected
 
     if legacy_account is not None:
@@ -366,6 +370,7 @@ def _env_messages_from_env(env: Any) -> list[dict[str, Any]]:
             'replied': '\\Answered' in flags,
             'flagged': '\\Flagged' in flags,
             'keywords': [f for f in flags if not f.startswith('\\')],
+            'mailboxPath': str(msg.get('mailbox', 'INBOX') or 'INBOX'),
         })
     return env_messages
 
@@ -423,6 +428,38 @@ def _store_message_flags(
     failed_ids: list[str] = []
     for uid in message_ids:
         try:
+            typ, _ = imap.uid('STORE', str(uid), command, flag)
+            if str(typ).upper() == 'OK':
+                changed_ids.append(str(uid))
+            else:
+                failed_ids.append(str(uid))
+        except (imaplib.IMAP4.error, OSError):
+            failed_ids.append(str(uid))
+    return changed_ids, failed_ids
+
+
+def _has_flag(flags: list[str], flag_name: str) -> bool:
+    target = flag_name.strip().lower()
+    return target in {flag.strip().lower() for flag in flags}
+
+
+def _store_message_flags_when(
+    imap: Any,
+    message_ids: list[str],
+    command: str,
+    flag: str,
+    should_change: Any,
+) -> tuple[list[str], list[str]]:
+    changed_ids: list[str] = []
+    failed_ids: list[str] = []
+    for uid in message_ids:
+        try:
+            flags_ok, flags = _fetch_flags_result(imap, str(uid))
+            if not flags_ok:
+                failed_ids.append(str(uid))
+                continue
+            if not should_change(flags):
+                continue
             typ, _ = imap.uid('STORE', str(uid), command, flag)
             if str(typ).upper() == 'OK':
                 changed_ids.append(str(uid))
@@ -626,10 +663,12 @@ def _collect_imap_messages(criteria: SearchCriteria, settings: dict[str, Any]) -
         for mailbox_path in requested_mailboxes:
             if mailbox_path not in available_mailboxes:
                 raise MailServiceError(f'Could not select mailbox {mailbox_path}')
+        requested = set(requested_mailboxes)
         return [
             deepcopy(message)
             for message in _env_messages_from_env(fake_env)
-            if _matches_criteria(message, criteria)
+            if str(message.get('mailboxPath', 'INBOX') or 'INBOX') in requested
+            and _matches_criteria(message, criteria)
         ][:limit]
 
     for account in _resolve_search_accounts(settings, criteria):
@@ -737,17 +776,24 @@ def _open_imap(host: str, port: int, use_ssl: bool) -> imaplib.IMAP4 | imaplib.I
         raise MailServiceError(str(exc)) from exc
 
 
-def _fetch_flags(imap, uid: str) -> list[str]:
+def _fetch_flags_result(imap, uid: str) -> tuple[bool, list[str]]:
     try:
         rtyp, rdata = imap.uid('fetch', uid, '(FLAGS)')
-        if rtyp == 'OK' and rdata and rdata[0]:
+        if str(rtyp).upper() == 'OK' and rdata and rdata[0]:
             flags_text = str(rdata[0])
             if 'FLAGS (' in flags_text:
                 start = flags_text.find('FLAGS (') + len('FLAGS (')
                 end = flags_text.find(')', start)
-                return [f.strip() for f in flags_text[start:end].split() if f.strip()]
+                return True, [f.strip() for f in flags_text[start:end].split() if f.strip()]
     except (imaplib.IMAP4.error, OSError):
         pass
+    return False, []
+
+
+def _fetch_flags(imap, uid: str) -> list[str]:
+    ok, flags = _fetch_flags_result(imap, uid)
+    if ok:
+        return flags
     return []
 
 
@@ -873,7 +919,10 @@ def mark_messages_read(message_ids: list[str], settings: dict[str, Any]) -> dict
         return {'restore_unread_ids': changed_ids, 'failed_message_ids': failed_ids}
     changed_ids, failed_ids = _apply_grouped_message_action(
         message_ids, settings,
-        imap_op=lambda imap, uids: _store_message_flags(imap, uids, '+FLAGS', '(\\Seen)'),
+        imap_op=lambda imap, uids: _store_message_flags_when(
+            imap, uids, '+FLAGS', '(\\Seen)',
+            lambda flags: not _has_flag(flags, '\\Seen'),
+        ),
         env_op=lambda env, uids: _mark_env_messages_read(env, uids),
     )
     return {'restore_unread_ids': changed_ids, 'failed_message_ids': failed_ids}
@@ -885,7 +934,10 @@ def restore_messages_unread(message_ids: list[str], settings: dict[str, Any]) ->
         return {'restore_unread_ids': changed_ids, 'failed_message_ids': failed_ids}
     changed_ids, failed_ids = _apply_grouped_message_action(
         message_ids, settings,
-        imap_op=lambda imap, uids: _store_message_flags(imap, uids, '-FLAGS', '(\\Seen)'),
+        imap_op=lambda imap, uids: _store_message_flags_when(
+            imap, uids, '-FLAGS', '(\\Seen)',
+            lambda flags: _has_flag(flags, '\\Seen'),
+        ),
         env_op=lambda env, uids: _restore_env_messages_unread(env, uids),
     )
     return {'restore_unread_ids': changed_ids, 'failed_message_ids': failed_ids}
@@ -900,7 +952,10 @@ def add_keyword_tag(message_ids: list[str], tag: str, settings: dict[str, Any]) 
         return {'added_message_ids': added_message_ids, 'failed_message_ids': failed_message_ids}
     added_message_ids, failed_message_ids = _apply_grouped_message_action(
         message_ids, settings,
-        imap_op=lambda imap, uids: _store_message_flags(imap, uids, '+FLAGS', f'({normalized_tag})'),
+        imap_op=lambda imap, uids: _store_message_flags_when(
+            imap, uids, '+FLAGS', f'({normalized_tag})',
+            lambda flags: not _has_flag(flags, normalized_tag),
+        ),
         env_op=lambda env, uids: _add_env_tag(env, normalized_tag, uids),
     )
     return {'added_message_ids': added_message_ids, 'failed_message_ids': failed_message_ids}
@@ -915,7 +970,10 @@ def remove_keyword_tag(message_ids: list[str], tag: str, settings: dict[str, Any
         return {'removed_message_ids': removed_message_ids, 'failed_message_ids': failed_message_ids}
     removed_message_ids, failed_message_ids = _apply_grouped_message_action(
         message_ids, settings,
-        imap_op=lambda imap, uids: _store_message_flags(imap, uids, '-FLAGS', f'({normalized_tag})'),
+        imap_op=lambda imap, uids: _store_message_flags_when(
+            imap, uids, '-FLAGS', f'({normalized_tag})',
+            lambda flags: _has_flag(flags, normalized_tag),
+        ),
         env_op=lambda env, uids: _remove_env_tag(env, normalized_tag, uids),
     )
     return {'removed_message_ids': removed_message_ids, 'failed_message_ids': failed_message_ids}
@@ -939,35 +997,30 @@ def _parse_copyuid(data: Any) -> str | None:
 
 
 def _imap_move_messages(imap: Any, message_ids: list[str], target_mailbox: str) -> tuple[dict[str, str], list[str]]:
-    """Move uids in the selected mailbox to ``target_mailbox``.
-
-    Prefers IMAP MOVE (RFC 6851); otherwise COPY then mark ``\\Deleted`` and
-    EXPUNGE. Returns ``({source_uid: new_uid}, failed_uids)``.
-    """
+    """Move uids in the selected mailbox to ``target_mailbox`` with IMAP MOVE."""
     moved: dict[str, str] = {}
     failed: list[str] = []
-    capabilities = getattr(imap, 'capabilities', ()) or ()
-    use_move = 'MOVE' in capabilities
-    expunge_needed = False
+    capabilities = {
+        str(cap.decode('utf-8', errors='replace') if isinstance(cap, bytes) else cap).upper()
+        for cap in (getattr(imap, 'capabilities', ()) or ())
+    }
+    if 'MOVE' not in capabilities:
+        raise MailServiceError('IMAP MOVE is not supported by this server; archive is disabled for this account')
+    if 'UIDPLUS' not in capabilities:
+        raise MailServiceError('IMAP UIDPLUS is not supported by this server; archive undo is disabled for this account')
     for uid in message_ids:
         try:
-            command = 'MOVE' if use_move else 'COPY'
-            typ, data = imap.uid(command, str(uid), target_mailbox)
+            typ, data = imap.uid('MOVE', str(uid), target_mailbox)
             if str(typ).upper() != 'OK':
                 failed.append(str(uid))
                 continue
-            new_uid = _parse_copyuid(data) or str(uid)
-            if not use_move:
-                imap.uid('STORE', str(uid), '+FLAGS', '(\\Deleted)')
-                expunge_needed = True
+            new_uid = _parse_copyuid(data)
+            if not new_uid:
+                failed.append(str(uid))
+                continue
             moved[str(uid)] = new_uid
         except (imaplib.IMAP4.error, OSError):
             failed.append(str(uid))
-    if expunge_needed:
-        try:
-            imap.expunge()
-        except (imaplib.IMAP4.error, OSError):
-            pass
     return moved, failed
 
 
@@ -1016,6 +1069,14 @@ def _move_dummy_back(moved_entries: list[dict[str, Any]]) -> tuple[list[str], li
     return restored, failed
 
 
+def _account_archive_mailbox(account: dict[str, Any] | None, fallback_mailbox: str) -> str:
+    if isinstance(account, dict):
+        target = str(account.get('archiveMailbox') or '').strip()
+        if target:
+            return target
+    return fallback_mailbox
+
+
 def _move_one_group(account: dict[str, Any] | None, account_id: str, source_mailbox: str,
                     target_mailbox: str, units: list[tuple[str, str]], settings: dict[str, Any],
                     moved: list[dict[str, Any]], failed: list[str]) -> None:
@@ -1032,12 +1093,17 @@ def _move_one_group(account: dict[str, Any] | None, account_id: str, source_mail
         new_map, failed_uids = _move_env_messages(env, uids, target_mailbox)
     else:
         if host is None:
-            raise MailServiceError('IMAP host not configured')
+            failed.extend(external for _uid, external in units)
+            return
         try:
             with _imap_connection(host, port, use_ssl, username, password, source_mailbox) as imap:
                 new_map, failed_uids = _imap_move_messages(imap, uids, target_mailbox)
-        except (imaplib.IMAP4.error, OSError) as exc:
-            raise MailServiceError(_redact_error_message(str(exc), password)) from exc
+        except MailServiceError:
+            failed.extend(external for _uid, external in units)
+            return
+        except (imaplib.IMAP4.error, OSError):
+            failed.extend(external for _uid, external in units)
+            return
     for uid in uids:
         if uid in new_map:
             moved.append({'id': external_by_uid[uid], 'accountId': account_id,
@@ -1057,28 +1123,38 @@ def _move_groups(message_ids: list[str], target_mailbox: str,
         legacy_account = _legacy_search_account(settings)
         if legacy_account is None:
             raise MailServiceError('IMAP host not configured')
-        _move_one_group(legacy_account, 'default', 'INBOX', target_mailbox, legacy_units,
+        legacy_target = _account_archive_mailbox(legacy_account, target_mailbox)
+        _move_one_group(legacy_account, 'default', 'INBOX', legacy_target, legacy_units,
                         settings, moved, failed)
     for (account_id, source_mailbox), units in composite_groups.items():
-        _move_one_group(_resolve_action_account(account_id, settings), account_id, source_mailbox,
-                        target_mailbox, units, settings, moved, failed)
+        account = _resolve_action_account(account_id, settings)
+        account_target = _account_archive_mailbox(account, target_mailbox)
+        _move_one_group(account, account_id, source_mailbox,
+                        account_target, units, settings, moved, failed)
     return moved, failed
 
 
 def _move_back_groups(moved_entries: list[dict[str, Any]],
-                      settings: dict[str, Any]) -> tuple[list[str], list[str]]:
-    groups: dict[tuple[str, str, str], list[str]] = {}
+                      settings: dict[str, Any]) -> tuple[list[str], list[str], list[dict[str, Any]]]:
+    groups: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
     for entry in moved_entries:
         account_id = str(entry.get('accountId', '') or '')
         from_mailbox = str(entry.get('targetMailbox', '') or '')
         to_mailbox = str(entry.get('sourceMailbox', '') or 'INBOX')
-        groups.setdefault((account_id, from_mailbox, to_mailbox), []).append(str(entry.get('newUid', '')))
+        groups.setdefault((account_id, from_mailbox, to_mailbox), []).append(entry)
     restored: list[str] = []
     failed: list[str] = []
-    for (account_id, from_mailbox, to_mailbox), uids in groups.items():
+    restored_entries: list[dict[str, Any]] = []
+    for (account_id, from_mailbox, to_mailbox), entries in groups.items():
+        uids = [str(entry.get('newUid', '')) for entry in entries]
+        entry_by_uid = {
+            str(entry.get('newUid', '')): entry
+            for entry in entries
+            if str(entry.get('newUid', '')).strip()
+        }
         account = _resolve_action_account(account_id, settings)
         if account is None:
-            failed.extend(uids)
+            failed.extend(str(entry.get('id') or entry.get('newUid') or '') for entry in entries)
             continue
         host, port, use_ssl, username, password = _account_connection_details(account, settings)
         env = _get_fake_env_for_host_port(host, port)
@@ -1086,15 +1162,30 @@ def _move_back_groups(moved_entries: list[dict[str, Any]],
             new_map, failed_uids = _move_env_messages(env, uids, to_mailbox)
         else:
             if host is None:
-                raise MailServiceError('IMAP host not configured')
+                failed.extend(str(entry.get('id') or entry.get('newUid') or '') for entry in entries)
+                continue
             try:
                 with _imap_connection(host, port, use_ssl, username, password, from_mailbox) as imap:
                     new_map, failed_uids = _imap_move_messages(imap, uids, to_mailbox)
-            except (imaplib.IMAP4.error, OSError) as exc:
-                raise MailServiceError(_redact_error_message(str(exc), password)) from exc
-        restored.extend(new_map.keys())
-        failed.extend(failed_uids)
-    return restored, failed
+            except MailServiceError:
+                failed.extend(str(entry.get('id') or entry.get('newUid') or '') for entry in entries)
+                continue
+            except (imaplib.IMAP4.error, OSError):
+                failed.extend(str(entry.get('id') or entry.get('newUid') or '') for entry in entries)
+                continue
+        for archive_uid, restored_uid in new_map.items():
+            entry = entry_by_uid.get(str(archive_uid), {})
+            restored_id = str(entry.get('id') or archive_uid)
+            restored.append(restored_id)
+            restored_entries.append({
+                **entry,
+                'restoredUid': str(restored_uid),
+                'restoredId': _compose_message_id(account_id, to_mailbox, str(restored_uid)),
+            })
+        for failed_uid in failed_uids:
+            failed_entry = entry_by_uid.get(str(failed_uid), {})
+            failed.append(str(failed_entry.get('id') or failed_uid))
+    return restored, failed, restored_entries
 
 
 def move_messages(message_ids: list[str], target_mailbox: str,
@@ -1113,9 +1204,17 @@ def move_messages_back(moved_entries: list[dict[str, Any]],
                        settings: dict[str, Any]) -> dict[str, Any]:
     if is_dummy_mode(settings):
         restored, failed = _move_dummy_back(moved_entries)
-        return {'restored_message_ids': restored, 'failed_message_ids': failed}
-    restored, failed = _move_back_groups(moved_entries, settings)
-    return {'restored_message_ids': restored, 'failed_message_ids': failed}
+        restored_entries = [
+            {**entry, 'restoredUid': str(entry.get('newUid') or entry.get('id') or ''),
+             'restoredId': str(entry.get('id') or entry.get('newUid') or '')}
+            for entry in moved_entries
+            if str(entry.get('id') or entry.get('newUid') or '') in restored
+        ]
+        return {'restored_message_ids': restored, 'failed_message_ids': failed,
+                'restored': restored_entries}
+    restored, failed, restored_entries = _move_back_groups(moved_entries, settings)
+    return {'restored_message_ids': restored, 'failed_message_ids': failed,
+            'restored': restored_entries}
 
 
 def send_summary_email(recipient: str, subject: str, body: str, settings: dict[str, Any]) -> None:

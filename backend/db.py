@@ -635,13 +635,24 @@ def list_all_index_messages() -> list[dict[str, Any]]:
 
 def get_index_message(message_id: str) -> dict[str, Any] | None:
     init_db()
-    if not message_id:
+    message_id_value = str(message_id or '').strip()
+    if not message_id_value:
         return None
     with _connect() as conn:
-        row = conn.execute('SELECT * FROM messages_index WHERE id = ?', (message_id,)).fetchone()
+        row = conn.execute('SELECT * FROM messages_index WHERE id = ?', (message_id_value,)).fetchone()
     if row is None:
         return None
     return _decode_index_message(row)
+
+
+def delete_index_message(message_id: str) -> bool:
+    init_db()
+    message_id_value = str(message_id or '').strip()
+    if not message_id_value:
+        return False
+    with _connect() as conn:
+        result = conn.execute('DELETE FROM messages_index WHERE id = ?', (message_id_value,))
+    return bool(result.rowcount)
 
 
 def update_sync_state(account_id: str, mailbox_path: str, uidvalidity: str = '',

@@ -56,9 +56,21 @@ class MultiAccountRoutingTests(unittest.TestCase):
         def factory(host, port):
             conn = mock.MagicMock()
             conn._host = host
+            conn.capabilities = ('IMAP4REV1', 'MOVE', 'UIDPLUS')
             conn.login.return_value = ('OK', [])
             conn.select.return_value = ('OK', [b'1'])
-            conn.uid.return_value = ('OK', [])
+
+            def uid_side_effect(command, *args):
+                command_text = str(command).upper()
+                if command_text == 'FETCH':
+                    return ('OK', [b'1 (FLAGS ())'])
+                if command_text == 'STORE':
+                    return ('OK', [])
+                if command_text == 'MOVE':
+                    return ('OK', [b'[COPYUID 1 5 9]'])
+                return ('OK', [])
+
+            conn.uid.side_effect = uid_side_effect
             created.append(conn)
             return conn
 
@@ -117,7 +129,7 @@ class ImapMoveHelperTests(unittest.TestCase):
 
     def test_imap_move_uses_move_capability(self) -> None:
         conn = mock.MagicMock()
-        conn.capabilities = ('IMAP4REV1', 'MOVE')
+        conn.capabilities = ('IMAP4REV1', 'MOVE', 'UIDPLUS')
         conn.uid.return_value = ('OK', [b'[COPYUID 1 5 9]'])
         moved, failed = mail_service._imap_move_messages(conn, ['5'], 'Archive')
         self.assertEqual(moved, {'5': '9'})
@@ -125,25 +137,36 @@ class ImapMoveHelperTests(unittest.TestCase):
         conn.uid.assert_called_once_with('MOVE', '5', 'Archive')
         conn.expunge.assert_not_called()
 
-    def test_imap_move_falls_back_to_copy_delete_expunge(self) -> None:
+    def test_imap_move_rejects_without_move_capability(self) -> None:
         conn = mock.MagicMock()
         conn.capabilities = ('IMAP4REV1',)
-        conn.uid.side_effect = [('OK', [b'[COPYUID 1 5 9]']), ('OK', [])]
-        moved, failed = mail_service._imap_move_messages(conn, ['5'], 'Archive')
-        self.assertEqual(moved, {'5': '9'})
-        self.assertEqual(failed, [])
-        self.assertEqual(conn.uid.call_args_list[0].args, ('COPY', '5', 'Archive'))
-        self.assertEqual(conn.uid.call_args_list[1].args, ('STORE', '5', '+FLAGS', '(\\Deleted)'))
-        conn.expunge.assert_called_once()
+        with self.assertRaises(mail_service.MailServiceError):
+            mail_service._imap_move_messages(conn, ['5'], 'Archive')
+        conn.uid.assert_not_called()
 
-    def test_imap_move_reports_failed_copy(self) -> None:
+    def test_imap_move_rejects_without_uidplus_capability(self) -> None:
         conn = mock.MagicMock()
-        conn.capabilities = ('IMAP4REV1',)
+        conn.capabilities = ('IMAP4REV1', 'MOVE')
+        with self.assertRaises(mail_service.MailServiceError):
+            mail_service._imap_move_messages(conn, ['5'], 'Archive')
+        conn.uid.assert_not_called()
+
+    def test_imap_move_reports_failed_move(self) -> None:
+        conn = mock.MagicMock()
+        conn.capabilities = ('IMAP4REV1', 'MOVE', 'UIDPLUS')
         conn.uid.return_value = ('NO', [b'over quota'])
         moved, failed = mail_service._imap_move_messages(conn, ['5'], 'Archive')
         self.assertEqual(moved, {})
         self.assertEqual(failed, ['5'])
         conn.expunge.assert_not_called()
+
+    def test_imap_move_reports_missing_copyuid_as_failed(self) -> None:
+        conn = mock.MagicMock()
+        conn.capabilities = ('IMAP4REV1', 'MOVE', 'UIDPLUS')
+        conn.uid.return_value = ('OK', [b'Done'])
+        moved, failed = mail_service._imap_move_messages(conn, ['5'], 'Archive')
+        self.assertEqual(moved, {})
+        self.assertEqual(failed, ['5'])
 
 
 if __name__ == '__main__':

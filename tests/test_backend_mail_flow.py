@@ -95,7 +95,13 @@ class BackendMailFlowTests(unittest.TestCase):
         job_id = payload["jobId"]
         return job_id, payload
 
+    def _disable_safe_mode(self, client: TestClient) -> None:
+        settings = client.get("/settings").json()
+        settings["safeMode"] = False
+        self.assertEqual(client.post("/settings", json=settings).status_code, 200)
+
     def _perform_undo_checks(self, client: TestClient, job_id: str, payload: dict) -> None:
+        self._disable_safe_mode(client)
         # mark as read and tag summarised, then verify undo behavior
         mark_response = client.post(f"/actions/jobs/{job_id}/apply", json={"action": "mark_read"})
         self.assertEqual(mark_response.status_code, 200)
@@ -137,6 +143,7 @@ class BackendMailFlowTests(unittest.TestCase):
         self.assertTrue(restored[0]["unread"])
 
     def _perform_imap_flow_checks(self, client: TestClient, environment: Any, job_id: str, payload: dict) -> None:
+        self._disable_safe_mode(client)
         self.assertEqual(len(payload["messages"]), 1)
         self.assertEqual(payload["messages"][0]["id"], "102")
         self.assertNotIn("body", payload["messages"][0])
@@ -259,6 +266,7 @@ class BackendMailFlowTests(unittest.TestCase):
                 json={**environment.settings_payload, "summarisedTag": "reviewed"},
             )
             self.assertEqual(save_response.status_code, 200)
+            self._disable_safe_mode(client)
 
             job_id, payload = self._create_summary_and_get_job(client, "invoice")
             self.assertEqual(payload["messages"][0]["id"], "102")
@@ -279,6 +287,7 @@ class BackendMailFlowTests(unittest.TestCase):
         with FakeMailEnvironment() as environment, self._client() as client:
             save_response = client.post("/settings", json=environment.settings_payload)
             self.assertEqual(save_response.status_code, 200)
+            self._disable_safe_mode(client)
 
             job_id, payload = self._create_summary_and_get_job(client, "invoice")
             self.assertEqual(payload["messages"][0]["id"], "102")
@@ -313,6 +322,7 @@ class BackendMailFlowTests(unittest.TestCase):
 
             save_response = client.post("/settings", json=status_payload["suggestedSettings"])
             self.assertEqual(save_response.status_code, 200)
+            self._disable_safe_mode(client)
 
             connection = client.post("/settings/test-connection",
                                      json=status_payload["suggestedSettings"])

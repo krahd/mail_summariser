@@ -272,6 +272,7 @@ def _legacy_mail_account_payload(settings: dict[str, Any]) -> dict[str, Any]:
         'smtpUseSSL': bool(settings.get('smtpUseSSL', DEFAULT_SETTINGS.get('smtpUseSSL', True))),
         'smtpPassword': settings.get('smtpPassword', ''),
         'recipientEmail': settings.get('recipientEmail', ''),
+        'archiveMailbox': settings.get('archiveMailbox', DEFAULT_SETTINGS.get('archiveMailbox', 'Archive')),
     }
 
 

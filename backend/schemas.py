@@ -28,6 +28,7 @@ class MailAccountSettings(BaseModel):
     smtpUseSSL: bool = True
     smtpPassword: str = ''
     recipientEmail: str = ''
+    archiveMailbox: str = 'Archive'
     indexMailboxes: list[str] = Field(default_factory=list)
 
 
@@ -275,7 +276,7 @@ class AppSettings(BaseModel):
     recipientEmail: str
     summarisedTag: str
     archiveMailbox: str = 'Archive'
-    safeMode: bool = False
+    safeMode: bool = True
     llmProvider: str
     openaiApiKey: str = ''
     anthropicApiKey: str = ''
@@ -327,7 +328,7 @@ class ActionPreview(BaseModel):
     skipped: list[ActionPreviewItem] = Field(default_factory=list)
     groups: list[ActionPreviewGroup] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
-    safeMode: bool = False
+    safeMode: bool = True
 
 
 class ActionApplyResult(BaseModel):
@@ -335,7 +336,7 @@ class ActionApplyResult(BaseModel):
     jobId: str
     action: str
     applied: bool
-    safeMode: bool = False
+    safeMode: bool = True
     changedIds: list[str] = Field(default_factory=list)
     failedIds: list[str] = Field(default_factory=list)
     skippedIds: list[str] = Field(default_factory=list)

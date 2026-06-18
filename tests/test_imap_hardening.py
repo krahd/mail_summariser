@@ -363,11 +363,14 @@ class IMAPHardeningTests(unittest.TestCase):
             mock_conn.login.return_value = ('OK', [])
             mock_conn.select.return_value = ('OK', [b'5'])
 
-            # First call succeeds, second returns a non-OK status, third succeeds.
+            # Each message fetches current flags before STORE. STORE fails for the second message.
             mock_conn.uid.side_effect = [
-                ('OK', []),  # First message succeeds
-                ('NO', [b'Connection lost']),  # Second message fails
-                ('OK', []),  # Third message succeeds
+                ('OK', [b'1 (FLAGS ())']),
+                ('OK', []),
+                ('OK', [b'2 (FLAGS ())']),
+                ('NO', [b'Connection lost']),
+                ('OK', [b'3 (FLAGS ())']),
+                ('OK', []),
             ]
 
             settings = {
@@ -392,9 +395,12 @@ class IMAPHardeningTests(unittest.TestCase):
             mock_conn.login.return_value = ('OK', [])
             mock_conn.select.return_value = ('OK', [b'5'])
             mock_conn.uid.side_effect = [
-                ('OK', []),  # First message succeeds
-                ('NO', [b'Permission denied']),  # Second message fails
-                ('OK', []),  # Third message succeeds
+                ('OK', [b'1 (FLAGS ())']),
+                ('OK', []),
+                ('OK', [b'2 (FLAGS ())']),
+                ('NO', [b'Permission denied']),
+                ('OK', [b'3 (FLAGS ())']),
+                ('OK', []),
             ]
 
             settings = {
@@ -419,9 +425,12 @@ class IMAPHardeningTests(unittest.TestCase):
             mock_conn.login.return_value = ('OK', [])
             mock_conn.select.return_value = ('OK', [b'5'])
             mock_conn.uid.side_effect = [
-                ('OK', []),  # First message succeeds
-                ('OK', []),  # Second message succeeds
-                ('NO', [b'No such message']),  # Third message fails
+                ('OK', [b'1 (FLAGS (important))']),
+                ('OK', []),
+                ('OK', [b'2 (FLAGS (important))']),
+                ('OK', []),
+                ('OK', [b'3 (FLAGS (important))']),
+                ('NO', [b'No such message']),
             ]
 
             settings = {
