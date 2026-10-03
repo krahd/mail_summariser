@@ -4,15 +4,16 @@ from backend import app as backend_app
 
 
 def test_decomposed_router_endpoints_are_registered() -> None:
-    route_map: set[tuple[str, str]] = set()
-
-    for route in backend_app.app.routes:
-        path = getattr(route, "path", None)
-        methods = getattr(route, "methods", None)
-        if not path or not methods:
-            continue
-        for method in methods:
-            route_map.add((method.upper(), path))
+    # Assert the public API contract rather than FastAPI/Starlette's private
+    # route-container representation. FastAPI 0.142+ keeps included routers as
+    # nested _IncludedRouter nodes, while OpenAPI remains the stable contract.
+    http_methods = {"get", "put", "post", "delete", "options", "head", "patch", "trace"}
+    route_map = {
+        (method.upper(), path)
+        for path, operations in backend_app.app.openapi()["paths"].items()
+        for method in operations
+        if method.lower() in http_methods
+    }
 
     expected_routes = {
         ("GET", "/settings"),
