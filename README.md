@@ -32,7 +32,7 @@ mail_summariser
 
 This installs the pre-built backend binary. Serve the `webapp/` folder separately (see Web app below).
 
-Current product decision: use the backend plus browser client for now. macOS app deployment, notarisation, and end-user distribution are paused until the browser workflow has passed real-account acceptance testing.
+Current product decision: use the backend plus browser client for now. macOS app deployment, notarisation, and end-user distribution are paused until the browser workflow has passed real-account acceptance testing. The repository now includes a credential-safe, read-only acceptance probe; see [`docs/LIVE_ACCOUNT_ACCEPTANCE.md`](docs/LIVE_ACCOUNT_ACCEPTANCE.md). A paid macOS package remains blocked until that probe has passed against a real account.
 
 ### Backend
 
