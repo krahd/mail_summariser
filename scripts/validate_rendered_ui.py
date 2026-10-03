@@ -131,12 +131,16 @@ def _seed_mail_index(backend_url: str) -> dict[str, object]:
 
 
 def _wait_for_initial_load(page) -> None:
-    page.wait_for_selector("#workspace-health-strip", state="visible", timeout=15_000)
+    # Triage is the intentional default view. Validate initial load there,
+    # then navigate to Review & Act before checking controls in that tab.
+    page.wait_for_selector("#tab-triage", state="visible", timeout=15_000)
     page.wait_for_function(
         "() => document.querySelector('#status-line')?.textContent"
         ".includes('Connected and loaded initial data.')",
         timeout=30_000,
     )
+    page.locator("button[data-tab='search']").click()
+    page.wait_for_selector("#workspace-health-strip", state="visible", timeout=15_000)
 
 
 def _assert_no_horizontal_overflow(page, label: str) -> None:
