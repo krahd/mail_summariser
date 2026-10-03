@@ -16,3 +16,5 @@ ignore/
 build/
 DerivedData/
 *.xcbuilddata/
+
+.runtime-tmp/
