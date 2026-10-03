@@ -64,11 +64,28 @@ def test_summaries_returns_400_when_search_layer_raises() -> None:
 
 def test_actions_mark_read_returns_400_when_mail_operation_fails() -> None:
     fake_job = {"messages_json": [{"id": "mid-1"}]}
+    fake_plan = {
+        "jobId": "job-123",
+        "action": "mark_read",
+        "tag": "",
+        "targetMailbox": "",
+        "totalMessages": 1,
+        "changeCount": 1,
+        "skipCount": 0,
+        "items": [{"id": "mid-1"}],
+        "skipped": [],
+        "groups": [],
+        "warnings": [],
+        "safeMode": False,
+    }
 
     with (
         TestClient(backend_app.app) as client,
+        mock.patch.object(routers_actions, "get_app_module", return_value=backend_app),
         mock.patch.object(routers_actions, "is_dummy_mode", return_value=False),
         mock.patch.object(routers_actions, "get_job", return_value=fake_job),
+        mock.patch.object(backend_app, "_merged_settings", return_value={"safeMode": False}),
+        mock.patch.object(routers_actions, "_build_action_plan", return_value=fake_plan),
         mock.patch.object(
             routers_actions,
             "mark_messages_read",
