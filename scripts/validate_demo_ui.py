@@ -17,10 +17,37 @@ sys.path.insert(0, str(ROOT))
 from scripts.validate_full_stack import find_free_port, wait_for_url, terminate_process
 
 
+def serve_fault_fixture(port: int, fault_file: Path):
+    """CI-only fault injection, with no added HTTP routes or product switches."""
+    os.environ['MAIL_SUMMARISER_DEMO'] = 'true'
+    from unittest.mock import patch
+    import uvicorn
+    from backend import mail_index_service
+    real_sync = mail_index_service.sync_mailbox
+
+    def controlled_sync(*args, **kwargs):
+        if fault_file.exists():
+            fault_file.unlink()
+            raise RuntimeError('Synthetic one-shot index failure')
+        return real_sync(*args, **kwargs)
+
+    mail_index_service.sync_mailbox = controlled_sync
+    with patch('socket.socket.connect', side_effect=AssertionError('Outbound network forbidden')), \
+         patch('socket.create_connection', side_effect=AssertionError('Outbound network forbidden')), \
+         patch('backend.summary_service._summarize_with_provider', side_effect=AssertionError('Provider forbidden')), \
+         patch('backend.routers_actions.send_summary_email', side_effect=AssertionError('SMTP forbidden')):
+        uvicorn.run('backend.app:app', host='127.0.0.1', port=port, workers=1)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', default='demo-evidence')
+    parser.add_argument('--serve-fault-fixture', type=int, help=argparse.SUPPRESS)
+    parser.add_argument('--fault-file', type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
+    if args.serve_fault_fixture:
+        serve_fault_fixture(args.serve_fault_fixture, args.fault_file)
+        return
     output = Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
     from playwright.sync_api import sync_playwright, expect
@@ -28,8 +55,9 @@ def main():
     port = find_free_port('127.0.0.1')
     base = f'http://127.0.0.1:{port}'
     with tempfile.TemporaryDirectory(prefix='mail-demo-ui-') as tmp:
+        fault_file = Path(tmp)/'fail-next-index-sync'
         with (Path(tmp)/'server.log').open('wb') as log:
-            server = subprocess.Popen([sys.executable, 'scripts/run_demo.py', '--port', str(port)], cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)
+            server = subprocess.Popen([sys.executable, 'scripts/validate_demo_ui.py', '--serve-fault-fixture', str(port), '--fault-file', str(fault_file)], cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)
         try:
             wait_for_url(base+'/health', attempts=80, delay_seconds=0.25, process=server)
             with sync_playwright() as pw:
@@ -40,8 +68,15 @@ def main():
                 errors, external = [], []
                 page.on('pageerror', lambda e: errors.append(str(e)))
                 page.on('request', lambda req: external.append(req.url) if not req.url.startswith(base+'/') else None)
+                page.route('**/mail/triage/dashboard*', lambda route: route.fulfill(status=503, content_type='application/json', body='{"detail":"Synthetic dashboard failure"}'))
                 page.goto(base)
+                expect(page.locator('#status-line')).to_contain_text('Triage dashboard failed')
+                page.wait_for_timeout(150)
+                expect(page.locator('#status-line')).not_to_contain_text('Sample inbox ready')
+                page.unroute('**/mail/triage/dashboard*')
+                page.locator('#demo-retry').click()
                 expect(page.locator('#status-line')).to_contain_text('Sample inbox ready')
+                checks.append('Initial dashboard failure remains an error; visible Reload recovers')
                 expect(page.locator('#demo-onboarding')).to_be_visible()
                 expect(page.locator('.tab[data-tab="settings"]')).to_be_hidden()
                 assert len(page.request.get(base+'/mail/index/messages').json()) == 8
@@ -85,9 +120,53 @@ def main():
                 assert page.request.get(base+'/mail/triage/dashboard').json()['totals']['unread'] == 6
                 checks.append('Apply, double-click suppression, grouped undo and index recovery')
 
+                page.locator('#scope-action-tag').uncheck()
+                page.locator('#apply-scope-actions').click()
+                expect(page.locator('#action-confirm-apply')).to_be_enabled()
+                fault_file.write_text('fail next sync')
+                page.locator('#action-confirm-apply').click()
+                expect(page.locator('#status-line')).to_contain_text('Action completed. Sample index refresh failed')
+                assert page.request.get(base+'/mail/triage/dashboard').status == 503
+                logs_after_apply = page.request.get(base+'/logs').json()
+                fault_file.write_text('fail next sync')
+                page.locator('#demo-sync').click()
+                expect(page.locator('#status-line')).to_contain_text('Index rebuild failed')
+                expect(page.locator('#demo-sync')).to_be_enabled()
+                page.locator('#demo-retry').click()
+                expect(page.locator('#status-line')).to_contain_text('Sample index is out of date')
+                page.locator('#demo-sync').click()
+                expect(page.locator('#status-line')).to_contain_text('Sample index rebuilt')
+                assert page.request.get(base+'/logs').json() == logs_after_apply
+                assert page.request.get(base+'/mail/triage/dashboard').json()['totals']['unread'] < 6
+                fault_file.write_text('fail next sync')
+                page.locator('#undo-action').click()
+                expect(page.locator('#status-line')).to_contain_text('Undo completed. Sample index refresh failed')
+                assert page.request.get(base+'/mail/triage/dashboard').status == 503
+                logs_after_undo = page.request.get(base+'/logs').json()
+                assert not any(entry['undoable'] for entry in logs_after_undo)
+                page.locator('#demo-sync').click()
+                expect(page.locator('#status-line')).to_contain_text('Sample index rebuilt')
+                assert page.request.get(base+'/logs').json() == logs_after_undo
+                assert page.request.get(base+'/mail/triage/dashboard').json()['totals']['unread'] == 6
+                checks.append('Completed apply/undo plus actual index faults remain truthful; nondestructive rebuild retries preserve history')
+
+                page.locator('#apply-scope-actions').click()
+                expect(page.locator('#action-confirm-apply')).to_be_enabled()
+                page.route('**/mail/triage/dashboard*', lambda route: route.fulfill(status=503, content_type='application/json', body='{"detail":"Synthetic view failure"}'))
+                page.locator('#action-confirm-apply').click()
+                expect(page.locator('#status-line')).to_contain_text('Dashboard refresh failed')
+                expect(page.locator('#status-line')).to_contain_text('Applied:')
+                page.unroute('**/mail/triage/dashboard*')
+                page.locator('#demo-retry').click()
+                expect(page.locator('#status-line')).to_contain_text('Sample inbox ready')
+                page.locator('#undo-action').click()
+                expect(page.locator('#status-line')).to_contain_text('Undone.')
+                checks.append('Completed mutation plus failed view refresh never reports an unqualified ready state')
+
+
                 held = []
                 page.route('**/actions/jobs/*/preview', lambda route: held.append(route))
-                page.locator('#mark-read').click()
+                page.locator('#apply-scope-actions').click()
                 expect(page.locator('#action-confirm-summary')).to_contain_text('Preparing preview')
                 page.locator('#action-confirm-cancel').click()
                 assert held
@@ -138,14 +217,14 @@ def main():
                 expect(page.locator('#status-line')).to_contain_text('Summary created')
                 checks.append('Failed summary retains previous result and explicit retry recovers')
 
-                page.locator('#mark-read').click()
+                page.locator('#apply-scope-actions').click()
                 expect(page.locator('#action-confirm-apply')).to_be_enabled()
                 page.route('**/actions/jobs/*/apply', lambda route: route.fulfill(status=503, content_type='application/json', body='{"detail":"Synthetic action interruption"}'))
                 page.locator('#action-confirm-apply').click()
                 expect(page.locator('#status-line')).to_contain_text('Inspect Log before retrying')
-                expect(page.locator('#mark-read')).to_be_enabled()
+                expect(page.locator('#apply-scope-actions')).to_be_enabled()
                 page.unroute('**/actions/jobs/*/apply')
-                page.locator('#mark-read').click()
+                page.locator('#apply-scope-actions').click()
                 expect(page.locator('#action-confirm-apply')).to_be_enabled()
                 page.locator('.tab[data-tab="logs"]').click()
                 expect(page.locator('#action-confirm')).to_be_hidden()
@@ -167,7 +246,7 @@ def main():
                 page.screenshot(path=str(output/'03-onboarding-mobile.png'), full_page=True)
                 page.locator('[data-triage-summary-bucket-id="reply_needed_candidates"]').click()
                 expect(page.locator('#summary-text')).to_contain_text('local excerpts')
-                page.locator('#mark-read').click()
+                page.locator('#apply-scope-actions').click()
                 expect(page.locator('#action-confirm-apply')).to_be_enabled()
                 page.locator('#action-confirm-cancel').click()
                 expect(page.locator('#action-confirm')).to_be_hidden()

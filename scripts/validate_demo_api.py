@@ -24,17 +24,17 @@ from backend import routers_actions
 class IsolatedDemoTests(unittest.TestCase):
     def setUp(self):
         self.client_context = TestClient(app)
-        self.client = self.client_context.__enter__()
         # A single accidental transport/provider call fails the acceptance test.
         self.patches = [patch('socket.socket.connect', side_effect=AssertionError('Network blocked in demo')),
                         patch('socket.create_connection', side_effect=AssertionError('Network blocked in demo')),
                         patch.object(summary_service, '_summarize_with_provider', side_effect=AssertionError('Provider called')),
                         patch.object(routers_actions, 'send_summary_email', side_effect=AssertionError('SMTP called'))]
         for guard in self.patches: guard.start()
+        self.client = self.client_context.__enter__()
 
     def tearDown(self):
-        for guard in reversed(self.patches): guard.stop()
         self.client_context.__exit__(None, None, None)
+        for guard in reversed(self.patches): guard.stop()
 
     def job(self, **criteria):
         r = self.client.post('/summaries', json={'criteria': criteria})
@@ -180,12 +180,49 @@ class IsolatedDemoTests(unittest.TestCase):
         job = self.job()
         plan = self.preview(job)
         with patch('backend.mail_index_service.sync_mailbox', side_effect=RuntimeError('Synthetic index failure')):
-            self.assertEqual(self.apply(job, plan).status_code, 503)
-        self.assertEqual(len(self.client.get('/mail/index/messages').json()), 8)
+            response = self.apply(job, plan)
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(response.json()['applied'])
+            self.assertFalse(response.json()['indexRefreshed'])
+            self.assertIn('Action completed', response.json()['warning'])
+        self.assertEqual(self.client.get('/mail/index/messages').status_code, 503)
+        self.assertEqual(len(db.list_all_index_messages()), 8)
         logs = self.client.get('/logs').json()
         self.assertTrue(any(log['undoable'] for log in logs))
         self.assertEqual(self.client.post('/actions/undo').status_code, 200)
         self.assertEqual(self.client.get('/mail/triage/dashboard').json()['totals']['unread'], 6)
+
+    def test_completed_undo_with_failed_index_needs_rebuild_not_repeat(self):
+        for undo_latest in (False, True):
+            with self.subTest(undo_latest=undo_latest):
+                self.client.post('/demo/reset')
+                self.enable_changes()
+                job = self.job(unreadOnly=True)
+                result = self.apply(job, self.preview(job)).json()
+                path = '/actions/undo' if undo_latest else '/actions/undo/logs/'+result['logId']
+                with patch('backend.mail_index_service.sync_mailbox', side_effect=RuntimeError('Synthetic index failure')):
+                    response = self.client.post(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertTrue(response.json()['undoCompleted'])
+                self.assertFalse(response.json()['indexRefreshed'])
+                self.assertIn('Undo completed', response.json()['warning'])
+                self.assertEqual(self.client.get('/mail/triage/dashboard').status_code, 503)
+                self.assertEqual(self.client.post(path).status_code, 404)
+                before = self.client.get('/logs').json()
+                for _ in range(2):
+                    self.assertEqual(self.client.post('/mail/index/sync', json={}).status_code, 200)
+                self.assertEqual(self.client.get('/logs').json(), before)
+                self.assertEqual(self.client.get('/mail/triage/dashboard').json()['totals']['unread'], 6)
+
+    def test_reset_completion_survives_projection_failure(self):
+        self.enable_changes()
+        with patch('backend.mail_index_service.sync_mailbox', side_effect=RuntimeError('Synthetic index failure')):
+            response = self.client.post('/demo/reset')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('Sample reset completed', response.json()['warning'])
+        self.assertTrue(self.client.get('/settings').json()['safeMode'])
+        self.assertEqual(self.client.get('/mail/triage/dashboard').status_code, 503)
+        self.assertEqual(self.client.post('/mail/index/sync', json={}).status_code, 200)
 
     def test_partial_undo_failure_preserves_recovery(self):
         self.enable_changes()

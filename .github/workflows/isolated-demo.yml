@@ -4,7 +4,7 @@ on:
     paths:
       - 'backend/**'
       - 'webapp/**'
-      - 'scripts/*demo*.py'
+      - 'scripts/*demo*'
       - 'tests/test_isolated_demo.py'
       - '.github/workflows/isolated-demo.yml'
 permissions:

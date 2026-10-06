@@ -27,6 +27,8 @@ Do not expose this server to the network or run it behind a public proxy. The de
 6. Uncheck **Simulate only** to enable fictional-message changes. Preview again, apply, then undo from the toast or **Log**. Archive is a folder move; it is not deletion. Triage/index counts refresh after changes and undo.
 7. Reset the sample inbox, or stop the process. Reset asks before clearing demo digests and undo history and restores safe mode.
 
+**Rebuild sample index** is a visible, non-destructive recovery control. It preserves messages, digests, logs and remaining undo history. A completed apply or undo whose index refresh failed returns its completed result plus an explicit warning; it is not re-queued or automatically repeated. Stale index reads fail explicitly until rebuilding succeeds. **Reload demo** retries view loading only.
+
 If a request fails, the previous digest remains available. A cancelled or superseded digest cannot replace it later. Cancelled/changed/navigated-away previews cannot reopen after a late response. If applying has an uncertain result, inspect **Log** before trying a fresh preview; the client never automatically retries an action. Once an apply request has started, it must finish before resetting the demo. Cancellation is available before confirmation, and undo afterwards.
 
 ## Isolation contract
@@ -50,7 +52,7 @@ pytest -q
 python scripts/validate_demo_ui.py --output demo-evidence
 ```
 
-The API acceptance script runs in a fresh demo process, supplies deliberately conflicting synthetic environment settings and traps network/provider/SMTP calls. It covers initial indexing, dry run, no-preview rejection, expiry, replay/concurrency, changed plans, apply, archive/resync, undo recovery and reset. The browser script runs real Chromium against a synthetic local server and covers onboarding, evidence, preview/cancel, simulation, apply/undo, late responses, errors/retry and mobile controls.
+The API acceptance script runs in a fresh demo process, supplies deliberately conflicting synthetic environment settings and traps network/provider/SMTP calls before startup and through shutdown. Nineteen API tests include completed apply/undo/reset with failed index refresh. Five mocked client-state checks exercise truthful load/view failure reporting and duplicate undo suppression. It covers initial indexing, dry run, no-preview rejection, expiry, replay/concurrency, changed plans, apply, archive/resync, undo recovery and reset. The browser script uses the visible scoped-action controls, including real one-shot index faults injected into its CI-only server fixture without adding production routes. Its server traps outbound network/provider/SMTP calls. The script runs real Chromium against a synthetic local server and covers onboarding, evidence, preview/cancel, simulation, apply/undo, late responses, errors/retry and mobile controls.
 
 The `Isolated synthetic demo` PR workflow retains only three small screenshots and a JSON check summary for seven days. Ordinary CI also runs the existing full tests/startup/browser regression. Local browser execution was unavailable in the implementation sandbox; CI evidence must be checked for the exact draft head before claiming browser acceptance.
 

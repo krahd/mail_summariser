@@ -25,6 +25,7 @@ from backend.config import DEMO_MODE
 _lock = RLock()
 _previews: dict[str, tuple[float, str]] = {}
 PREVIEW_TTL = 300
+_index_stale = True
 
 
 def serial_demo(fn):
@@ -81,8 +82,10 @@ def sample_messages() -> list[dict]:
 
 @serial_demo
 def sync_demo_index() -> dict:
+    global _index_stale
     if not DEMO_MODE:
         raise HTTPException(404, 'Isolated demo is not running.')
+    _index_stale = True
     from backend import db
     from backend.mail_index_service import sync_mailbox
     # This database belongs solely to this ephemeral demo process. Preserve the
@@ -100,8 +103,28 @@ def sync_demo_index() -> dict:
             db.delete_index_message(message['id'])
         for message in previous:
             db.upsert_index_message(message)
-        raise HTTPException(503, 'Sample index refresh failed. The previous index was retained. Inspect Log for completed actions; retry Sync or Undo.') from exc
+        raise HTTPException(503, 'Sample index refresh failed. The previous index was retained. Use Rebuild sample index; do not repeat completed actions or undo.') from exc
+    _index_stale = False
     return {'accountId': 'sample', 'mailbox': 'INBOX', 'scanned': count, 'indexed': count, 'errors': 0}
+
+
+def require_fresh_demo_index() -> None:
+    if DEMO_MODE and _index_stale:
+        raise HTTPException(503, 'Sample index is out of date. Use Rebuild sample index to refresh it without changing messages or history.')
+
+
+def refresh_after_completed_mutation(completed: str) -> dict:
+    """Report completed mailbox work separately from its fallible projection."""
+    if not DEMO_MODE:
+        return {}
+    try:
+        sync_demo_index()
+        return {'indexRefreshed': True, 'warning': ''}
+    except Exception:
+        # The completed action/undo is not retried or re-queued. Its log is the
+        # source of truth; the visible rebuild control repairs only the index.
+        return {'indexRefreshed': False,
+                'warning': f'{completed} completed. Sample index refresh failed. Use Rebuild sample index; do not repeat the completed operation.'}
 
 
 @serial_demo
@@ -115,7 +138,7 @@ def reset_demo() -> dict:
     reset_dummy_mailbox()
     get_app_module().dummy_state.reset_dummy_session_store()
     set_setting('safeMode', True)
-    return sync_demo_index()
+    return refresh_after_completed_mutation('Sample reset')
 
 
 class DemoSafety(BaseModel):

@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 
 from backend import db
 from backend.config import DEMO_MODE
-from backend.demo import serial_demo, sync_demo_index
+from backend.demo import require_fresh_demo_index, serial_demo, sync_demo_index
 from backend.mail_index_service import MailServiceError, _resolve_account, sync_mailbox
 from backend.router_context import get_app_module
 from backend.schemas import (
@@ -46,6 +46,7 @@ def list_mail_index_messages(accountId: str | None = None, mailbox: str | None =
                              tag: str | None = None, keyword: str | None = None,
                              listId: str | None = None, sender: str | None = None,
                              limit: int = 100) -> list[MailIndexMessageSummary]:
+    require_fresh_demo_index()
     criteria = {
         'accountId': accountId,
         'mailbox': mailbox,
@@ -64,6 +65,7 @@ def list_mail_index_messages(accountId: str | None = None, mailbox: str | None =
 @router.get('/messages/{message_id}', response_model=MailIndexMessageDetail)
 @serial_demo
 def get_mail_index_message(message_id: str) -> MailIndexMessageDetail:
+    require_fresh_demo_index()
     message = db.get_index_message(message_id)
     if message is None:
         raise HTTPException(status_code=404, detail='Message not found')

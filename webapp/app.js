@@ -941,7 +941,7 @@ async function refreshTriageScopes() {
     return scopes;
   } catch (error) {
     setStatus(`Triage scopes failed: ${error.message}`, true);
-    return [];
+    return null;
   }
 }
 
@@ -2014,9 +2014,10 @@ async function loadInitialData() {
     ]);
     renderLogs(logs);
     fillSettings(settings);
+    document.getElementById("demo-safe-mode").checked = activeSafeMode;
     currentSystemMessageDefaults = defaults;
-    await refreshTriageScopes();
-    await refreshTriageDashboard();
+    if (await refreshTriageScopes() === null) return false;
+    if (await refreshTriageDashboard() === null) return false;
     if (!isolatedDemo) {
       await refreshRuntimeStatus();
       await refreshModelOptions();
@@ -2025,8 +2026,10 @@ async function loadInitialData() {
     }
     document.getElementById("demo-safe-mode").checked = activeSafeMode;
     setStatus(isolatedDemo ? "Sample inbox ready. Choose a triage candidate to inspect." : "Connected and loaded initial data.");
+    return true;
   } catch (error) {
     setStatus(`Initial load failed: ${error.message}`, true);
+    return false;
   }
 }
 
@@ -2113,26 +2116,52 @@ function showActionToast(message, logIds) {
   toastTimer = setTimeout(hideActionToast, 12000);
 }
 
-async function undoFromToast() {
-  if (toastUndoLogIds.length === 0) {
-    hideActionToast();
-    return;
+function setMutationBusy(busy) {
+  applyInFlight = busy;
+  setActionButtons(!busy && Boolean(currentJobId && currentMessages.length));
+  undoActionBtn.disabled = busy;
+  for (const id of ["demo-reset", "demo-safe-mode", "demo-sync", "demo-retry", "action-toast-undo"]) {
+    document.getElementById(id).disabled = busy;
   }
+  document.querySelectorAll(".log-undo-btn").forEach(button => { button.disabled = busy; });
+}
+
+async function refreshAfterMutation(message, warnings = []) {
+  const issues = [...warnings];
+  try { renderLogs(await api.getLogs()); }
+  catch (error) { issues.push(`Log refresh failed: ${error.message}. Reload demo to inspect completed work.`); }
+  if (await refreshTriageDashboard() === null && !issues.length) {
+    issues.push("Dashboard refresh failed. Reload demo to retry the view; do not repeat completed work.");
+  }
+  updateActionScopePreview();
+  setStatus([message, ...issues].join(" "), issues.length > 0);
+  return issues.length === 0;
+}
+
+async function runUndoActions(logIds = null) {
+  if (applyInFlight) return;
+  hideActionConfirm();
+  setMutationBusy(true);
+  let completed = 0;
+  const warnings = [];
+  try {
+    for (const logId of (logIds || [null])) {
+      const result = logId ? await api.undoLog(logId) : await api.undo();
+      completed += 1;
+      if (result.warning) warnings.push(result.warning);
+    }
+    await refreshAfterMutation("Undone.", warnings);
+  } catch (error) {
+    const message = completed ? `${completed} undo operation(s) completed; another undo could not be confirmed.` : "Undo could not be confirmed.";
+    await refreshAfterMutation(message, [...warnings, `${error.message}. Inspect Log before retrying.`]);
+  } finally { setMutationBusy(false); }
+}
+
+async function undoFromToast() {
+  if (applyInFlight || toastUndoLogIds.length === 0) return;
   const logIds = [...toastUndoLogIds].reverse();
   hideActionToast();
-  try {
-    for (const logId of logIds) {
-      await api.undoLog(logId);
-      hideActionConfirm();
-      await refreshTriageDashboard();
-    }
-    renderLogs(await api.getLogs());
-    updateActionScopePreview();
-    await refreshTriageDashboard();
-    setStatus("Undone.");
-  } catch (error) {
-    setStatus(`Undo failed: ${error.message}`, true);
-  }
+  await runUndoActions(logIds);
 }
 
 async function confirmPendingActions() {
@@ -2140,41 +2169,35 @@ async function confirmPendingActions() {
   const { jobId, previews } = pendingActionKinds;
   if (jobId !== currentJobId) { hideActionConfirm(); return; }
   hideActionConfirm();
-  applyInFlight = true;
-  setActionButtons(false);
-  document.getElementById("demo-reset").disabled = true;
-  document.getElementById("demo-safe-mode").disabled = true;
+  setMutationBusy(true);
   const appliedLogIds = [];
   let totalChanged = 0;
   let totalFailed = 0;
   let simulated = false;
+  const warnings = [];
   try {
     for (const { action, plan } of previews) {
       const result = await api.applyAction(jobId, action, { previewToken: plan.previewToken });
+      if (result.warning) warnings.push(result.warning);
       if (result.applied) {
         totalChanged += (result.changedIds || []).length;
         totalFailed += (result.failedIds || []).length;
         if (result.logId) appliedLogIds.push(result.logId);
       } else { simulated = true; }
     }
-    renderLogs(await api.getLogs());
-    await refreshTriageDashboard();
-    updateActionScopePreview();
     if (simulated && !appliedLogIds.length) {
-      setStatus("Safe mode: simulated only, nothing changed in your mailbox.");
+      await refreshAfterMutation("Safe mode: simulated only, nothing changed in your mailbox.", warnings);
     } else {
       const message = `Applied: ${totalChanged} change(s), ${totalFailed} failed. Undo is also available in Log.`;
-      setStatus(message, totalFailed > 0);
+      if (totalFailed) warnings.push(`${totalFailed} message changes failed. Review Log.`);
+      await refreshAfterMutation(message, warnings);
       showActionToast(message, appliedLogIds);
     }
   } catch (error) {
     setStatus(`Could not confirm all actions: ${error.message}. Inspect Log before retrying; completed changes can be undone there.`, true);
     if (appliedLogIds.length) showActionToast("Some changes completed. Review Log or undo them.", appliedLogIds);
   } finally {
-    applyInFlight = false;
-    setActionButtons(Boolean(currentJobId && currentMessages.length));
-    document.getElementById("demo-reset").disabled = false;
-    document.getElementById("demo-safe-mode").disabled = false;
+    setMutationBusy(false);
   }
 }
 
@@ -2197,8 +2220,8 @@ function wireEvents() {
     try {
       const settings = await api.getSettings();
       fillSettings(settings);
-      await refreshTriageScopes();
-      await refreshTriageDashboard();
+      if (await refreshTriageScopes() === null) return;
+      if (await refreshTriageDashboard() === null) return;
       await refreshRuntimeStatus();
       await refreshModelOptions();
       await refreshDownloadCatalog();
@@ -2270,7 +2293,7 @@ function wireEvents() {
     });
   });
   reloadTriageScopesBtn?.addEventListener("click", async () => {
-    await refreshTriageScopes();
+    if (await refreshTriageScopes() === null) return;
     await refreshTriageDashboard();
   });
   triageBucketsContainer?.addEventListener("click", async (event) => {
@@ -2403,17 +2426,7 @@ function wireEvents() {
   tagSummaryBtn.addEventListener("click", () => requestJobActions(["tag_summarised"]));
   emailSummaryBtn.addEventListener("click", runEmailSummary);
 
-  undoActionBtn.addEventListener("click", async () => {
-    try {
-      await api.undo();
-      hideActionConfirm();
-      await refreshTriageDashboard();
-      setStatus("Undo requested.");
-      renderLogs(await api.getLogs());
-    } catch (error) {
-      setStatus(`Undo failed: ${error.message}`, true);
-    }
-  });
+  undoActionBtn.addEventListener("click", () => runUndoActions());
 
   refreshLogsBtn.addEventListener("click", async () => {
     try {
@@ -2444,17 +2457,7 @@ function wireEvents() {
       return;
     }
 
-    try {
-      undoButton.setAttribute("disabled", "disabled");
-      await api.undoLog(logId);
-      hideActionConfirm();
-      await refreshTriageDashboard();
-      setStatus("Undo requested for selected log entry.");
-      renderLogs(await api.getLogs());
-    } catch (error) {
-      undoButton.removeAttribute("disabled");
-      setStatus(`Undo failed: ${error.message}`, true);
-    }
+    await runUndoActions([logId]);
   });
 
   refreshModelsBtn.addEventListener("click", async () => {
@@ -2557,8 +2560,8 @@ function wireEvents() {
       clearCurrentWorkspaceState();
       fillSettings(response.settings);
       renderLogs(await api.getLogs());
-      await refreshTriageScopes();
-      await refreshTriageDashboard();
+      if (await refreshTriageScopes() === null) return;
+      if (await refreshTriageDashboard() === null) return;
       await refreshRuntimeStatus();
       await refreshModelOptions();
       await refreshDownloadCatalog();
@@ -2611,8 +2614,8 @@ function wireEvents() {
       }
       syncDummyModeUI(nextMode);
       clearCurrentWorkspaceState();
-      await refreshTriageScopes();
-      await refreshTriageDashboard();
+      if (await refreshTriageScopes() === null) return;
+      if (await refreshTriageDashboard() === null) return;
       setStatus(nextMode ? "Sample mailbox enabled." : "Live mailbox enabled.");
       renderLogs(await api.getLogs());
     } catch (error) {
@@ -2635,8 +2638,8 @@ function wireEvents() {
       if (previousDummyMode !== Boolean(refreshedSettings.dummyMode)) {
         clearCurrentWorkspaceState();
       }
-      await refreshTriageScopes();
-      await refreshTriageDashboard();
+      if (await refreshTriageScopes() === null) return;
+      if (await refreshTriageDashboard() === null) return;
       await refreshRuntimeStatus();
       await refreshModelOptions();
       await refreshDownloadCatalog();
@@ -2726,10 +2729,27 @@ function setupDemo() {
   scopeActionEmail.checked = false;
   scopeActionEmail.disabled = true;
   scopeActionEmail.closest("label").hidden = true;
-  document.getElementById("demo-retry").addEventListener("click", () => loadInitialData());
+  document.getElementById("demo-retry").addEventListener("click", async () => {
+    if (applyInFlight) return;
+    setMutationBusy(true);
+    try { await loadInitialData(); }
+    finally { setMutationBusy(false); }
+  });
+  document.getElementById("demo-sync").addEventListener("click", async () => {
+    if (applyInFlight) return;
+    setMutationBusy(true);
+    hideActionConfirm();
+    try {
+      await api.syncMailIndex({ accountId: "sample", mailbox: "INBOX" });
+      await refreshAfterMutation("Sample index rebuilt. Messages, digests and undo history were preserved.");
+    } catch (error) {
+      setStatus(`Index rebuild failed: ${error.message}. You can retry Rebuild sample index without repeating mailbox actions.`, true);
+    } finally { setMutationBusy(false); }
+  });
   document.getElementById("demo-safe-mode").addEventListener("change", async (event) => {
     const control = event.target;
-    control.disabled = true;
+    if (applyInFlight) return;
+    setMutationBusy(true);
     hideActionConfirm();
     try {
       const result = await api.setDemoSafeMode(control.checked);
@@ -2739,15 +2759,15 @@ function setupDemo() {
     } catch (error) {
       control.checked = activeSafeMode;
       setStatus(`Could not update demo safety: ${error.message}`, true);
-    } finally { control.disabled = false; }
+    } finally { setMutationBusy(false); }
   });
   document.getElementById("demo-reset").addEventListener("click", async (event) => {
     if (applyInFlight || !confirm("Reset the eight fictional messages? Demo digests and undo history will be cleared.")) return;
-    event.target.disabled = true;
+    setMutationBusy(true);
     hideActionConfirm();
     cancelSummary(false);
     try {
-      await api.resetDemo();
+      const reset = await api.resetDemo();
       currentJobId = null;
       renderMessages([]);
       summaryText.textContent = "Sample inbox reset. Create a new digest.";
@@ -2755,11 +2775,15 @@ function setupDemo() {
       renderMessageDetail(null);
       setActionButtons(false);
       hideActionToast();
-      await loadInitialData();
+      const loaded = await loadInitialData();
       document.querySelector(".tab[data-tab='triage']").click();
-      setStatus("Eight fictional messages restored. Safe mode is on.");
+      if (reset.warning || !loaded) {
+        setStatus(reset.warning || "Sample reset completed. View refresh failed; Reload demo to retry the view.", true);
+      } else {
+        setStatus("Eight fictional messages restored. Safe mode is on.");
+      }
     } catch (error) { setStatus(`Reset failed: ${error.message}. Reload the demo to inspect its current state.`, true); }
-    finally { event.target.disabled = false; }
+    finally { setMutationBusy(false); }
   });
 }
 

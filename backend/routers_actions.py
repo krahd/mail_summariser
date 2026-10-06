@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from backend.config import DEFAULT_SETTINGS, DEMO_MODE
-from backend.demo import serial_demo, issue_preview, consume_preview, sync_demo_index
+from backend.demo import serial_demo, issue_preview, consume_preview, refresh_after_completed_mutation
 from backend.db import (
     delete_index_message,
     get_index_message,
@@ -413,13 +413,11 @@ def actions_apply(job_id: str, payload: dict) -> dict:
             _sync_index_after_apply(action, changed, undo_fragment, settings)
         if _undo_payload_has_changes(action, undo_fragment):
             app_module._push_undo({**undo_fragment, 'log_id': log_id, 'job_id': job_id})
-        if DEMO_MODE:
-            # Record recovery before an index refresh that could fail.
-            sync_demo_index()
+        index_result = refresh_after_completed_mutation('Action')
         return {
             'status': 'ok', 'jobId': job_id, 'action': action, 'applied': True,
             'safeMode': safe_mode, 'changedIds': changed, 'failedIds': failed,
-            'skippedIds': skipped, 'logId': log_id, 'preview': plan,
+            'skippedIds': skipped, 'logId': log_id, 'preview': plan, **index_result,
         }
     except HTTPException:
         raise
@@ -511,9 +509,7 @@ def actions_undo_log(log_id: str) -> dict:
             if DEMO_MODE:
                 app_module._push_undo(payload)
             raise
-        if DEMO_MODE:
-            sync_demo_index()
-        return {'status': 'ok'}
+        return {'status': 'ok', 'undoCompleted': True, **refresh_after_completed_mutation('Undo')}
     except HTTPException:
         raise
     except Exception as exc:  # pylint: disable=broad-except
@@ -537,9 +533,7 @@ def actions_undo() -> dict:
             if DEMO_MODE:
                 app_module._push_undo(payload)
             raise
-        if DEMO_MODE:
-            sync_demo_index()
-        return {'status': 'ok'}
+        return {'status': 'ok', 'undoCompleted': True, **refresh_after_completed_mutation('Undo')}
     except HTTPException:
         raise
     except Exception as exc:  # pylint: disable=broad-except
