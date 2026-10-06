@@ -1708,3 +1708,11 @@ body[data-isolated-demo] #tab-settings, body[data-isolated-demo] #email-summary,
   .summary-meta, .bottom-status-chip { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
   .triage-message-item, .triage-bucket-card, .triage-sidebar { min-width: 0; }
 }
+@media (max-width: 1080px) {
+  /* A wrapping fixed footer can cover the last action row. Keep it in flow. */
+  .bottom-status-bar { position: static; width: var(--content-width); margin: 16px auto 0; }
+}
+@media (max-width: 780px) {
+  .bottom-status-bar { width: 100%; }
+  body { padding-bottom: 20px; }
+}

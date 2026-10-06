@@ -251,6 +251,7 @@ def main():
                 expect(page.locator('#summary-text')).to_contain_text('local excerpts')
                 page.locator('#apply-scope-actions').click()
                 expect(page.locator('#action-confirm-apply')).to_be_enabled()
+                page.screenshot(path=str(output/'04-preview-mobile.png'), full_page=True)
                 page.locator('#action-confirm-cancel').click()
                 expect(page.locator('#action-confirm')).to_be_hidden()
                 checks.append('Mobile layout, scrolling, triage digest and cancel controls')
