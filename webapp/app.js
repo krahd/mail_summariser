@@ -443,6 +443,9 @@ function applyQuickFilter(filter) {
 }
 
 function clearCurrentWorkspaceState() {
+  hideActionConfirm();
+  dashboardRequestVersion += 1;
+  currentTriageDashboard = null;
   currentJobId = null;
   currentMessages = [];
   selectedMessageId = null;
@@ -620,7 +623,7 @@ function renderTriageMessageDetail(detail, options = {}) {
 }
 
 async function selectMessage(messageId) {
-  if (!currentJobId || !messageId) {
+  if (applyInFlight || !currentJobId || !messageId) {
     return;
   }
 
@@ -966,7 +969,7 @@ async function refreshTriageDashboard() {
 }
 
 async function selectTriageMessage(messageId) {
-  if (!messageId) {
+  if (applyInFlight || !messageId) {
     return;
   }
 
@@ -2766,15 +2769,12 @@ function setupDemo() {
     setMutationBusy(true);
     hideActionConfirm();
     cancelSummary(false);
+    clearCurrentWorkspaceState();
+    hideActionToast();
+    summaryText.textContent = "Resetting sample inbox…";
     try {
       const reset = await api.resetDemo();
-      currentJobId = null;
-      renderMessages([]);
       summaryText.textContent = "Sample inbox reset. Create a new digest.";
-      jobIdLabel.textContent = "No job yet";
-      renderMessageDetail(null);
-      setActionButtons(false);
-      hideActionToast();
       const loaded = await loadInitialData();
       document.querySelector(".tab[data-tab='triage']").click();
       if (reset.warning || !loaded) {
@@ -2782,7 +2782,9 @@ function setupDemo() {
       } else {
         setStatus("Eight fictional messages restored. Safe mode is on.");
       }
-    } catch (error) { setStatus(`Reset failed: ${error.message}. Reload the demo to inspect its current state.`, true); }
+    } catch (error) {
+      summaryText.textContent = "Reset could not be confirmed. Reload the demo before creating another digest.";
+      setStatus(`Reset failed: ${error.message}. Reload the demo to inspect its current state.`, true); }
     finally { setMutationBusy(false); }
   });
 }

@@ -1716,3 +1716,11 @@ body[data-isolated-demo] #tab-settings, body[data-isolated-demo] #email-summary,
   .bottom-status-bar { width: 100%; }
   body { padding-bottom: 20px; }
 }
+@media (max-width: 780px) {
+  /* Dates remain in the selected-message detail; give subjects room to read. */
+  .message-table-wrapper th:first-child,
+  .message-table-wrapper tr[data-message-id] td:first-child { display: none; }
+  .message-table-wrapper th:nth-child(2),
+  .message-table-wrapper td:nth-child(2) { width: 40%; }
+  .message-table-wrapper td:nth-child(3) { overflow-wrap: normal; }
+}

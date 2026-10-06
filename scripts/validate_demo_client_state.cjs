@@ -5,9 +5,10 @@ const vm = require('node:vm');
 const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, '../webapp/app.js'), 'utf8');
 function fn(name) {
-  const start = source.indexOf('async function '+name+'(');
+  const start = source.indexOf('function '+name+'(');
   assert(start >= 0, name);
-  return source.slice(start, source.indexOf('\n}', start)+2);
+  const begin = source.slice(start-6,start) === 'async ' ? start-6 : start;
+  return source.slice(begin, source.indexOf('\n}', start)+2);
 }
 function context() {
   const statuses = [];
@@ -35,5 +36,29 @@ function context() {
   const first=c.runUndoActions();await c.runUndoActions();assert.equal(calls,1);
   release({undoCompleted:true,warning:'Undo completed. Rebuild sample index.'});await first;
   assert(c.statuses.at(-1).isError);assert.equal(c.applyInFlight,false);
-  console.log('5 client-state regressions passed (mocked I/O, no network)');
+  for (const triage of [false,true]) {
+    for (const error of [false,true]) {
+      const elements=new Map(), rendered=[], statuses=[];
+      const el=id=>{ if(!elements.has(id)) elements.set(id,{addEventListener(type,handler){this[type]=handler;},closest(){return {hidden:false};},click(){}}); return elements.get(id); };
+      let settle, finishReset;
+      const c={isolatedDemo:true,applyInFlight:false,currentJobId:'before-reset',currentMessages:[{id:'demo-001'}],selectedMessageId:null,currentMessageDetail:null,latestMessageDetailRequest:0,currentTriageSelectedMessageId:null,latestTriageMessageDetailRequest:0,dashboardRequestVersion:0,currentTriageDashboard:{},summaryCard:{dataset:{}},
+        api:{getMessageDetail:()=>new Promise((resolve,reject)=>{settle=error?()=>reject(Error('Late failure')):()=>resolve({id:'demo-001',body:'PRE-RESET BODY'});}),resetDemo:()=>new Promise(resolve=>{finishReset=resolve;})},
+        document:{getElementById:el,querySelector:()=>el('tab'),addEventListener(){}},scopeActionEmail:el('email'),
+        renderMessages(m){c.currentMessages=m;},updateDigestMetrics(){},updateActionScopePreview(){},updateBottomStatusBar(){},getMessageListItem:()=>({subject:'Sample'}),findTriageMessageSample:()=>({subject:'Sample'}),parseMailbox:()=>({name:'Sample',address:'sample@example.com'}),renderMessageDetail:(d)=>rendered.push(d),renderTriageMessageDetail:(d)=>rendered.push(d),renderTriageMessagePlaceholder:()=>rendered.push(null),setStatus:m=>statuses.push(m),
+        setMutationBusy:b=>{c.applyInFlight=b;},hideActionConfirm(){},cancelSummary(){},confirm:()=>true,summaryText:{},jobIdLabel:{},setActionButtons(){},hideActionToast(){},loadInitialData:async()=>true};
+      c.api.getMailIndexMessage=c.api.getMessageDetail;
+      vm.createContext(c);vm.runInContext(['selectMessage','selectTriageMessage','clearCurrentWorkspaceState','setupDemo'].map(fn).join('\n'),c);c.setupDemo();
+      const request=triage?c.selectTriageMessage('demo-001'):c.selectMessage('demo-001');
+      const reset=el('demo-reset').click({target:el('demo-reset')});
+      // Invalidate at acceptance, even while the reset HTTP response is held.
+      assert.equal(c.selectedMessageId,null);assert.equal(c.currentTriageSelectedMessageId,null);
+      assert(c.latestMessageDetailRequest>0);assert(c.latestTriageMessageDetailRequest>0);
+      finishReset({indexRefreshed:true});await reset;
+      const count=rendered.length,lastStatus=statuses.at(-1);
+      settle();await request;
+      assert.equal(rendered.length,count);assert.equal(c.currentMessageDetail,null);
+      assert.equal(statuses.at(-1),lastStatus);assert.equal(c.currentJobId,null);
+    }
+  }
+  console.log('9 client-state regressions passed (mocked I/O, no network)');
 })().catch(error=>{console.error(error);process.exitCode=1;});

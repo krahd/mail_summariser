@@ -81,7 +81,7 @@ def main():
                 expect(page.locator('.tab[data-tab="settings"]')).to_be_hidden()
                 assert len(page.request.get(base+'/mail/index/messages').json()) == 8
                 assert page.request.get(base+'/mail/triage/dashboard').json()['totals']['unread'] == 6
-                page.screenshot(path=str(output/'01-onboarding-desktop.png'), full_page=True)
+                page.screenshot(path=str(output/'01-onboarding-desktop.png'), full_page=True, animations="disabled")
                 checks.append('First-run isolation, indexed fixtures, malicious stored backend ignored')
 
                 page.locator('.triage-message-item').first.click()
@@ -95,7 +95,7 @@ def main():
                 page.locator('#apply-scope-actions').click()
                 expect(page.locator('#action-confirm-apply')).to_be_enabled()
                 assert page.locator('#action-confirm-items li').count() > 0
-                page.screenshot(path=str(output/'02-review-preview-desktop.png'), full_page=True)
+                page.screenshot(path=str(output/'02-review-preview-desktop.png'), full_page=True, animations="disabled")
                 page.locator('#action-confirm-cancel').click()
                 expect(page.locator('#action-confirm')).to_be_hidden()
                 assert page.request.get(base+'/mail/triage/dashboard').json()['totals']['unread'] == 6
@@ -240,9 +240,68 @@ def main():
                 assert page.request.get(base+'/logs').json() == []
                 checks.append('Reset cancellation and confirmed reset restore safe onboarding')
 
+                # Real held detail responses must not cross a confirmed reset.
+                for surface in ('review', 'triage'):
+                    for late_error in (False, True):
+                        if surface == 'review':
+                            page.locator('[data-triage-summary-bucket-id="reply_needed_candidates"]').click()
+                            expect(page.locator('#message-detail-shell')).to_have_attribute('data-state', 'ready')
+                            pattern = '**/jobs/*/messages/*'
+                            target = page.locator('#messages-body tr[data-message-id]').nth(1)
+                            detail_shell = '#message-detail-shell'
+                        else:
+                            pattern = '**/mail/index/messages/*'
+                            target = page.locator('.triage-message-item').first
+                            detail_shell = '#triage-message-detail-shell'
+                        held_details = []
+                        page.route(pattern, lambda route: held_details.append(route))
+                        target.click()
+                        expect(page.locator(detail_shell)).to_have_attribute('data-state', 'loading')
+                        for _ in range(100):
+                            if held_details: break
+                            page.wait_for_timeout(20)
+                        assert len(held_details) == 1
+                        before_reset = held_details[0].fetch()
+                        assert before_reset.status == 200
+                        page.once('dialog', lambda d: d.accept())
+                        page.locator('#demo-reset').click()
+                        expect(page.locator('#status-line')).to_contain_text('Eight fictional messages restored')
+                        if late_error:
+                            held_details[0].fulfill(status=503, content_type='application/json', body='{"detail":"Synthetic delayed detail failure"}')
+                        else:
+                            held_details[0].fulfill(response=before_reset)
+                        page.wait_for_timeout(150)
+                        expect(page.locator('#message-detail-shell')).to_have_attribute('data-state', 'empty')
+                        expect(page.locator('#triage-message-detail-shell')).to_have_attribute('data-state', 'empty')
+                        expect(page.locator('#messages-body tr.is-selected')).to_have_count(0)
+                        expect(page.locator('#status-line')).to_contain_text('Eight fictional messages restored')
+                        assert page.locator('#message-detail-body').inner_text() == ''
+                        page.unroute(pattern)
+                checks.append('Review and triage detail success/error responses held across reset cannot restore old selection, body or errors')
+
+                # A rejected reset clears the review safely but never claims a restored inbox.
+                page.locator('[data-triage-summary-bucket-id="reply_needed_candidates"]').click()
+                expect(page.locator('#message-detail-shell')).to_have_attribute('data-state', 'ready')
+                logs_before_reset_failure = page.request.get(base+'/logs').json()
+                page.route('**/demo/reset', lambda route: route.fulfill(status=503, content_type='application/json', body='{"detail":"Synthetic reset failure"}'))
+                page.once('dialog', lambda d: d.accept())
+                page.locator('#demo-reset').click()
+                expect(page.locator('#status-line')).to_contain_text('Reset failed')
+                expect(page.locator('#summary-text')).to_contain_text('Reset could not be confirmed')
+                expect(page.locator('#message-detail-shell')).to_have_attribute('data-state', 'empty')
+                assert page.request.get(base+'/logs').json() == logs_before_reset_failure
+                page.unroute('**/demo/reset')
+                page.locator('#demo-retry').click()
+                expect(page.locator('#status-line')).to_contain_text('Sample inbox ready')
+                page.once('dialog', lambda d: d.accept())
+                page.locator('#demo-reset').click()
+                expect(page.locator('#status-line')).to_contain_text('Eight fictional messages restored')
+                checks.append('Failed reset remains unconfirmed and recoverable without erasing mailbox history')
+
                 page.set_viewport_size({'width':390, 'height':844})
                 expect(page.locator('#demo-onboarding')).to_be_visible()
-                page.screenshot(path=str(output/'03-onboarding-mobile.png'), full_page=True)
+                page.wait_for_function("getComputedStyle(document.querySelector('#tab-triage')).opacity === '1'")
+                page.screenshot(path=str(output/'03-onboarding-mobile.png'), full_page=True, animations="disabled")
                 metrics = page.evaluate('''() => ({width:innerWidth, scrollWidth:document.documentElement.scrollWidth,
                     overflow:[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right > innerWidth+1).map(e=>({tag:e.tagName,id:e.id,cls:e.className,right:e.getBoundingClientRect().right,whiteSpace:getComputedStyle(e).whiteSpace})).slice(0,25)})''')
                 (output/'mobile-layout.json').write_text(json.dumps(metrics, indent=2))
@@ -251,7 +310,9 @@ def main():
                 expect(page.locator('#summary-text')).to_contain_text('local excerpts')
                 page.locator('#apply-scope-actions').click()
                 expect(page.locator('#action-confirm-apply')).to_be_enabled()
-                page.screenshot(path=str(output/'04-preview-mobile.png'), full_page=True)
+                expect(page.locator('.message-table-wrapper th').first).to_be_hidden()
+                assert page.locator('#messages-body td:nth-child(3)').first.bounding_box()['width'] >= 150
+                page.screenshot(path=str(output/'04-preview-mobile.png'), full_page=True, animations="disabled")
                 page.locator('#action-confirm-cancel').click()
                 expect(page.locator('#action-confirm')).to_be_hidden()
                 checks.append('Mobile layout, scrolling, triage digest and cancel controls')

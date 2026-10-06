@@ -1,6 +1,8 @@
 # Synthetic demo acceptance checkpoint
 
-6 October 2026. Draft implementation only; independent repair recheck pending.
+6 October 2026. Draft implementation only; final reset-race recheck pending.
+
+The green runtime checkpoint below predates the final reset/detail-race correction. That correction invalidates both selected-detail request generations immediately when reset is confirmed, and includes held success/error regressions for review and triage plus failed-reset recovery. The expanded browser acceptance and settled mobile screenshots must pass on the new code head; this document does not attribute the older run to later runtime changes.
 
 ## Reproducible source and evidence
 
@@ -9,9 +11,9 @@ Runtime/code head: `f67dbe5c9524e47c25579b8b93b368add2e02937`.
 - [Ordinary CI 37509282224](https://github.com/krahd/mail_summariser/actions/runs/37509282224): passed. Python 3.11/3.12 tests, hygiene, existing rendered UI regression and Linux/macOS/Windows startup jobs completed successfully.
 - [Synthetic Chromium CI 37509282239](https://github.com/krahd/mail_summariser/actions/runs/37509282239): passed. Nineteen synthetic API tests with outbound transport/provider/SMTP traps and fifteen real-browser scenario groups.
 - [Small evidence artifact 11434495213](https://github.com/krahd/mail_summariser/actions/runs/37509282239/artifacts/11434495213): four PNGs, mobile geometry and summary JSON. Retained by CI for seven days. The JSON records source head `f67dbe5c9524e47c25579b8b93b368add2e02937` and GitHub's test merge checkout `675a63314f96af3c8bf3980de81a8d6c7a32ff1a`.
-- Local full regression: 205 passed, one expected skip. Five mocked client-state checks also passed. These are distinct from browser evidence.
+- Local full regression: 205 passed, one expected skip. Five original mocked client-state checks passed at this checkpoint; the reset-race correction expands this to nine. These are distinct from browser evidence.
 
-The publication checkpoint that adds this report changes documentation only; runtime source remains byte-identical to the code head above. No later runtime change inherits this acceptance automatically.
+This report initially accompanied a documentation-only publication. Subsequent runtime changes require their own workflow result; no later runtime change inherits this acceptance automatically.
 
 ## Covered browser scenarios
 
