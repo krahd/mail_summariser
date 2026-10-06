@@ -300,7 +300,7 @@ def main():
 
                 page.set_viewport_size({'width':390, 'height':844})
                 expect(page.locator('#demo-onboarding')).to_be_visible()
-                page.wait_for_function("getComputedStyle(document.querySelector('#tab-triage')).opacity === '1'")
+                expect(page.locator("#tab-triage")).to_have_css("opacity", "1")
                 page.screenshot(path=str(output/'03-onboarding-mobile.png'), full_page=True, animations="disabled")
                 metrics = page.evaluate('''() => ({width:innerWidth, scrollWidth:document.documentElement.scrollWidth,
                     overflow:[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right > innerWidth+1).map(e=>({tag:e.tagName,id:e.id,cls:e.className,right:e.getBoundingClientRect().right,whiteSpace:getComputedStyle(e).whiteSpace})).slice(0,25)})''')
