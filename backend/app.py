@@ -23,6 +23,7 @@ from backend.config import (
     ALLOWED_ORIGIN_REGEX,
     DB_PATH as DEFAULT_DB_PATH,
     DEFAULT_SETTINGS,
+    DEMO_MODE,
     ENABLE_DEV_TOOLS as _CONFIG_ENABLE_DEV_TOOLS,
 )
 from backend.db import (
@@ -110,6 +111,9 @@ async def lifespan(_: FastAPI):
         pass
     dummy_state.reset_dummy_session_store()
     reset_dummy_mailbox()
+    if DEMO_MODE:
+        from backend.demo import reset_demo
+        reset_demo()
     # Auto-start Ollama at startup when configured (tests may patch provider)
     try:
         settings = _merged_settings()
@@ -238,6 +242,9 @@ def _schedule_backend_shutdown(delay_seconds: float = 0.1) -> None:
 
 
 def _merged_settings() -> dict[str, Any]:
+    if DEMO_MODE:
+        # Only the simulation toggle may vary during an isolated demo session.
+        return DEFAULT_SETTINGS | {"safeMode": list_settings().get("safeMode", True)}
     return DEFAULT_SETTINGS | list_settings()
 
 
@@ -342,3 +349,9 @@ def _push_undo(payload: dict) -> None:
 @app.get('/health')
 def health() -> dict[str, str]:
     return {'status': 'ok'}
+
+
+
+if DEMO_MODE:
+    from backend.demo import install_demo
+    install_demo(app)

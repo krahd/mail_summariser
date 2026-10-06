@@ -1,7 +1,7 @@
 import os
 import re
 
-from backend.config import DEFAULT_SYSTEM_MESSAGES
+from backend.config import DEFAULT_SYSTEM_MESSAGES, DEMO_MODE
 from backend.llm_provider_clients import ProviderClientError, ProviderRequest, get_provider_client
 from backend.model_provider_service import ensure_ollama_running
 
@@ -185,6 +185,10 @@ def summarize_messages(messages: list[dict], summary_length: int, settings: dict
             'status': 'empty',
             'fallback': 'false',
         }
+    if DEMO_MODE:
+        return ("Synthetic demo digest (local excerpts, no AI provider).\n\n"
+                + _demo_summarize_messages(messages, summary_length),
+                {"provider": "local-excerpts", "model": "none", "status": "demo", "fallback": "false"})
     cfg = settings or {}
     provider = _normalize_provider(str(cfg.get('llmProvider', 'ollama')))
     model_name = str(cfg.get('modelName', 'llama3.2:latest')).strip() or 'llama3.2:latest'
@@ -204,3 +208,4 @@ def summarize_messages(messages: list[dict], summary_length: int, settings: dict
             {'provider': provider, 'model': model_name,
                 'status': 'fallback', 'fallback': 'true', 'error': reason},
         )
+

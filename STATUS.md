@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-06-17 23:45
+Last updated: 2026-10-06 13:59
 
 ## Purpose
 
@@ -13,6 +13,15 @@ mail_summariser is a local-first email situational-awareness system with:
 It supports a resettable sample mailbox for onboarding and testing, live IMAP/SMTP workflows, provider-backed summaries, and deterministic fallback summaries when providers are unavailable or return invalid output.
 
 ## Current state
+
+### Isolated onboarding first version (draft, 6 October 2026)
+
+- The current browser client now has an explicit synthetic-only launch path: `python scripts/run_demo.py`, on loopback port 8767 by default. `backend/demo.py` supplies a process-level isolation boundary, an ephemeral database, eight fictional indexed messages and default-deny route access. It does not read the normal mail database or allow live mailbox/model/SMTP operations.
+- Onboarding explains triage evidence, local excerpt digests, simulation, per-message previews and undo. The existing UI is reused; settings and send controls are hidden in the locked demo. Normal backend/client mode is preserved.
+- Demo previews expire after five minutes, are bound to the current plan and safety state, and are single-use. Apply/archive/undo refresh the synthetic index; repeated sync does not duplicate or resurrect moved entries. Failed sample undo preserves recovery. Cancellation and newer requests invalidate pending browser results and confirmations.
+- `docs/ISOLATED_DEMO.md` records the safety contract, run path, manual acceptance and remaining gates. `scripts/validate_demo_api.py` passed 17 in-process acceptance tests with network/provider/SMTP calls trapped. Focused existing action/index/triage/router checks passed. Full regression passed with 204 passed and 1 expected skip, including the final index-recovery additions. Exact-head Chromium CI is pending verification. No browser pass is claimed from source inspection.
+- The scoped CI workflow exercises real synthetic Chromium interactions and retains small screenshots/check summaries. Native deployment, live-account/privacy/security/provider-compatibility acceptance, paid release and demand validation remain gated. No mailbox credentials/content, outbound mail, OAuth, model transmission, deployment or release were used for this implementation.
+
 
 The repository currently contains two active runtime surfaces, one paused client source tree, and one documentation surface:
 
@@ -507,4 +516,5 @@ Run the manual personal acceptance test against the real MailMate IMAP accounts 
 - Triage is the browser's primary landing surface; the digest review and bulk-action panel live in the "Review & Act" tab, which a triage bucket summary opens with the job preloaded.
 - macOS app deployment, notarisation, and end-user distribution are paused. The active product surface is the browser client against the local backend; `macos-app/` is retained as source but not positioned as a current download target.
 ---
-Last updated: 2026-06-17 23:45
+Last updated: 2026-10-06 13:59
+

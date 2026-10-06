@@ -3,6 +3,7 @@ from datetime import datetime
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
+from backend.demo import serial_demo
 
 from backend.db import get_job, insert_job
 from backend.mail_service import MailServiceError, is_dummy_mode, search_messages
@@ -19,6 +20,7 @@ def _safe_summary_length(value: int) -> int:
 
 
 @router.post('/summaries', response_model=SummaryResponse)
+@serial_demo
 def create_summary(request: SummaryRequest) -> SummaryResponse:
     app_module = get_app_module()
 
@@ -65,6 +67,7 @@ def create_summary(request: SummaryRequest) -> SummaryResponse:
 
 
 @router.get('/jobs/{job_id}/messages/{message_id}', response_model=MessageDetail)
+@serial_demo
 def get_job_message(job_id: str, message_id: str) -> MessageDetail:
     app_module = get_app_module()
 
@@ -83,3 +86,4 @@ def get_job_message(job_id: str, message_id: str) -> MessageDetail:
                 body=str(message.get('body', '')),
             )
     raise HTTPException(status_code=404, detail='Message not found')
+

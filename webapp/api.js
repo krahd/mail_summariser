@@ -415,7 +415,9 @@ export function createApiClient(context) {
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(text || `HTTP ${response.status}`);
+      let detail = text;
+      try { detail = JSON.parse(text).detail || text; } catch {}
+      throw new Error(typeof detail === "string" ? detail : `HTTP ${response.status}: invalid request`);
     }
 
     const contentType = response.headers.get("content-type") || "";
@@ -442,6 +444,8 @@ export function createApiClient(context) {
   }
 
   return {
+    resetDemo() { return request("/demo/reset", { method: "POST" }); },
+    setDemoSafeMode(safeMode) { return request("/demo/safe-mode", { method: "POST", body: JSON.stringify({ safeMode }) }); },
     /** @returns {Promise<{status: string}>} */
     health() {
       return request("/health");
@@ -671,7 +675,7 @@ export function createApiClient(context) {
     applyAction(jobId, action, options = {}) {
       return request(`/actions/jobs/${encodeURIComponent(jobId)}/apply`, {
         method: "POST",
-        body: JSON.stringify({ action, dryRun: Boolean(options.dryRun) }),
+        body: JSON.stringify({ action, dryRun: Boolean(options.dryRun), previewToken: options.previewToken }),
       });
     },
     /** @param {string} jobId */
@@ -690,3 +694,4 @@ export function createApiClient(context) {
     },
   };
 }
+

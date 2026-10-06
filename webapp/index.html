@@ -38,6 +38,20 @@
     </div>
   </section>
 
+  <section id="demo-onboarding" class="demo-onboarding" hidden aria-label="Synthetic demo guide">
+    <div><strong>Try a private, synthetic inbox</strong>
+      <p>1. Inspect a triage candidate and its evidence. 2. Create a digest. 3. Preview a change, then undo it in Log.</p>
+      <p>Eight fictional messages. Digests are local excerpts, not AI judgements. No login, email sending or provider calls. State is discarded when the server stops.</p>
+      <p>Real-account reliability, security/privacy review and native distribution are still unverified.</p>
+    </div>
+    <div class="inline-actions">
+      <label class="checkbox"><input id="demo-safe-mode" type="checkbox" checked /> Simulate only (safe mode)</label>
+      <button id="demo-reset" type="button" class="secondary">Reset sample inbox</button>
+      <button id="demo-retry" type="button" class="secondary">Reload demo</button>
+    </div>
+  </section>
+  <button id="cancel-digest" type="button" class="secondary" hidden>Cancel digest</button>
+
   <nav class="tabs" aria-label="Main views">
     <button class="tab active" data-tab="triage">Triage</button>
     <button class="tab" data-tab="search">Review &amp; Act</button>
@@ -193,6 +207,7 @@
         </div>
         <div id="action-confirm" class="action-confirm" hidden>
           <p id="action-confirm-summary" class="panel-copy"></p>
+          <ul id="action-confirm-items" class="action-confirm-items"></ul>
           <ul id="action-confirm-warnings" class="action-confirm-warnings"></ul>
           <div class="inline-actions">
             <button id="action-confirm-apply" type="button">Confirm &amp; Apply</button>
@@ -668,3 +683,4 @@
   <script type="module" src="app.js"></script>
 </body>
 </html>
+

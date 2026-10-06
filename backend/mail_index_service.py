@@ -8,6 +8,7 @@ from typing import Any
 import imaplib
 
 from backend import db
+from backend.config import DEMO_MODE
 from backend.fake_mail_server import REGISTRY as FAKE_MAIL_REGISTRY
 from backend.mail_service import (
     MailServiceError,
@@ -84,6 +85,8 @@ def _fake_or_dummy_messages(account: dict[str, Any], mailbox_path: str, limit: i
     indexed: list[dict[str, Any]] = []
     account_id = str(account.get('id') or 'sample').strip() or 'sample'
     now = _now_iso()
+    if DEMO_MODE and dummy_mode:
+        messages = [m for m in messages if m.get('mailbox', 'INBOX') == mailbox_path]
     for message in messages[:limit]:
         recipient = str(message.get('recipient') or message.get('sender') or '').strip()
         keywords = _string_list(message.get('keywords'))
@@ -107,10 +110,10 @@ def _fake_or_dummy_messages(account: dict[str, Any], mailbox_path: str, limit: i
             'date': str(message.get('date') or ''),
             'flags': flags,
             'keywords': keywords,
-            'listId': '',
+            'listId': str(message.get('listId', '')) if DEMO_MODE else '',
             'bodyPreview': _trimmed_preview(message.get('body', '')),
-            'bodyCached': False,
-            'bodyText': '',
+            'bodyCached': DEMO_MODE,
+            'bodyText': str(message.get('body', '')) if DEMO_MODE else '',
             'lastSeenAt': now,
         })
     return indexed
@@ -369,3 +372,4 @@ def sync_mailbox(account: dict[str, Any], mailbox_path: str, limit: int = 500) -
         raise
     except (imaplib.IMAP4.error, OSError) as exc:
         raise MailServiceError(_redact_error_message(str(exc), password)) from exc
+

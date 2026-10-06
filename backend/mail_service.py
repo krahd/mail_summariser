@@ -83,8 +83,21 @@ _dummy_outbox: list[dict[str, str]] = []
 
 def reset_dummy_mailbox() -> None:
     global _dummy_mailbox  # pylint: disable=global-statement
-    _dummy_mailbox = deepcopy(DEFAULT_DUMMY_MESSAGES)
+    from backend.config import DEMO_MODE
+    if DEMO_MODE:
+        from backend.demo import sample_messages
+        _dummy_mailbox = sample_messages()
+    else:
+        _dummy_mailbox = deepcopy(DEFAULT_DUMMY_MESSAGES)
     _dummy_outbox.clear()
+
+
+def get_dummy_message(message_id: str) -> dict[str, Any] | None:
+    """Snapshot current sample state, including the actual folder after a move."""
+    message = _find_dummy_message(message_id)
+    if message is None:
+        return None
+    return deepcopy(message) | {'mailboxPath': message.get('mailbox', 'INBOX')}
 
 
 def get_dummy_outbox() -> list[dict[str, str]]:
@@ -1463,3 +1476,4 @@ def discover_mailboxes_for_account(account: dict[str, Any]) -> list[dict[str, An
             imap.logout()
         except (imaplib.IMAP4.error, OSError):
             pass
+
