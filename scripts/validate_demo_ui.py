@@ -242,8 +242,11 @@ def main():
 
                 page.set_viewport_size({'width':390, 'height':844})
                 expect(page.locator('#demo-onboarding')).to_be_visible()
-                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
                 page.screenshot(path=str(output/'03-onboarding-mobile.png'), full_page=True)
+                metrics = page.evaluate('''() => ({width:innerWidth, scrollWidth:document.documentElement.scrollWidth,
+                    overflow:[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right > innerWidth+1).map(e=>({tag:e.tagName,id:e.id,cls:e.className,right:e.getBoundingClientRect().right,whiteSpace:getComputedStyle(e).whiteSpace})).slice(0,25)})''')
+                (output/'mobile-layout.json').write_text(json.dumps(metrics, indent=2))
+                assert metrics['scrollWidth'] <= metrics['width'] + 1, metrics
                 page.locator('[data-triage-summary-bucket-id="reply_needed_candidates"]').click()
                 expect(page.locator('#summary-text')).to_contain_text('local excerpts')
                 page.locator('#apply-scope-actions').click()

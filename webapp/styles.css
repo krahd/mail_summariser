@@ -1702,3 +1702,9 @@ td[colspan] {
 .action-confirm-items li { margin: .6rem 0; }
 #cancel-digest { margin: .5rem 1.4rem; }
 body[data-isolated-demo] #tab-settings, body[data-isolated-demo] #email-summary, body[data-isolated-demo] #runtime-startup-banner { display: none !important; }
+/* Status messages remain readable on narrow screens instead of widening the page. */
+.app-header .status-line { white-space: normal; overflow-wrap: anywhere; min-width: 0; }
+@media (max-width: 780px) {
+  .summary-meta, .bottom-status-chip { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
+  .triage-message-item, .triage-bucket-card, .triage-sidebar { min-width: 0; }
+}
