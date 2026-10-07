@@ -4,6 +4,7 @@ from datetime import datetime
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
+from backend.demo import require_fresh_demo_index, serial_demo
 
 from backend.db import insert_job
 from backend.mail_service import is_dummy_mode
@@ -31,8 +32,10 @@ def _safe_summary_length(value: int) -> int:
 
 
 @router.get('/dashboard', response_model=TriageDashboardResponse)
+@serial_demo
 def get_triage_dashboard(scopeId: str | None = None, limitPerBucket: int = 5,
                          staleDays: int = 14) -> TriageDashboardResponse:
+    require_fresh_demo_index()
     try:
         dashboard = build_triage_dashboard(scopeId, limitPerBucket, staleDays, include_body_text=False)
     except LookupError as exc:
@@ -41,7 +44,9 @@ def get_triage_dashboard(scopeId: str | None = None, limitPerBucket: int = 5,
 
 
 @router.post('/buckets/{bucket_id}/summary', response_model=SummaryResponse)
+@serial_demo
 def create_triage_bucket_summary(bucket_id: str, request: TriageBucketSummaryRequest) -> SummaryResponse:
+    require_fresh_demo_index()
     app_module = get_app_module()
     settings = app_module._merged_settings()
 
@@ -111,3 +116,4 @@ def create_triage_bucket_summary(bucket_id: str, request: TriageBucketSummaryReq
         ],
         summary=summary,
     )
+

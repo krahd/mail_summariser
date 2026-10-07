@@ -3,6 +3,8 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from backend import db
+from backend.config import DEMO_MODE
+from backend.demo import require_fresh_demo_index, serial_demo, sync_demo_index
 from backend.mail_index_service import MailServiceError, _resolve_account, sync_mailbox
 from backend.router_context import get_app_module
 from backend.schemas import (
@@ -17,8 +19,13 @@ router = APIRouter(prefix='/mail/index')
 
 
 @router.post('/sync', response_model=MailIndexSyncResponse)
+@serial_demo
 def sync_mail_index(request: MailIndexSyncRequest) -> MailIndexSyncResponse:
     app_module = get_app_module()
+    if DEMO_MODE:
+        if request.accountId not in ("", "sample") or request.mailbox not in ("INBOX", "Archive"):
+            raise HTTPException(status_code=400, detail="Demo contains only the sample INBOX and Archive.")
+        return MailIndexSyncResponse(**sync_demo_index())
     try:
         settings = app_module._merged_settings()
         account = _resolve_account(settings, request.accountId)
@@ -33,11 +40,13 @@ def sync_mail_index(request: MailIndexSyncRequest) -> MailIndexSyncResponse:
 
 
 @router.get('/messages', response_model=list[MailIndexMessageSummary])
+@serial_demo
 def list_mail_index_messages(accountId: str | None = None, mailbox: str | None = None,
                              unread: bool | None = None, flagged: bool | None = None,
                              tag: str | None = None, keyword: str | None = None,
                              listId: str | None = None, sender: str | None = None,
                              limit: int = 100) -> list[MailIndexMessageSummary]:
+    require_fresh_demo_index()
     criteria = {
         'accountId': accountId,
         'mailbox': mailbox,
@@ -54,8 +63,11 @@ def list_mail_index_messages(accountId: str | None = None, mailbox: str | None =
 
 
 @router.get('/messages/{message_id}', response_model=MailIndexMessageDetail)
+@serial_demo
 def get_mail_index_message(message_id: str) -> MailIndexMessageDetail:
+    require_fresh_demo_index()
     message = db.get_index_message(message_id)
     if message is None:
         raise HTTPException(status_code=404, detail='Message not found')
     return MailIndexMessageDetail(**message)
+

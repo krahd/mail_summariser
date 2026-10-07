@@ -22,6 +22,18 @@ It supports:
 
 ## Quick start
 
+### Try the isolated synthetic demo first
+
+After installing the Python dependencies below, run:
+
+```bash
+python scripts/run_demo.py
+```
+
+Open `http://127.0.0.1:8767`. Eight fictional messages are already indexed in the existing browser UI. Local excerpt digests require no model or account. Safe mode is on; every action requires an expiring preview and changes can be undone. Live accounts, email sending and external model/runtime routes are blocked for this process. Demo state is temporary. See [the demo guide and acceptance gates](docs/ISOLATED_DEMO.md).
+
+This is a productisation checkpoint, not a real-account or paid-release acceptance result. Normal backend mode retains its existing provider behaviour; **Sample Mailbox** alone is not the isolated demo.
+
 ### Homebrew (macOS)
 
 ```bash
@@ -117,3 +129,4 @@ Contributions are welcome. Open an issue to discuss significant changes before s
 ## Disclaimer
 
 This software is provided as-is, without warranty of any kind, express or implied. Use at your own risk. The authors accept no liability for data loss, mailbox corruption, unintended message actions, or any other damages arising from its use. Live IMAP/SMTP mode operates on real mailboxes — review configuration carefully before enabling it.
+

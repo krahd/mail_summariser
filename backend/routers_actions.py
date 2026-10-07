@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from backend.config import DEFAULT_SETTINGS
+from backend.config import DEFAULT_SETTINGS, DEMO_MODE
+from backend.demo import serial_demo, issue_preview, consume_preview, refresh_after_completed_mutation
 from backend.db import (
     delete_index_message,
     get_index_message,
@@ -13,6 +14,7 @@ from backend.db import (
 from backend.mail_service import (
     add_keyword_tag,
     is_dummy_mode,
+    get_dummy_message,
     mark_messages_read,
     move_messages,
     move_messages_back,
@@ -75,6 +77,11 @@ def _job_message_dicts(job: dict) -> list[dict]:
 
 def _message_state(message: dict, settings: dict) -> dict:
     message_id = str(message.get('id') or '')
+    if DEMO_MODE:
+        state = get_dummy_message(message_id)
+        if state is None:
+            raise HTTPException(status_code=409, detail='Sample changed. Generate a fresh digest.')
+        return state
     if message_id and not is_dummy_mode(settings):
         indexed = get_index_message(message_id)
         if indexed:
@@ -243,7 +250,7 @@ def _build_action_plan(action: str, job_id: str, messages: list[dict], settings:
         base = {
             'id': message_id,
             'accountId': str(message.get('accountId') or state.get('accountId') or ''),
-            'mailboxPath': str(message.get('mailboxPath') or state.get('mailboxPath') or ''),
+            'mailboxPath': str(state.get('mailboxPath') or message.get('mailboxPath') or ''),
             'uid': str(message.get('uid') or state.get('uid') or ''),
             'subject': str(message.get('subject') or state.get('subject') or ''),
             'sender': str(message.get('sender') or state.get('sender') or ''),
@@ -319,6 +326,7 @@ def _require_action(payload: dict) -> str:
 
 
 @router.post('/actions/jobs/{job_id}/preview')
+@serial_demo
 def actions_preview(job_id: str, payload: dict) -> dict:
     app_module = get_app_module()
     try:
@@ -328,6 +336,8 @@ def actions_preview(job_id: str, payload: dict) -> dict:
         if job is None:
             raise HTTPException(status_code=404, detail='Job not found')
         plan = _build_action_plan(action, job_id, _job_message_dicts(job), settings)
+        if DEMO_MODE:
+            plan["previewToken"] = issue_preview(plan)
         return plan
     except HTTPException:
         raise
@@ -359,6 +369,7 @@ def _apply_action(action: str, message_ids: list[str], settings: dict) -> tuple[
 
 
 @router.post('/actions/jobs/{job_id}/apply')
+@serial_demo
 def actions_apply(job_id: str, payload: dict) -> dict:
     app_module = get_app_module()
     try:
@@ -369,6 +380,8 @@ def actions_apply(job_id: str, payload: dict) -> dict:
             raise HTTPException(status_code=404, detail='Job not found')
         messages = _job_message_dicts(job)
         plan = _build_action_plan(action, job_id, messages, settings)
+        if DEMO_MODE:
+            consume_preview(plan, payload.get('previewToken'))
         action_message_ids = _dedupe([str(item.get('id') or '') for item in plan['items']])
 
         safe_mode = _bool(settings.get('safeMode'))
@@ -400,10 +413,11 @@ def actions_apply(job_id: str, payload: dict) -> dict:
             _sync_index_after_apply(action, changed, undo_fragment, settings)
         if _undo_payload_has_changes(action, undo_fragment):
             app_module._push_undo({**undo_fragment, 'log_id': log_id, 'job_id': job_id})
+        index_result = refresh_after_completed_mutation('Action')
         return {
             'status': 'ok', 'jobId': job_id, 'action': action, 'applied': True,
             'safeMode': safe_mode, 'changedIds': changed, 'failedIds': failed,
-            'skippedIds': skipped, 'logId': log_id, 'preview': plan,
+            'skippedIds': skipped, 'logId': log_id, 'preview': plan, **index_result,
         }
     except HTTPException:
         raise
@@ -441,6 +455,8 @@ def _perform_undo(payload: dict, settings: dict, app_module) -> None:
         result = _result_payload(restore_messages_unread(message_ids, settings))
         restored_ids = result.get('restore_unread_ids', []) or []
         failed_ids = result.get('failed_message_ids', []) or []
+        if DEMO_MODE and failed_ids:
+            raise HTTPException(409, 'Some sample changes could not be undone. Recovery remains available; try Undo again.')
         _sync_index_after_undo(payload, result, settings)
         details = f"restored {len(restored_ids)} messages"
         if failed_ids:
@@ -451,6 +467,8 @@ def _perform_undo(payload: dict, settings: dict, app_module) -> None:
         result = _result_payload(remove_keyword_tag(message_ids, tag, settings))
         removed_ids = result.get('removed_message_ids', []) or []
         failed_ids = result.get('failed_message_ids', []) or []
+        if DEMO_MODE and failed_ids:
+            raise HTTPException(409, 'Some sample changes could not be undone. Recovery remains available; try Undo again.')
         _sync_index_after_undo(payload, result, settings)
         details = f"removed tags from {len(removed_ids)} messages"
         if failed_ids:
@@ -460,6 +478,8 @@ def _perform_undo(payload: dict, settings: dict, app_module) -> None:
         result = _result_payload(move_messages_back(payload.get('moved', []) or [], settings))
         restored_ids = result.get('restored_message_ids', []) or []
         failed_ids = result.get('failed_message_ids', []) or []
+        if DEMO_MODE and failed_ids:
+            raise HTTPException(409, 'Some sample changes could not be undone. Recovery remains available; try Undo again.')
         _sync_index_after_undo(payload, result, settings)
         details = f"moved back {len(restored_ids)} messages"
         if failed_ids:
@@ -471,6 +491,7 @@ def _perform_undo(payload: dict, settings: dict, app_module) -> None:
 
 
 @router.post('/actions/undo/logs/{log_id}')
+@serial_demo
 def actions_undo_log(log_id: str) -> dict:
     app_module = get_app_module()
 
@@ -482,8 +503,13 @@ def actions_undo_log(log_id: str) -> dict:
             payload = app_module._get_db().pop_undo_by_log_id(log_id)
         if payload is None:
             raise HTTPException(status_code=404, detail='No undo found for log')
-        _perform_undo(payload, settings, app_module)
-        return {'status': 'ok'}
+        try:
+            _perform_undo(payload, settings, app_module)
+        except Exception:
+            if DEMO_MODE:
+                app_module._push_undo(payload)
+            raise
+        return {'status': 'ok', 'undoCompleted': True, **refresh_after_completed_mutation('Undo')}
     except HTTPException:
         raise
     except Exception as exc:  # pylint: disable=broad-except
@@ -491,6 +517,7 @@ def actions_undo_log(log_id: str) -> dict:
 
 
 @router.post('/actions/undo')
+@serial_demo
 def actions_undo() -> dict:
     app_module = get_app_module()
 
@@ -500,8 +527,13 @@ def actions_undo() -> dict:
             settings) else app_module._get_db().pop_latest_undo()
         if payload is None:
             raise HTTPException(status_code=404, detail='No undo found')
-        _perform_undo(payload, settings, app_module)
-        return {'status': 'ok'}
+        try:
+            _perform_undo(payload, settings, app_module)
+        except Exception:
+            if DEMO_MODE:
+                app_module._push_undo(payload)
+            raise
+        return {'status': 'ok', 'undoCompleted': True, **refresh_after_completed_mutation('Undo')}
     except HTTPException:
         raise
     except Exception as exc:  # pylint: disable=broad-except
@@ -526,3 +558,4 @@ def get_logs() -> list[dict]:
             entry['undo_status'] = None
         enriched.append(entry)
     return enriched
+

@@ -1,5 +1,11 @@
 import { createApiClient } from "./api.js";
 
+const isolatedDemo = document.body.dataset.isolatedDemo === "true";
+let previewRequestVersion = 0;
+let summaryRequestVersion = 0;
+let dashboardRequestVersion = 0;
+let applyInFlight = false;
+
 const storageKeys = {
   baseUrl: "mail_summariser-base-url",
   apiKey: "mail_summariser-api-key",
@@ -196,10 +202,11 @@ let ollamaCatalogStatusState = { message: "Catalogue not loaded yet.", isError: 
 
 const api = createApiClient({
   getBaseUrl,
-  getApiKey: () => backendApiKeyInput?.value || "",
+  getApiKey: () => isolatedDemo ? "" : backendApiKeyInput?.value || "",
 });
 
 function getBaseUrl() {
+  if (isolatedDemo) return location.origin;
   const backendUrlInput = settingsForm?.elements.namedItem("backendBaseURL");
   const stored = localStorage.getItem(storageKeys.baseUrl) || "";
   const raw = (backendUrlInput?.value || stored || "http://127.0.0.1:8766").toString();
@@ -227,7 +234,7 @@ function setConnectionTestStatus(message, isError = false) {
 function setActionButtons(enabled) {
   markReadBtn.disabled = !enabled;
   tagSummaryBtn.disabled = !enabled;
-  emailSummaryBtn.disabled = !enabled;
+  emailSummaryBtn.disabled = isolatedDemo || !enabled;
   if (applyScopeActionsBtn) {
     applyScopeActionsBtn.disabled = !enabled;
   }
@@ -262,6 +269,13 @@ function updateActionScopePreview() {
 }
 
 function updateHealthStrip() {
+  if (isolatedDemo) {
+    healthMode.textContent = activeSafeMode ? "Sample inbox · simulation only" : "Sample inbox · reversible changes";
+    healthProvider.textContent = "Digest: local excerpts (no AI)";
+    healthRuntime.textContent = "Network providers: blocked";
+    healthSync.textContent = "Synthetic index · refreshed after changes";
+    return;
+  }
   if (healthMode) {
     const safeSuffix = activeSafeMode ? " · Safe mode" : "";
     healthMode.textContent = `Mailbox: ${activeDummyMode ? "Sample" : "Live"}${safeSuffix}`;
@@ -382,7 +396,7 @@ function updateBottomStatusBar() {
     bottomStatusMailbox.textContent = `Mailbox: ${activeDummyMode ? "Sample" : "Live"}`;
   }
   if (bottomStatusProvider) {
-    bottomStatusProvider.textContent = `Provider: ${providerDisplayName(selectedProvider())}`;
+    bottomStatusProvider.textContent = isolatedDemo ? "Digest: local excerpts" : `Provider: ${providerDisplayName(selectedProvider())}`;
   }
   if (bottomStatusJob) {
     bottomStatusJob.textContent = currentJobId ? `Job: ${currentJobId}` : "Job: none";
@@ -429,6 +443,9 @@ function applyQuickFilter(filter) {
 }
 
 function clearCurrentWorkspaceState() {
+  hideActionConfirm();
+  dashboardRequestVersion += 1;
+  currentTriageDashboard = null;
   currentJobId = null;
   currentMessages = [];
   selectedMessageId = null;
@@ -606,7 +623,7 @@ function renderTriageMessageDetail(detail, options = {}) {
 }
 
 async function selectMessage(messageId) {
-  if (!currentJobId || !messageId) {
+  if (applyInFlight || !currentJobId || !messageId) {
     return;
   }
 
@@ -927,11 +944,12 @@ async function refreshTriageScopes() {
     return scopes;
   } catch (error) {
     setStatus(`Triage scopes failed: ${error.message}`, true);
-    return [];
+    return null;
   }
 }
 
 async function refreshTriageDashboard() {
+  const requestVersion = ++dashboardRequestVersion;
   const filters = collectTriageDashboardFilters();
   try {
     const dashboard = await api.getTriageDashboard({
@@ -939,9 +957,11 @@ async function refreshTriageDashboard() {
       limitPerBucket: filters.limitPerBucket,
       staleDays: filters.staleDays,
     });
+    if (requestVersion !== dashboardRequestVersion) return null;
     renderTriageDashboard(dashboard);
     return dashboard;
   } catch (error) {
+    if (requestVersion !== dashboardRequestVersion) return null;
     renderTriageDashboardError(error.message);
     setStatus(`Triage dashboard failed: ${error.message}`, true);
     return null;
@@ -949,7 +969,7 @@ async function refreshTriageDashboard() {
 }
 
 async function selectTriageMessage(messageId) {
-  if (!messageId) {
+  if (applyInFlight || !messageId) {
     return;
   }
 
@@ -997,6 +1017,8 @@ async function selectTriageMessage(messageId) {
 }
 
 async function applySummaryResult(result, options = {}) {
+  if (options.requestVersion !== undefined && options.requestVersion !== summaryRequestVersion) return;
+  hideActionConfirm();
   currentJobId = result.jobId;
   selectedMessageId = null;
   currentMessageDetail = null;
@@ -1027,7 +1049,10 @@ async function applySummaryResult(result, options = {}) {
     });
   }
 
-  renderLogs(await api.getLogs());
+  if (options.requestVersion !== undefined && options.requestVersion !== summaryRequestVersion) return;
+  const logs = await api.getLogs();
+  if (options.requestVersion !== undefined && options.requestVersion !== summaryRequestVersion) return;
+  renderLogs(logs);
 
   if (options.openMainTab) {
     document.querySelector(".tab[data-tab='search']")?.click();
@@ -1040,6 +1065,8 @@ async function summariseTriageBucket(bucketId, bucketLabel) {
     return;
   }
 
+  if (applyInFlight) return;
+  const requestVersion = beginSummary();
   const filters = collectTriageDashboardFilters();
   try {
     setStatus(`Creating triage summary for ${bucketLabel || bucketId}...`);
@@ -1049,7 +1076,10 @@ async function summariseTriageBucket(bucketId, bucketLabel) {
       limitPerBucket: filters.limitPerBucket,
       staleDays: filters.staleDays,
     });
+    if (requestVersion !== summaryRequestVersion) return;
+    finishSummary();
     await applySummaryResult(result, {
+      requestVersion,
       jobLabel: `Bucket: ${bucketLabel || bucketId}`,
       openMainTab: true,
     });
@@ -1059,6 +1089,8 @@ async function summariseTriageBucket(bucketId, bucketLabel) {
         : `Triage summary created for empty bucket ${bucketLabel || bucketId}.`
     );
   } catch (error) {
+    if (requestVersion !== summaryRequestVersion) return;
+    finishSummary();
     setStatus(`Triage summary failed: ${error.message}`, true);
   }
 }
@@ -1911,6 +1943,8 @@ function bindTabs() {
   tabButtons.forEach((button) => {
     button.addEventListener("click", () => {
       const newTab = button.dataset.tab;
+      hideActionConfirm();
+      cancelSummary(false);
       if (newTab !== "help") {
         previousTab = newTab;
       }
@@ -1933,6 +1967,8 @@ function bindTabs() {
   const helpButton = document.getElementById("help-button");
   if (helpButton) {
     helpButton.addEventListener("click", () => {
+      hideActionConfirm();
+      cancelSummary(false);
       const helpPanel = panels.help;
       const isHelpActive = helpPanel.classList.contains("active");
 
@@ -1981,31 +2017,48 @@ async function loadInitialData() {
     ]);
     renderLogs(logs);
     fillSettings(settings);
+    document.getElementById("demo-safe-mode").checked = activeSafeMode;
     currentSystemMessageDefaults = defaults;
-    await refreshTriageScopes();
-    await refreshTriageDashboard();
-    await refreshRuntimeStatus();
-    await refreshModelOptions();
-    await refreshDownloadCatalog();
-    await refreshFakeMailStatus();
-    setStatus("Connected and loaded initial data.");
+    if (await refreshTriageScopes() === null) return false;
+    if (await refreshTriageDashboard() === null) return false;
+    if (!isolatedDemo) {
+      await refreshRuntimeStatus();
+      await refreshModelOptions();
+      await refreshDownloadCatalog();
+      await refreshFakeMailStatus();
+    }
+    document.getElementById("demo-safe-mode").checked = activeSafeMode;
+    setStatus(isolatedDemo ? "Sample inbox ready. Choose a triage candidate to inspect." : "Connected and loaded initial data.");
+    return true;
   } catch (error) {
     setStatus(`Initial load failed: ${error.message}`, true);
+    return false;
   }
 }
 
 function hideActionConfirm() {
+  previewRequestVersion += 1;
   pendingActionKinds = null;
+  const items = document.getElementById("action-confirm-items");
+  if (items) items.replaceChildren();
   if (actionConfirm) actionConfirm.hidden = true;
   if (actionConfirmWarnings) actionConfirmWarnings.innerHTML = "";
 }
 
 function renderActionConfirm(previews) {
+  actionConfirmApplyBtn.disabled = false;
+  const items = document.getElementById("action-confirm-items");
+  items.replaceChildren();
   const lines = [];
   const warnings = [];
   let safeMode = false;
   for (const { action, plan } of previews) {
     const label = ACTION_LABELS[action] || action;
+    for (const item of [...(plan.items || []), ...(plan.skipped || [])]) {
+      const row = document.createElement("li");
+      row.textContent = `${label}: ${item.subject || item.id} · ${item.currentState || ""} → ${item.plannedState || ""}${item.reason ? ` (${item.reason})` : ""}`;
+      items.append(row);
+    }
     const dest = action === "archive" && plan.targetMailbox ? ` → ${plan.targetMailbox}` : "";
     lines.push(
       `${label}${dest}: ${plan.changeCount} to change, ${plan.skipCount} unchanged of ${plan.totalMessages}.`,
@@ -2024,20 +2077,26 @@ function renderActionConfirm(previews) {
 }
 
 async function requestJobActions(actionKinds) {
-  if (!currentJobId) {
-    setStatus("No active job selected.", true);
-    return;
-  }
+  if (!currentJobId || applyInFlight) return;
+  hideActionConfirm();
+  const version = previewRequestVersion;
+  const jobId = currentJobId;
+  actionConfirm.hidden = false;
+  actionConfirmSummary.textContent = "Preparing preview… Cancel to leave the mailbox unchanged.";
+  actionConfirmApplyBtn.disabled = true;
   try {
     const previews = [];
     for (const action of actionKinds) {
-      previews.push({ action, plan: await api.previewAction(currentJobId, action) });
+      previews.push({ action, plan: await api.previewAction(jobId, action) });
+      if (version !== previewRequestVersion || jobId !== currentJobId) return;
     }
-    pendingActionKinds = actionKinds;
+    pendingActionKinds = { jobId, previews };
     renderActionConfirm(previews);
-    setStatus("Review the preview, then confirm to apply.");
+    setStatus("Review each change, then confirm to apply. Preview expires after five minutes in demo.");
   } catch (error) {
-    setStatus(`Preview failed: ${error.message}`, true);
+    if (version !== previewRequestVersion) return;
+    hideActionConfirm();
+    setStatus(`Preview failed: ${error.message}. You can try the preview again.`, true);
   }
 }
 
@@ -2060,57 +2119,88 @@ function showActionToast(message, logIds) {
   toastTimer = setTimeout(hideActionToast, 12000);
 }
 
-async function undoFromToast() {
-  if (toastUndoLogIds.length === 0) {
-    hideActionToast();
-    return;
+function setMutationBusy(busy) {
+  applyInFlight = busy;
+  setActionButtons(!busy && Boolean(currentJobId && currentMessages.length));
+  undoActionBtn.disabled = busy;
+  for (const id of ["demo-reset", "demo-safe-mode", "demo-sync", "demo-retry", "action-toast-undo"]) {
+    document.getElementById(id).disabled = busy;
   }
+  document.querySelectorAll(".log-undo-btn").forEach(button => { button.disabled = busy; });
+}
+
+async function refreshAfterMutation(message, warnings = []) {
+  const issues = [...warnings];
+  try { renderLogs(await api.getLogs()); }
+  catch (error) { issues.push(`Log refresh failed: ${error.message}. Reload demo to inspect completed work.`); }
+  if (await refreshTriageDashboard() === null && !issues.length) {
+    issues.push("Dashboard refresh failed. Reload demo to retry the view; do not repeat completed work.");
+  }
+  updateActionScopePreview();
+  setStatus([message, ...issues].join(" "), issues.length > 0);
+  return issues.length === 0;
+}
+
+async function runUndoActions(logIds = null) {
+  if (applyInFlight) return;
+  hideActionConfirm();
+  setMutationBusy(true);
+  let completed = 0;
+  const warnings = [];
+  try {
+    for (const logId of (logIds || [null])) {
+      const result = logId ? await api.undoLog(logId) : await api.undo();
+      completed += 1;
+      if (result.warning) warnings.push(result.warning);
+    }
+    await refreshAfterMutation("Undone.", warnings);
+  } catch (error) {
+    const message = completed ? `${completed} undo operation(s) completed; another undo could not be confirmed.` : "Undo could not be confirmed.";
+    await refreshAfterMutation(message, [...warnings, `${error.message}. Inspect Log before retrying.`]);
+  } finally { setMutationBusy(false); }
+}
+
+async function undoFromToast() {
+  if (applyInFlight || toastUndoLogIds.length === 0) return;
   const logIds = [...toastUndoLogIds].reverse();
   hideActionToast();
-  try {
-    for (const logId of logIds) {
-      await api.undoLog(logId);
-    }
-    renderLogs(await api.getLogs());
-    updateActionScopePreview();
-    setStatus("Undone.");
-  } catch (error) {
-    setStatus(`Undo failed: ${error.message}`, true);
-  }
+  await runUndoActions(logIds);
 }
 
 async function confirmPendingActions() {
-  if (!pendingActionKinds || !currentJobId) {
-    hideActionConfirm();
-    return;
-  }
-  const actionKinds = pendingActionKinds;
+  if (!pendingActionKinds || applyInFlight) return;
+  const { jobId, previews } = pendingActionKinds;
+  if (jobId !== currentJobId) { hideActionConfirm(); return; }
   hideActionConfirm();
+  setMutationBusy(true);
+  const appliedLogIds = [];
+  let totalChanged = 0;
+  let totalFailed = 0;
+  let simulated = false;
+  const warnings = [];
   try {
-    let applied = false;
-    let simulated = false;
-    let totalChanged = 0;
-    const appliedLogIds = [];
-    for (const action of actionKinds) {
-      const result = await api.applyAction(currentJobId, action);
+    for (const { action, plan } of previews) {
+      const result = await api.applyAction(jobId, action, { previewToken: plan.previewToken });
+      if (result.warning) warnings.push(result.warning);
       if (result.applied) {
-        applied = true;
         totalChanged += (result.changedIds || []).length;
+        totalFailed += (result.failedIds || []).length;
         if (result.logId) appliedLogIds.push(result.logId);
-      } else {
-        simulated = true;
-      }
+      } else { simulated = true; }
     }
-    renderLogs(await api.getLogs());
-    updateActionScopePreview();
-    if (simulated && !applied) {
-      setStatus("Safe mode: simulated only, nothing changed in your mailbox.");
+    if (simulated && !appliedLogIds.length) {
+      await refreshAfterMutation("Safe mode: simulated only, nothing changed in your mailbox.", warnings);
     } else {
-      setStatus(`Applied: ${totalChanged} message(s) changed.`);
-      showActionToast(`Applied: ${totalChanged} message(s) changed.`, appliedLogIds);
+      const message = `Applied: ${totalChanged} change(s), ${totalFailed} failed. Undo is also available in Log.`;
+      if (totalFailed) warnings.push(`${totalFailed} message changes failed. Review Log.`);
+      await refreshAfterMutation(message, warnings);
+      showActionToast(message, appliedLogIds);
     }
   } catch (error) {
-    setStatus(`Action failed: ${error.message}`, true);
+    setStatus(`Could not confirm all actions: ${error.message}. Inspect Log before retrying; completed changes can be undone there.`, true);
+    if (appliedLogIds.length) showActionToast("Some changes completed. Review Log or undo them.", appliedLogIds);
+  } finally {
+    setMutationBusy(false);
   }
 }
 
@@ -2133,8 +2223,8 @@ function wireEvents() {
     try {
       const settings = await api.getSettings();
       fillSettings(settings);
-      await refreshTriageScopes();
-      await refreshTriageDashboard();
+      if (await refreshTriageScopes() === null) return;
+      if (await refreshTriageDashboard() === null) return;
       await refreshRuntimeStatus();
       await refreshModelOptions();
       await refreshDownloadCatalog();
@@ -2160,17 +2250,24 @@ function wireEvents() {
 
   searchForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (applyInFlight) return;
+    const requestVersion = beginSummary();
     setStatus("Creating summary...");
     try {
       const payload = collectSearchCriteria();
       const result = await api.createSummary(payload);
-      await applySummaryResult(result);
+      if (requestVersion !== summaryRequestVersion) return;
+      finishSummary();
+      await applySummaryResult(result, { requestVersion });
+      if (requestVersion !== summaryRequestVersion) return;
       setStatus(
         Array.isArray(result.messages) && result.messages.length > 0
           ? `Summary created for ${result.messages.length} messages.`
           : "No messages matched the current filters."
       );
     } catch (error) {
+      if (requestVersion !== summaryRequestVersion) return;
+      finishSummary();
       setStatus(`Summary request failed: ${error.message}`, true);
     }
   });
@@ -2199,7 +2296,7 @@ function wireEvents() {
     });
   });
   reloadTriageScopesBtn?.addEventListener("click", async () => {
-    await refreshTriageScopes();
+    if (await refreshTriageScopes() === null) return;
     await refreshTriageDashboard();
   });
   triageBucketsContainer?.addEventListener("click", async (event) => {
@@ -2227,7 +2324,7 @@ function wireEvents() {
   });
 
   [scopeActionMarkRead, scopeActionTag, scopeActionArchive, scopeActionEmail].forEach((field) => {
-    field?.addEventListener("change", updateActionScopePreview);
+    field?.addEventListener("change", () => { hideActionConfirm(); updateActionScopePreview(); });
   });
 
   applyScopeActionsBtn?.addEventListener("click", async () => {
@@ -2332,15 +2429,7 @@ function wireEvents() {
   tagSummaryBtn.addEventListener("click", () => requestJobActions(["tag_summarised"]));
   emailSummaryBtn.addEventListener("click", runEmailSummary);
 
-  undoActionBtn.addEventListener("click", async () => {
-    try {
-      await api.undo();
-      setStatus("Undo requested.");
-      renderLogs(await api.getLogs());
-    } catch (error) {
-      setStatus(`Undo failed: ${error.message}`, true);
-    }
-  });
+  undoActionBtn.addEventListener("click", () => runUndoActions());
 
   refreshLogsBtn.addEventListener("click", async () => {
     try {
@@ -2371,15 +2460,7 @@ function wireEvents() {
       return;
     }
 
-    try {
-      undoButton.setAttribute("disabled", "disabled");
-      await api.undoLog(logId);
-      setStatus("Undo requested for selected log entry.");
-      renderLogs(await api.getLogs());
-    } catch (error) {
-      undoButton.removeAttribute("disabled");
-      setStatus(`Undo failed: ${error.message}`, true);
-    }
+    await runUndoActions([logId]);
   });
 
   refreshModelsBtn.addEventListener("click", async () => {
@@ -2482,8 +2563,8 @@ function wireEvents() {
       clearCurrentWorkspaceState();
       fillSettings(response.settings);
       renderLogs(await api.getLogs());
-      await refreshTriageScopes();
-      await refreshTriageDashboard();
+      if (await refreshTriageScopes() === null) return;
+      if (await refreshTriageDashboard() === null) return;
       await refreshRuntimeStatus();
       await refreshModelOptions();
       await refreshDownloadCatalog();
@@ -2536,8 +2617,8 @@ function wireEvents() {
       }
       syncDummyModeUI(nextMode);
       clearCurrentWorkspaceState();
-      await refreshTriageScopes();
-      await refreshTriageDashboard();
+      if (await refreshTriageScopes() === null) return;
+      if (await refreshTriageDashboard() === null) return;
       setStatus(nextMode ? "Sample mailbox enabled." : "Live mailbox enabled.");
       renderLogs(await api.getLogs());
     } catch (error) {
@@ -2560,8 +2641,8 @@ function wireEvents() {
       if (previousDummyMode !== Boolean(refreshedSettings.dummyMode)) {
         clearCurrentWorkspaceState();
       }
-      await refreshTriageScopes();
-      await refreshTriageDashboard();
+      if (await refreshTriageScopes() === null) return;
+      if (await refreshTriageDashboard() === null) return;
       await refreshRuntimeStatus();
       await refreshModelOptions();
       await refreshDownloadCatalog();
@@ -2580,6 +2661,11 @@ function wireEvents() {
 }
 
 function bootstrapConnectionFromStorage() {
+  if (isolatedDemo) {
+    settingsForm.elements.namedItem("backendBaseURL").value = location.origin;
+    backendApiKeyInput.value = "";
+    return;
+  }
   const savedUrl = localStorage.getItem(storageKeys.baseUrl);
   const savedApiKey = localStorage.getItem(storageKeys.apiKey);
   const backendUrlInput = settingsForm?.elements.namedItem("backendBaseURL");
@@ -2615,7 +2701,96 @@ function resetSearchFormOnLoad() {
   if (repliedSelect) repliedSelect.value = "";
 }
 
+function beginSummary() {
+  hideActionConfirm();
+  const version = ++summaryRequestVersion;
+  setActionButtons(false);
+  document.getElementById("cancel-digest").hidden = false;
+  return version;
+}
+
+function finishSummary() {
+  if (!applyInFlight) setActionButtons(Boolean(currentJobId && currentMessages.length));
+  document.getElementById("cancel-digest").hidden = true;
+}
+
+function cancelSummary(announce = true) {
+  const pending = !document.getElementById("cancel-digest").hidden;
+  summaryRequestVersion += 1;
+  finishSummary();
+  if (pending && announce) setStatus("Digest cancelled. Late results will not replace your current view.");
+}
+
+function setupDemo() {
+  document.getElementById("cancel-digest").addEventListener("click", () => cancelSummary());
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") { hideActionConfirm(); cancelSummary(); }
+  });
+  if (!isolatedDemo) return;
+  document.getElementById("demo-onboarding").hidden = false;
+  document.querySelector(".tab[data-tab='settings']").hidden = true;
+  scopeActionEmail.checked = false;
+  scopeActionEmail.disabled = true;
+  scopeActionEmail.closest("label").hidden = true;
+  document.getElementById("demo-retry").addEventListener("click", async () => {
+    if (applyInFlight) return;
+    setMutationBusy(true);
+    try { await loadInitialData(); }
+    finally { setMutationBusy(false); }
+  });
+  document.getElementById("demo-sync").addEventListener("click", async () => {
+    if (applyInFlight) return;
+    setMutationBusy(true);
+    hideActionConfirm();
+    try {
+      await api.syncMailIndex({ accountId: "sample", mailbox: "INBOX" });
+      await refreshAfterMutation("Sample index rebuilt. Messages, digests and undo history were preserved.");
+    } catch (error) {
+      setStatus(`Index rebuild failed: ${error.message}. You can retry Rebuild sample index without repeating mailbox actions.`, true);
+    } finally { setMutationBusy(false); }
+  });
+  document.getElementById("demo-safe-mode").addEventListener("change", async (event) => {
+    const control = event.target;
+    if (applyInFlight) return;
+    setMutationBusy(true);
+    hideActionConfirm();
+    try {
+      const result = await api.setDemoSafeMode(control.checked);
+      activeSafeMode = result.safeMode;
+      updateHealthStrip();
+      setStatus(activeSafeMode ? "Safe mode on: actions simulate only." : "Changes enabled for fictional messages only. Preview each action; undo from Log.");
+    } catch (error) {
+      control.checked = activeSafeMode;
+      setStatus(`Could not update demo safety: ${error.message}`, true);
+    } finally { setMutationBusy(false); }
+  });
+  document.getElementById("demo-reset").addEventListener("click", async (event) => {
+    if (applyInFlight || !confirm("Reset the eight fictional messages? Demo digests and undo history will be cleared.")) return;
+    setMutationBusy(true);
+    hideActionConfirm();
+    cancelSummary(false);
+    clearCurrentWorkspaceState();
+    hideActionToast();
+    summaryText.textContent = "Resetting sample inbox…";
+    try {
+      const reset = await api.resetDemo();
+      summaryText.textContent = "Sample inbox reset. Create a new digest.";
+      const loaded = await loadInitialData();
+      document.querySelector(".tab[data-tab='triage']").click();
+      if (reset.warning || !loaded) {
+        setStatus(reset.warning || "Sample reset completed. View refresh failed; Reload demo to retry the view.", true);
+      } else {
+        setStatus("Eight fictional messages restored. Safe mode is on.");
+      }
+    } catch (error) {
+      summaryText.textContent = "Reset could not be confirmed. Reload the demo before creating another digest.";
+      setStatus(`Reset failed: ${error.message}. Reload the demo to inspect its current state.`, true); }
+    finally { setMutationBusy(false); }
+  });
+}
+
 function init() {
+  setupDemo();
   bootstrapConnectionFromStorage();
   resetSearchFormOnLoad();
   showSettingsScreen("basic");
@@ -2633,3 +2808,4 @@ function init() {
 }
 
 init();
+

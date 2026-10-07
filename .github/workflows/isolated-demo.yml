@@ -1,0 +1,38 @@
+name: Isolated synthetic demo
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'webapp/**'
+      - 'scripts/*demo*'
+      - 'tests/test_isolated_demo.py'
+      - '.github/workflows/isolated-demo.yml'
+permissions:
+  contents: read
+jobs:
+  synthetic-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install contributor dependencies
+        run: python -m pip install -e '.[dev]' -r dev-requirements.txt
+      - name: Synthetic API safety and recovery
+        run: python scripts/validate_demo_api.py
+      - name: Install CI Chromium
+        run: python -m playwright install --with-deps chromium
+      - name: Actual browser onboarding, cancellation, action recovery and mobile flow
+        run: python scripts/validate_demo_ui.py --output demo-evidence
+      - name: Retain small synthetic screenshots and acceptance summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-demo-evidence
+          path: demo-evidence/
+          retention-days: 7
+          if-no-files-found: ignore

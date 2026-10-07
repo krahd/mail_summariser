@@ -1692,3 +1692,35 @@ td[colspan] {
     padding: 16px;
   }
 }
+
+
+/* A small onboarding layer on the existing workflow, not a separate client. */
+[hidden] { display: none !important; }
+.demo-onboarding { margin: 1rem auto; max-width: 1500px; padding: 1rem 1.4rem; border: 1px solid var(--line); border-radius: 16px; background: var(--surface, #fff); }
+.demo-onboarding p { margin: .5rem 0; max-width: 95ch; line-height: 1.5; }
+.action-confirm-items { max-height: 18rem; overflow-y: auto; padding-left: 1.3rem; overflow-wrap: anywhere; }
+.action-confirm-items li { margin: .6rem 0; }
+#cancel-digest { margin: .5rem 1.4rem; }
+body[data-isolated-demo] #tab-settings, body[data-isolated-demo] #email-summary, body[data-isolated-demo] #runtime-startup-banner { display: none !important; }
+/* Status messages remain readable on narrow screens instead of widening the page. */
+.app-header .status-line { white-space: normal; overflow-wrap: anywhere; min-width: 0; }
+@media (max-width: 780px) {
+  .summary-meta, .bottom-status-chip { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
+  .triage-message-item, .triage-bucket-card, .triage-sidebar { min-width: 0; }
+}
+@media (max-width: 1080px) {
+  /* A wrapping fixed footer can cover the last action row. Keep it in flow. */
+  .bottom-status-bar { position: static; width: var(--content-width); margin: 16px auto 0; }
+}
+@media (max-width: 780px) {
+  .bottom-status-bar { width: 100%; }
+  body { padding-bottom: 20px; }
+}
+@media (max-width: 780px) {
+  /* Dates remain in the selected-message detail; give subjects room to read. */
+  .message-table-wrapper th:first-child,
+  .message-table-wrapper tr[data-message-id] td:first-child { display: none; }
+  .message-table-wrapper th:nth-child(2),
+  .message-table-wrapper td:nth-child(2) { width: 40%; }
+  .message-table-wrapper td:nth-child(3) { overflow-wrap: normal; }
+}
