@@ -110,13 +110,14 @@ jobs:
             sleep 15
           done
 
-      - name: Clone tap repository
-        shell: bash
-        env:
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-        run: |
-          set -euo pipefail
-          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/krahd/homebrew-tap.git" tap-repo
+      - name: Check out shared Homebrew tap
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          repository: krahd/homebrew-tap
+          ref: main
+          path: tap-repo
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          persist-credentials: true
 
       - name: Configure tap git author
         working-directory: tap-repo

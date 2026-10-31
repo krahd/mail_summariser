@@ -1,6 +1,6 @@
 # mail_summariser - Project Status
 
-Last updated: 2026-10-06 15:24
+Last updated: 2026-10-31 03:44
 
 ## Purpose
 
@@ -465,6 +465,8 @@ Validation implications:
 
 ## Risks and limitations
 
+- Homebrew tap publishing credential hardening (31 October 2026): workflow now uses a pinned secondary `actions/checkout` instead of including the publishing token in a Git remote URL. Runtime execution of the changed workflow and provider-side token scope/rotation remain unverified.
+
 - Real IMAP/SMTP workflows involve real credentials and mailbox data; handling must remain conservative.
 - Secret masking and masked-write semantics must not regress.
 - Dev fake-mail endpoints must remain disabled unless explicitly enabled.
@@ -516,5 +518,5 @@ Run the manual personal acceptance test against the real MailMate IMAP accounts 
 - Triage is the browser's primary landing surface; the digest review and bulk-action panel live in the "Review & Act" tab, which a triage bucket summary opens with the job preloaded.
 - macOS app deployment, notarisation, and end-user distribution are paused. The active product surface is the browser client against the local backend; `macos-app/` is retained as source but not positioned as a current download target.
 ---
-Last updated: 2026-10-06 15:24
+Last updated: 2026-10-31 03:44
 
